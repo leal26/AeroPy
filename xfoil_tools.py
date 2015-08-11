@@ -1,20 +1,20 @@
 """
 Created on Sun Mar  9 14:58:25 2014
 Last update Fr Jul 20 16:26:40 2015
-    
+
 @author: Pedro Leal
 """
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                       Import necessary modules
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Module that subsistutes the os module and can be used to access the
-# command line 
+# command line
 import subprocess as sp
 
 # To check for already existing files and delete them
 import os
 
-# Numpy module is imported in case one of the inputs is a numpy array 
+# Numpy module is imported in case one of the inputs is a numpy array
 # and for mathematical analysis
 import numpy as np
 import math
@@ -26,81 +26,77 @@ import shutil
 #                       	Core Functions
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
-         NACA=False, GDES=False,iteration=10):
+         NACA=False, GDES=False, iteration=10):
     """ Call xfoil through Python.
-    
+
     The input variables are:
-        - airfoil: if NACA is false, airfoil is the name of the plain 
+        - airfoil: if NACA is false, airfoil is the name of the plain
           filewhere the airfoil geometry is stored (variable airfoil).
-          If NACA is True, airfoil is the naca series of the airfoil 
+          If NACA is True, airfoil is the naca series of the airfoil
           (i.e.: naca2244). By default NACA is False.
-          
+
         - alfas: list/array/float/int of angles of attack.
-        
-        - output: defines the kind of output desired from xfoil. There 
+
+        - output: defines the kind of output desired from xfoil. There
           are four posssible choices:
               - Cp: generates files with Pressure coefficients for
                 desired alfas.
               - Dump: generates file with Velocity along surface, Delta
                 star,theta and Cf vs s,x,y for several alfas.
-              - Polar: generates file with CL, CD, CM, CDp, Top_Xtr, 
+              - Polar: generates file with CL, CD, CM, CDp, Top_Xtr,
                 Bot_Xtr.
 		      - Alfa_L_0: generates a file with the value of the angle
 			    of attack that lift is equal to zero.
               - Coordinates: returns the coordinates of a NACA airfoil.
-              
+
           By default, Cp is chosen.
-              
-        - Reynolds: Reynolds number in case the simulation is for a 
+
+        - Reynolds: Reynolds number in case the simulation is for a
           viscous flow. In case not informed, the code will assume
           inviscid.
-          
-        - Mach: Mach number in case the simulation has to take in 
+
+        - Mach: Mach number in case the simulation has to take in
           account compressibility effects through the Prandtl-Glauert
           correlation. If not informed, the code will not use the
-          correction. For logical reasons, if Mach is informed a 
+          correction. For logical reasons, if Mach is informed a
           Reynolds number different from zero must also be informed.
-          
+
         - plots: the code is able to save in a .ps file all the plots
           of Cp vs.alfa. By default, this option is deactivated.
-          
-        - NACA: Boolean variable that defines if the code imports an 
+
+        - NACA: Boolean variable that defines if the code imports an
           airfoil from a file or generates a NACA airfoil.
-          
+
         - GDES: XFOIL function that improves the airfoil shape in case
           the selected points do not provide a good shape. The CADD
           function is also used. For more information about these
           functions, use the XFOIL manual.
-          
+
         - iteration: changes how many times XFOIL will try to make the
           results converge. Speciallt important for viscous flows
-          
+
     As a side note, it is much more eficient to run a single run with
-    multiple angles of attack rather than multiple runs, each with a 
-    single angle of attack
+    multiple angles of attack rather than multiple runs, each with a
+    single angle of attack.
 
     Created on Sun Mar  9 14:58:25 2014
     Last update Fr Jul 13 15:38:40 2015
-    
+
     @author: Pedro Leal (Based on Hakan Tiftikci's code)
     """
-    
-
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #                               Functions
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
-    
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def issueCmd(cmd, echo=True):
         """Submit a command through PIPE to the command line, therefore
         leading the commands to xfoil.
-        @author: Hakan Tiftikci 
+        @author: Hakan Tiftikci
         """
-        
+
         ps.stdin.write(cmd + '\n')
         if echo:
             print cmd
 
-            
     def submit(output, alfa):
         """Submit job to xfoil and saves file.
         
@@ -115,7 +111,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
         """
         
         if output == "Alfa_L_0":
-			issueCmd('CL 0')
+            issueCmd('CL 0')
 			
         else:
             # Submit job for given angle of attack
@@ -562,17 +558,18 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
                 if header == 0:
                     # Open line and replace anything we do not want (
                     # variants of the separator and units)
-                    line = line.replace(separator + separator + separator + separator +
-                    separator + separator, ' ').replace(separator + separator +
-                    separator + separator + separator, ' ').replace(separator +
-                    separator + separator + separator, ' ').replace(separator +
-                    separator + separator, ' ').replace(separator + separator,
-                    ' ').replace("\n", "").replace("(kg)", "").replace("(m)",
-                    "").replace("(Pa)", "").replace("(in)", "").replace("#", "")
+                    line = line.replace(separator + separator + separator +
+                    separator + separator + separator, ' ').replace(separator
+                    + separator + separator + separator + separator,
+                    ' ').replace(separator + separator + separator +
+                    separator, ' ').replace(separator + separator + separator,
+                    ' ').replace(separator + separator, ' ').replace("\n",
+                    "").replace("(kg)", "").replace("(m)", "").replace("(Pa)",
+                    "").replace("(in)", "").replace("#", "")
                     
                     header = line.split(' ')
                     n_del = header.count('')
-                    for n in range(0, n_del):
+                    for n_del in range(0, n_del):
                         header.remove('')
                     for head in header:
                         Data[head] = []
@@ -657,26 +654,26 @@ def file_name(airfoil, alfas='none', output='Cp'):
     
 	# At first verify if alfas was defined
     if alfas == 'none':
-		filename = '%s_%s' % (output, airfoil)
+        filename = '%s_%s' % (output, airfoil)
     elif alfas != 'none':
-		if output == 'Cp' or output == 'Dump':
-			if type(alfas) == list:
-				alfas = alfas[0]
-			alfa = alfa_for_file(alfas)
+        if output == 'Cp' or output == 'Dump':
+            if type(alfas) == list:
+                alfas = alfas[0]
+            alfa = alfa_for_file(alfas)
 
-			filename = '%s_%s_%s' % (output, airfoil, alfa)
+            filename = '%s_%s_%s' % (output, airfoil, alfa)
 				
-		if output == 'Polar':
-			# In case it is only for one angle of attack, the same
+        if output == 'Polar':
+            # In case it is only for one angle of attack, the same
             # angle will be repeated. This is done to keep the 
             # formating
-			if type(alfas) == int or type(alfas) == float:
-				alfas = [alfas]
-			alfa_i = alfa_for_file(alfas[0])
-			alfa_f = alfa_for_file(alfas[-1])
-			# Name of file with polar information
+            if type(alfas) == int or type(alfas) == float:
+                alfas = [alfas]
+                alfa_i = alfa_for_file(alfas[0])
+                alfa_f = alfa_for_file(alfas[-1])
+                # Name of file with polar information
 
-			filename = '%s_%s_%s_%s' % (output, airfoil, alfa_i, alfa_f)
+            filename = '%s_%s_%s_%s' % (output, airfoil, alfa_i, alfa_f)
     return filename
 
 def air_properties(height, unit='feet'):
@@ -838,13 +835,13 @@ def pressure_shell(Data, chord, thickness, half_span, air_density, Velocity, N, 
     if txt == True:
         for j in range(N):
             for i in range(len(Data['x'])):
-                    DataFile = open('Pressure_shell.txt','a')
-                    DataFile.write('%f\t%f\t%f\t%f\n' % (
-                        Data['x'][i],
-                        Data['y'][i],
-                        Data['z'][j],
-                        distribution[j]*Data['Pressure'][i]))
-                    DataFile.close()
+                DataFile = open('Pressure_shell.txt','a')
+                DataFile.write('%f\t%f\t%f\t%f\n' % (
+                    Data['x'][i],
+                    Data['y'][i],
+                    Data['z'][j],
+                    distribution[j]*Data['Pressure'][i]))
+                DataFile.close()
         return 0
     else:
         PressureDistribution = ()

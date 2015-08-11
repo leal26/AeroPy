@@ -10,3 +10,4 @@ TODO list:
 * Include Velocity in filename
 * include option for elliptical distribution
 * output_reader lacks Coordinates options
+* where is the height option the high level functions
