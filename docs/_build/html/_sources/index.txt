@@ -4,6 +4,8 @@ Welcome to pyXFOIL's documentation!
 ===================================
 Easy and simple to use aerodynamic tool:
 
+.. code-block:: python
+
     from xfoil_tools import *
     find_coefficients(0)
     >>{'CD',}
