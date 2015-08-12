@@ -118,8 +118,8 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
             issueCmd('ALFA %.4f' % (alfa,))
             if plots == True:
                 issueCmd('HARD')
-                shutil.copyfile('plot.ps', 'plot_{!s}_{!s}_{!s}.ps'.format(output,
-                                airfoil, alfa))
+                shutil.copyfile('plot.ps', 'plot_{!s}_{!s}_{!s}.ps'.format(
+                                output, airfoil, alfa))
             if output == 'Cp':    
                 # Creating the file with the Pressure Coefficients
                 filename = file_name(airfoil, alfas, output)
@@ -584,10 +584,10 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
                     header_done = True
             else:
                 line = line.replace(separator + separator + separator,
-                ' ').replace(separator + separator, ' ').replace(separator, ' ').replace("\n",
-                "").replace('---------', '').replace('--------',
-                '').replace('-------', '').replace('------', '').replace('-',
-                ' -')
+                ' ').replace(separator + separator, ' ').replace(separator,
+                ' ').replace("\n", "").replace('---------', '').replace(
+                '--------', '').replace('-------', '').replace('------', 
+                '').replace('-',' -')
                 
                 line_components = line.split(' ')    
                 
@@ -775,7 +775,8 @@ def find_alpha_L_0(airfoil, Reynolds=0, iteration=10, NACA=True):
     alpha = output_reader(filename, output='Alfa_L_0')['alpha'][0]
     return alpha
     
-def force_shell(Data, chord, half_span, height, Velocity, thickness=0, txt=False):
+def force_shell(Data, chord, half_span, height, Velocity, thickness=0,
+                txt=False):
     # Height is in feet
     # If the Shell is an extrude, it needs to take in consideration
     # that there is a skin thickness outwards of the outer mold.
@@ -785,12 +786,15 @@ def force_shell(Data, chord, half_span, height, Velocity, thickness=0, txt=False
     atm_pressure = Air_properties['Atmospheric Pressure']
     air_density = Air_properties['Density']
     if thickness == 0:
-        Data['Force'] = map(lambda Cp:(Cp*0.5*air_density * Velocity**2 + atm_pressure) * chord*half_span, Data['Cp'])
+        Data['Force'] = map(lambda Cp:(Cp*0.5*air_density * Velocity**2 +
+                            atm_pressure) * chord*half_span, Data['Cp'])
         Data['x'] = map(lambda x: (chord)*x, Data['x'])
         Data['y'] = map(lambda x: (chord)*x, Data['y'])
     else:
-        Data['Force'] = map(lambda Cp:(Cp*0.5*air_density * Velocity**2 + atm_pressure) * chord*half_span, Data['Cp'])
-        Data['x'] = map(lambda x: (chord - 2.*thickness) * x + thickness, Data['x'])
+        Data['Force'] = map(lambda Cp:(Cp*0.5*air_density * Velocity**2 +
+                            atm_pressure) * chord*half_span, Data['Cp'])
+        Data['x'] = map(lambda x: (chord - 2.*thickness) * x + thickness, 
+                        Data['x'])
         Data['y'] = map(lambda x: (chord - 2.*thickness) * x, Data['y'])
     Data['z'] = [0] * len(Data['x'])
     
@@ -818,10 +822,12 @@ def force_shell(Data, chord, half_span, height, Velocity, thickness=0, txt=False
 #                        elliptical_distribution[j]*Data['Pressure'][i]),)
     return PressureDistribution
 
-def pressure_shell(Data, chord, thickness, half_span, air_density, Velocity, N, txt=False,
-                   llt_distribution=False, distribution='Elliptical'): 
+def pressure_shell(Data, chord, thickness, half_span, air_density, Velocity, 
+                   N, txt=False, llt_distribution=False, 
+                   distribution='Elliptical'): 
                        
-    Data['Pressure'] = map(lambda Cp: Cp*0.5*air_density* Velocity**2 *chord, Data['Cp'])
+    Data['Pressure'] = map(lambda Cp: Cp*0.5*air_density* Velocity**2 *chord,
+                            Data['Cp'])
     Data['x'] = map(lambda x: (chord - 2.*thickness)*x + thickness, Data['x'])
     Data['y'] = map(lambda x: (chord - 2.*thickness)*x, Data['y'])
     DataFile = open('Pressure_shell.txt', 'w')
@@ -847,17 +853,20 @@ def pressure_shell(Data, chord, thickness, half_span, air_density, Velocity, N, 
         PressureDistribution = ()
         for j in range(N):
             for i in range(len(Data['x'])):
-                    PressureDistribution = PressureDistribution + ((Data['x'][i],
-                        Data['y'][i], Data['z'][j],
-                        distribution[j]*Data['Pressure'][i]), )
+                    PressureDistribution = PressureDistribution + (
+                                             (Data['x'][i], Data['y'][i],
+                                              Data['z'][j], distribution[j]*
+                                              Data['Pressure'][i]), )
         return PressureDistribution
         
-def pressure_shell_2D(Data, chord, thickness, half_span, height, Velocity, N, txt=False):
+def pressure_shell_2D(Data, chord, thickness, half_span, height, Velocity, N,
+                      txt=False):
     Air_properties = air_properties(height, unit='feet')
     air_density = Air_properties['Density']
     
-    Data['Pressure'] = map(lambda Cp: Cp*0.5*air_density* Velocity**2 *chord, Data['Cp'])
-    Data['x'] = map(lambda x: (chord - 2.*thickness)*x+thickness,Data['x'])
+    Data['Pressure'] = map(lambda Cp: Cp*0.5*air_density* Velocity**2 *chord,
+                            Data['Cp'])
+    Data['x'] = map(lambda x: (chord - 2.*thickness)*x + thickness, Data['x'])
     Data['y'] = map(lambda x: (chord - 2.*thickness)*x, Data['y'])
     DataFile = open('Pressure_shell.txt', 'w')
     DataFile.close()
@@ -877,8 +886,10 @@ def pressure_shell_2D(Data, chord, thickness, half_span, height, Velocity, N, tx
         PressureDistribution = ()
         for j in range(N):
             for i in range(len(Data['x'])):
-                    PressureDistribution = PressureDistribution + ((Data['x'][i],
-                        Data['y'][i], Data['z'][j], Data['Pressure'][i]), )
+                    PressureDistribution = PressureDistribution + (
+                                            (Data['x'][i], Data['y'][i],
+                                             Data['z'][j],
+                                             Data['Pressure'][i]), )
         return PressureDistribution
 
 def M_crit(airfoil, pho, speed_sound, lift, c):

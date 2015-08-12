@@ -1,0 +1,1 @@
+Search.setIndex({envversion:46,filenames:["index"],objects:{},objnames:{},objtypes:{},terms:{"import":0,aerodynam:0,content:0,easi:0,find_coeffici:0,from:0,index:0,modul:0,page:0,search:0,simpl:0,tool:0,xfoil_tool:0},titles:["Welcome to pyXFOIL&#8217;s documentation!"],titleterms:{document:0,exampl:0,indic:0,pyxfoil:0,tabl:0,welcom:0}})
