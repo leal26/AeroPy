@@ -7,21 +7,14 @@ Last update Fr Jul 20 16:26:40 2015
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                       Import necessary modules
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Module that subsistutes the os module and can be used to access the
-# command line
+
 import subprocess as sp
-
-# To check for already existing files and delete them
-import os
-
-# Numpy module is imported in case one of the inputs is a numpy array
-# and for mathematical analysis
+import os # To check for already existing files and delete them
 import numpy as np
 import math
+import shutil # Modules necessary for saving multiple plots
 
-# Modules necessary for saving multiple plots
-import shutil
-
+from aero_tools import LLT_calculator
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                       	Core Functions
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -766,6 +759,7 @@ def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10, NACA=True):
     for key in Data:
         coefficients[key] = Data[key][0]
     return coefficients
+
 	
 def find_alpha_L_0(airfoil, Reynolds=0, iteration=10, NACA=True):
     filename = file_name(airfoil, output='Alfa_L_0')
@@ -918,3 +912,6 @@ def M_crit(airfoil, pho, speed_sound, lift, c):
                 Data_crit['alpha'] = Data['alpha'][i]
 #        if Data_crit['CL']==previous_iteration:
     return Data_crit
+    
+if __name__ == '__main__':
+    print find_coefficients('naca0012',1.)
