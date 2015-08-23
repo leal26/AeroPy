@@ -1,9 +1,7 @@
-"""
-Created on Sun Mar  9 14:58:25 2014
-Last update Fr Jul 20 16:26:40 2015
+#Created on Mar  9 14:58:25 2014
+#Last update Jul 20 16:26:40 2015
+#@author: Pedro Leal
 
-@author: Pedro Leal
-"""
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                       Import necessary modules
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -14,7 +12,6 @@ import numpy as np
 import math
 import shutil # Modules necessary for saving multiple plots
 
-from aero_tools import LLT_calculator
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                       	Core Functions
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -23,56 +20,59 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
     """ Call xfoil through Python.
 
     The input variables are:
-        - airfoil: if NACA is false, airfoil is the name of the plain
-          filewhere the airfoil geometry is stored (variable airfoil).
-          If NACA is True, airfoil is the naca series of the airfoil
-          (i.e.: naca2244). By default NACA is False.
+    
+    :param airfoil: if NACA is false, airfoil is the name of the plain
+           filewhere the airfoil geometry is stored (variable airfoil).
+           If NACA is True, airfoil is the naca series of the airfoil
+           (i.e.: naca2244). By default NACA is False.
 
-        - alfas: list/array/float/int of angles of attack.
+    :param alfas: list/array/float/int of angles of attack.
 
-        - output: defines the kind of output desired from xfoil. There
-          are four posssible choices:
-              - Cp: generates files with Pressure coefficients for
+    :param output: defines the kind of output desired from xfoil.  There
+           are four posssible choices (by default, Cp is chosen):
+           
+          - Cp: generates files with Pressure coefficients for
                 desired alfas.
-              - Dump: generates file with Velocity along surface, Delta
-                star,theta and Cf vs s,x,y for several alfas.
-              - Polar: generates file with CL, CD, CM, CDp, Top_Xtr,
-                Bot_Xtr.
-		      - Alfa_L_0: generates a file with the value of the angle
-			    of attack that lift is equal to zero.
-              - Coordinates: returns the coordinates of a NACA airfoil.
+          - Dump: generates file with Velocity along surface, Delta
+                  star,theta and Cf vs s,x,y for several alfas.
+          - Polar: generates file with CL, CD, CM, CDp, Top_Xtr,
+                   Bot_Xtr.
+          - Alfa_L_0: generates a file with the value of the angle
+                      of attack that lift is equal to zero.
+          - Coordinates: returns the coordinates of a NACA airfoil.
 
-          By default, Cp is chosen.
-
-        - Reynolds: Reynolds number in case the simulation is for a
+    :param Reynolds: Reynolds number in case the simulation is for a
           viscous flow. In case not informed, the code will assume
           inviscid.
 
-        - Mach: Mach number in case the simulation has to take in
+    :param Mach: Mach number in case the simulation has to take in
           account compressibility effects through the Prandtl-Glauert
           correlation. If not informed, the code will not use the
           correction. For logical reasons, if Mach is informed a
           Reynolds number different from zero must also be informed.
 
-        - plots: the code is able to save in a .ps file all the plots
+    :param  plots: the code is able to save in a .ps file all the plots
           of Cp vs.alfa. By default, this option is deactivated.
 
-        - NACA: Boolean variable that defines if the code imports an
+    :param NACA: Boolean variable that defines if the code imports an
           airfoil from a file or generates a NACA airfoil.
 
-        - GDES: XFOIL function that improves the airfoil shape in case
+    :param GDES: XFOIL function that improves the airfoil shape in case
           the selected points do not provide a good shape. The CADD
           function is also used. For more information about these
           functions, use the XFOIL manual.
 
-        - iteration: changes how many times XFOIL will try to make the
+    :param iteration: changes how many times XFOIL will try to make the
           results converge. Speciallt important for viscous flows
 
+    :rtype: dictionary with outputs relevant to the specific output type
+    
     As a side note, it is much more eficient to run a single run with
     multiple angles of attack rather than multiple runs, each with a
     single angle of attack.
 
     Created on Sun Mar  9 14:58:25 2014
+    
     Last update Fr Jul 13 15:38:40 2015
 
     @author: Pedro Leal (Based on Hakan Tiftikci's code)
@@ -83,6 +83,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
     def issueCmd(cmd, echo=True):
         """Submit a command through PIPE to the command line, therefore
         leading the commands to xfoil.
+        
         @author: Hakan Tiftikci
         """
 
@@ -100,6 +101,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
         
         Possible to output other results such as theta, delta star 
         through the choice of the ouput, but not implemented here.
+        
         @author: Pedro Leal (Based on Hakan Tiftikci's code)
         """
         
@@ -284,6 +286,9 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
 def create_x(c):
     """ Create set of points along the chord befitting for Xfoil. The x
     output is conviniently ordered from TE to LE. 
+
+    :param c: float value for the chord.
+    :rtype: x: numpy.array of values of x
     
     Because Xfoil it is not efficient or sometimes possible to create a
     uniform distribution of points because the front part of the 
@@ -293,22 +298,27 @@ def create_x(c):
     overcome this obstacle. This was done by dividing the airfoil in 
     to 3 parts.
     
-        - tip: correpondent to 0 to .3% of the chord length, it is the
-          most densily populated part of the airfoil to compensate the
-          wide variation of slopes
+    - tip: correpondent to 0 to .3% of the chord length, it is the
+      most densily populated part of the airfoil to compensate the
+      wide variation of slopes
+           
+    - middle: correpondent to .3% to 30% of the chord length (
+      Shortly above a quarter of the chord length). The second most
+      densily populated and the segment with the most amount of 
+      points. Represents the round section of the airfoil except 
+      for the tip. Such an amount of points is necessary because it
+      is where most of the lift is generated.
         
-        - middle: correpondent to .3% to 30% of the chord length (
-          Shortly above a quarter of the chord length). The second most
-          densily populated and the segment with the most amount of 
-          points. Represents the round section of the airfoil except 
-          for the tip. Such an amount of points is necessary because it
-          is where most of the lift is generated.
-        
-        - endbody: correspondent to 30% to 100% of the chord length. 
-          The less densily populated section. Such unrefined mesh is
-          possible because of the simplistic geometry of endbody's
-          airfoil, just straight lines.
-        
+    - endbody: correspondent to 30% to 100% of the chord length. 
+      The less densily populated section. Such unrefined mesh is
+      possible because of the simplistic geometry of endbody's
+      airfoil, just straight lines.
+
+    >>> print create_x(1.0)
+        array([  1.00000000e+00,   9.82051282e-01,   9.64102564e-01,
+        ...
+        6.66666667e-04,   3.33333333e-04,   0.00000000e+00])
+    
     Created on Thu Feb 27 2014
     @author: Pedro Leal
     """
@@ -613,33 +623,36 @@ def alfa_for_file(alfa):
 def file_name(airfoil, alfas='none', output='Cp'):
     """Create stnadard name for the files generated by XFOIL.
     
-    The input variables are:
-        - airfoil: the name of the plain file where the airfoil 
-          geometry is stored (variable airfoil).
+    :param airfoil: the name of the plain file where the airfoil 
+           geometry is stored (variable airfoil).
           
-        - alfas: list/array/float/int of a single angle of attack for
+    :param alfas: list/array/float/int of a single angle of attack for
           Cp and Dump, but the whole list for a Polar. Only the initial
           and the final values are used
         
-        - output: defines the kind of output desired from xfoil. There
-          are three posssible choices:
-              - Cp: generates files with Pressure coefficients for 
-                desired alfas
-              - Dump: generates file with Velocity along surface, Delta
-                star and theta and Cf vs s,x,y for several alfas
-              - Polar: generates file with CL, CD, CM, CDp, Top_Xtr,
-                Bot_Xtr
-			  - Alfa_L_0: calculate the angle of attack that lift is
-                zero
-                
-    The output has the following format (by default, Cp is chosen):
+    :param output: defines the kind of output desired from xfoil. There
+           are three posssible choices:
+           - Cp: generates files with Pressure coefficients for 
+                 desired alfas
+           - Dump: generates file with Velocity along surface, Delta
+                   star and theta and Cf vs s,x,y for several alfas
+           - Polar: generates file with CL, CD, CM, CDp, Top_Xtr,
+                    Bot_Xtr
+		 - Alpha_L_0: calculate the angle of attack that lift is
+                       zero
+    :returns: The output has the following format (by default, Cp is chosen):
+    
         - for Cp and Dump: output_airfoil_alfa
-           i.e. Cp_naca2244_0200 (alfa =2.00 degress)
+           >>> file_name('naca2244', alfas=2.0, output='Cp')
+           >>> Cp_naca2244_0200
+
         - for Polar: Polar_airfoil_alfa_i_alfa_f
-           i.e. Polar_naca2244_n0200_0200 (alfa_i=-2.00 degrees and 
-                                           alfa_f=2.00)
-		- for Alpha_L_0: Alpha_L_0_airfoil
-		   i.e. Alpha_L_0_naca2244
+           >>> file_name('naca2244', alfas=[-2.0, 2.0], output='Polar')
+           >>> Polar_naca2244_n0200_0200
+
+        - for Alpha_L_0: Alpha_L_0_airfoil
+           >>> file_name('naca2244', output='Alpha_L_0')
+           >>> Alpha_L_0_naca2244
 
     Created on Thu Mar 16 2014
     @author: Pedro Leal 
@@ -668,86 +681,13 @@ def file_name(airfoil, alfas='none', output='Cp'):
 
             filename = '%s_%s_%s_%s' % (output, airfoil, alfa_i, alfa_f)
     return filename
-
-def air_properties(height, unit='feet'):
-    """ Function to calculate air properties for a given height (m or ft).
-    
-    Sources: 
-      - http://en.wikipedia.org/wiki/Density_of_air#Altitude
-      - http://aerojet.engr.ucdavis.edu/fluenthelp/html/ug/node337.htm
-      
-    Created on Thu May 15 14:59:43 2014
-    @author: Pedro Leal
-    """
-    # height is in m
-    if unit == 'feet':
-        height = 0.3048*height
-    elif unit != 'meter':
-        raise Exception('air_properties can onlu understand feet and meters')
-        
-    #==================================================================
-    # Constants
-    #==================================================================
-    # Sea level standard atmospheric pressure
-    P0 = 101325. # Pa
-    # Sealevel standard atmospheric temperature
-    T0 = 288.15 # K
-    # Earth-surface gravitational acceleration
-    g = 8.80655 # m/s2
-    # Temperature lapse rate, 0.0065 K/m
-    L = 0.0065 # K/m
-    # Ideal (Universal) gas constant
-    R = 8.31447 # J/(mol K)
-    # Molar mass of dry air
-    M = 0.0289644 #kg/mol
-    # Specific R for air
-    R_air = R/M
-    # Sutherland's law coefficients
-    C1 = 1.458e-6 #kg/m.s.sqrt(K)
-    C2 = 110.4 #K
-    
-    #==================================================================
-    # Temperature
-    #==================================================================
-    #Temperature at altitude h meters above sea level is approximated 
-    # by the following formula (only valid inside the troposphere):
-    T = T0 - L*height
-    
-    #==================================================================
-    # Pressure
-    #==================================================================
-    P = P0 * (1. - L*height/T0)**(g*M/(R*L))
-    
-    #==================================================================
-    # Density 
-    #==================================================================
-    density = P*M / (R*T)
-    
-    #==================================================================
-    # Dynamic Viscosity (Sutherland equation with two constants)   
-    #==================================================================
-    dyn_viscosity = (C1 * T**(3./2)) / (T+C2)
-    
-    return {'Density': density, 'Dynamic Viscosity': dyn_viscosity,
-            'Atmospheric Temperature': T, 'R air': R_air, 
-            'Atmospheric Pressure': P}
-
-def Reynolds(height, V, c):
-    """Simple function to calculate Reynolds for a given height.
-
-    @author: Pedro Leal
-    Created in Jul 17 2015    
-    """
-    Air_Data = air_properties(height, unit='feet')
-    rho = Air_Data['Density']
-    L = c
-    nu = Air_Data['Dynamic Viscosity']
-    return rho*V*L/nu        
+  
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                       	Utility functions
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10, NACA=True):
+    """Calculate the coefficients of an airfoil"""
     filename = file_name(airfoil, alpha, output='Polar')
     # If file already exists, there is no need to recalculate it.
     if not os.path.isfile(filename):
@@ -762,129 +702,15 @@ def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10, NACA=True):
 
 	
 def find_alpha_L_0(airfoil, Reynolds=0, iteration=10, NACA=True):
+    """
+    Calculate the angle of attack where the lift coefficient is equal
+    to zero."""
     filename = file_name(airfoil, output='Alfa_L_0')
     # If file already exists, there no need to recalculate it.
     if not os.path.isfile(filename):
         call(airfoil, output='Alfa_L_0', NACA=NACA)
     alpha = output_reader(filename, output='Alfa_L_0')['alpha'][0]
     return alpha
-    
-def force_shell(Data, chord, half_span, height, Velocity, thickness=0,
-                txt=False):
-    # Height is in feet
-    # If the Shell is an extrude, it needs to take in consideration
-    # that there is a skin thickness outwards of the outer mold.
-    # If the Shell is na planar, there is no need for such a 
-    # consideration
-    Air_properties = air_properties(height, unit='feet')
-    atm_pressure = Air_properties['Atmospheric Pressure']
-    air_density = Air_properties['Density']
-    if thickness == 0:
-        Data['Force'] = map(lambda Cp:(Cp*0.5*air_density * Velocity**2 +
-                            atm_pressure) * chord*half_span, Data['Cp'])
-        Data['x'] = map(lambda x: (chord)*x, Data['x'])
-        Data['y'] = map(lambda x: (chord)*x, Data['y'])
-    else:
-        Data['Force'] = map(lambda Cp:(Cp*0.5*air_density * Velocity**2 +
-                            atm_pressure) * chord*half_span, Data['Cp'])
-        Data['x'] = map(lambda x: (chord - 2.*thickness) * x + thickness, 
-                        Data['x'])
-        Data['y'] = map(lambda x: (chord - 2.*thickness) * x, Data['y'])
-    Data['z'] = [0] * len(Data['x'])
-    
-    PressureDistribution = zip(Data['x'], Data['y'], Data['z'], Data['Force'])
-#    elliptical_distribution=np.sqrt(1.-(Data['z']/half_span)**2) 
-#    if txt==True:
-#        DataFile = open('Force_shell.txt','w')
-#        DataFile.close()
-#        for j in range(N):
-#            for i in range(len(Data['x'])):
-#                    DataFile = open('Force_shell.txt','a')
-#                    DataFile.write('%f\t%f\t%f\t%f\n' % (
-#                        Data['x'][i],
-#                        Data['y'][i],
-#                        Data['z'][j],
-#                        elliptical_distribution[j]*Data['Force'][i]))
-#                    DataFile.close()
-#        return 0
-#    else:
-#        PressureDistribution=()
-#        for j in range(N):
-#            for i in range(len(Data['x'])):
-#                    PressureDistribution=PressureDistribution+((Data['x'][i],
-#                        Data['y'][i],Data['z'][j],
-#                        elliptical_distribution[j]*Data['Pressure'][i]),)
-    return PressureDistribution
-
-def pressure_shell(Data, chord, thickness, half_span, air_density, Velocity, 
-                   N, txt=False, llt_distribution=False, 
-                   distribution='Elliptical'): 
-                       
-    Data['Pressure'] = map(lambda Cp: Cp*0.5*air_density* Velocity**2 *chord,
-                            Data['Cp'])
-    Data['x'] = map(lambda x: (chord - 2.*thickness)*x + thickness, Data['x'])
-    Data['y'] = map(lambda x: (chord - 2.*thickness)*x, Data['y'])
-    DataFile = open('Pressure_shell.txt', 'w')
-    DataFile.close()
-    if distribution == 'Elliptical':
-        Data['z'] = np.linspace(0, half_span, N)
-        distribution = np.sqrt(1. - (Data['z']/half_span)**2) 
-    elif distribution == 'LLT':
-        Data['z'] = np.linspace(0, half_span, len(distribution))
-        distribution = llt_distribution
-    if txt == True:
-        for j in range(N):
-            for i in range(len(Data['x'])):
-                DataFile = open('Pressure_shell.txt','a')
-                DataFile.write('%f\t%f\t%f\t%f\n' % (
-                    Data['x'][i],
-                    Data['y'][i],
-                    Data['z'][j],
-                    distribution[j]*Data['Pressure'][i]))
-                DataFile.close()
-        return 0
-    else:
-        PressureDistribution = ()
-        for j in range(N):
-            for i in range(len(Data['x'])):
-                    PressureDistribution = PressureDistribution + (
-                                             (Data['x'][i], Data['y'][i],
-                                              Data['z'][j], distribution[j]*
-                                              Data['Pressure'][i]), )
-        return PressureDistribution
-        
-def pressure_shell_2D(Data, chord, thickness, half_span, height, Velocity, N,
-                      txt=False):
-    Air_properties = air_properties(height, unit='feet')
-    air_density = Air_properties['Density']
-    
-    Data['Pressure'] = map(lambda Cp: Cp*0.5*air_density* Velocity**2 *chord,
-                            Data['Cp'])
-    Data['x'] = map(lambda x: (chord - 2.*thickness)*x + thickness, Data['x'])
-    Data['y'] = map(lambda x: (chord - 2.*thickness)*x, Data['y'])
-    DataFile = open('Pressure_shell.txt', 'w')
-    DataFile.close()
-    Data['z'] = np.linspace(0, half_span, N)
-    if txt == True:
-        for j in range(N):
-            for i in range(len(Data['x'])):
-                    DataFile = open('Pressure_shell.txt', 'a')
-                    DataFile.write('%f\t%f\t%f\t%f\n' % (
-                        Data['x'][i],
-                        Data['y'][i],
-                        Data['z'][j],
-                        Data['Pressure'][i]))
-                    DataFile.close()
-        return 0
-    else:
-        PressureDistribution = ()
-        for j in range(N):
-            for i in range(len(Data['x'])):
-                    PressureDistribution = PressureDistribution + (
-                                            (Data['x'][i], Data['y'][i],
-                                             Data['z'][j],
-                                             Data['Pressure'][i]), )
-        return PressureDistribution
 
 def M_crit(airfoil, pho, speed_sound, lift, c):
     """Calculate the Critical Mach. This function was not validated.

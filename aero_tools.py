@@ -177,6 +177,201 @@ def LLT_calculator(alpha_L_0_root, c_D_xfoil, N=10, b=10., taper=1.,
     C_D = total_drag_calculator(coefficients, c_D_xfoil, b, x)
     coefficients['C_D'] = C_D
     return coefficients
+ 
+#==============================================================================
+# Functions Intended for use with FInite ELement Methods
+#==============================================================================
+def force_shell(Data, chord, half_span, height, Velocity, thickness=0,
+                txt=False):
+    # Height is in feet
+    # If the Shell is an extrude, it needs to take in consideration
+    # that there is a skin thickness outwards of the outer mold.
+    # If the Shell is na planar, there is no need for such a 
+    # consideration
+    Air_properties = air_properties(height, unit='feet')
+    atm_pressure = Air_properties['Atmospheric Pressure']
+    air_density = Air_properties['Density']
+    if thickness == 0:
+        Data['Force'] = map(lambda Cp:(Cp*0.5*air_density * Velocity**2 +
+                            atm_pressure) * chord*half_span, Data['Cp'])
+        Data['x'] = map(lambda x: (chord)*x, Data['x'])
+        Data['y'] = map(lambda x: (chord)*x, Data['y'])
+    else:
+        Data['Force'] = map(lambda Cp:(Cp*0.5*air_density * Velocity**2 +
+                            atm_pressure) * chord*half_span, Data['Cp'])
+        Data['x'] = map(lambda x: (chord - 2.*thickness) * x + thickness, 
+                        Data['x'])
+        Data['y'] = map(lambda x: (chord - 2.*thickness) * x, Data['y'])
+    Data['z'] = [0] * len(Data['x'])
     
+    PressureDistribution = zip(Data['x'], Data['y'], Data['z'], Data['Force'])
+#    elliptical_distribution=np.sqrt(1.-(Data['z']/half_span)**2) 
+#    if txt==True:
+#        DataFile = open('Force_shell.txt','w')
+#        DataFile.close()
+#        for j in range(N):
+#            for i in range(len(Data['x'])):
+#                    DataFile = open('Force_shell.txt','a')
+#                    DataFile.write('%f\t%f\t%f\t%f\n' % (
+#                        Data['x'][i],
+#                        Data['y'][i],
+#                        Data['z'][j],
+#                        elliptical_distribution[j]*Data['Force'][i]))
+#                    DataFile.close()
+#        return 0
+#    else:
+#        PressureDistribution=()
+#        for j in range(N):
+#            for i in range(len(Data['x'])):
+#                    PressureDistribution=PressureDistribution+((Data['x'][i],
+#                        Data['y'][i],Data['z'][j],
+#                        elliptical_distribution[j]*Data['Pressure'][i]),)
+    return PressureDistribution
+
+def pressure_shell(Data, chord, thickness, half_span, air_density, Velocity, 
+                   N, txt=False, llt_distribution=False, 
+                   distribution='Elliptical'): 
+                       
+    Data['Pressure'] = map(lambda Cp: Cp*0.5*air_density* Velocity**2 *chord,
+                            Data['Cp'])
+    Data['x'] = map(lambda x: (chord - 2.*thickness)*x + thickness, Data['x'])
+    Data['y'] = map(lambda x: (chord - 2.*thickness)*x, Data['y'])
+    DataFile = open('Pressure_shell.txt', 'w')
+    DataFile.close()
+    if distribution == 'Elliptical':
+        Data['z'] = np.linspace(0, half_span, N)
+        distribution = np.sqrt(1. - (Data['z']/half_span)**2) 
+    elif distribution == 'LLT':
+        Data['z'] = np.linspace(0, half_span, len(distribution))
+        distribution = llt_distribution
+    if txt == True:
+        for j in range(N):
+            for i in range(len(Data['x'])):
+                DataFile = open('Pressure_shell.txt','a')
+                DataFile.write('%f\t%f\t%f\t%f\n' % (
+                    Data['x'][i],
+                    Data['y'][i],
+                    Data['z'][j],
+                    distribution[j]*Data['Pressure'][i]))
+                DataFile.close()
+        return 0
+    else:
+        PressureDistribution = ()
+        for j in range(N):
+            for i in range(len(Data['x'])):
+                    PressureDistribution = PressureDistribution + (
+                                             (Data['x'][i], Data['y'][i],
+                                              Data['z'][j], distribution[j]*
+                                              Data['Pressure'][i]), )
+        return PressureDistribution
+        
+def pressure_shell_2D(Data, chord, thickness, half_span, height, Velocity, N,
+                      txt=False):
+    """Calculate pressure field for a 2D Shell."""
+    Air_properties = air_properties(height, unit='feet')
+    air_density = Air_properties['Density']
+    
+    Data['Pressure'] = map(lambda Cp: Cp*0.5*air_density* Velocity**2 *chord,
+                            Data['Cp'])
+    Data['x'] = map(lambda x: (chord - 2.*thickness)*x + thickness, Data['x'])
+    Data['y'] = map(lambda x: (chord - 2.*thickness)*x, Data['y'])
+    DataFile = open('Pressure_shell.txt', 'w')
+    DataFile.close()
+    Data['z'] = np.linspace(0, half_span, N)
+    if txt == True:
+        for j in range(N):
+            for i in range(len(Data['x'])):
+                    DataFile = open('Pressure_shell.txt', 'a')
+                    DataFile.write('%f\t%f\t%f\t%f\n' % (
+                        Data['x'][i],
+                        Data['y'][i],
+                        Data['z'][j],
+                        Data['Pressure'][i]))
+                    DataFile.close()
+        return 0
+    else:
+        PressureDistribution = ()
+        for j in range(N):
+            for i in range(len(Data['x'])):
+                    PressureDistribution = PressureDistribution + (
+                                            (Data['x'][i], Data['y'][i],
+                                             Data['z'][j],
+                                             Data['Pressure'][i]), )
+        return PressureDistribution
+
+def air_properties(height, unit='feet'):
+    """ Function to calculate air properties for a given height (m or ft).
+    
+    Sources: 
+      - http://en.wikipedia.org/wiki/Density_of_air#Altitude
+      - http://aerojet.engr.ucdavis.edu/fluenthelp/html/ug/node337.htm
+      
+    Created on Thu May 15 14:59:43 2014
+    @author: Pedro Leal
+    """
+    # height is in m
+    if unit == 'feet':
+        height = 0.3048*height
+    elif unit != 'meter':
+        raise Exception('air_properties can onlu understand feet and meters')
+        
+    #==================================================================
+    # Constants
+    #==================================================================
+    # Sea level standard atmospheric pressure
+    P0 = 101325. # Pa
+    # Sealevel standard atmospheric temperature
+    T0 = 288.15 # K
+    # Earth-surface gravitational acceleration
+    g = 8.80655 # m/s2
+    # Temperature lapse rate, 0.0065 K/m
+    L = 0.0065 # K/m
+    # Ideal (Universal) gas constant
+    R = 8.31447 # J/(mol K)
+    # Molar mass of dry air
+    M = 0.0289644 #kg/mol
+    # Specific R for air
+    R_air = R/M
+    # Sutherland's law coefficients
+    C1 = 1.458e-6 #kg/m.s.sqrt(K)
+    C2 = 110.4 #K
+    
+    #==================================================================
+    # Temperature
+    #==================================================================
+    #Temperature at altitude h meters above sea level is approximated 
+    # by the following formula (only valid inside the troposphere):
+    T = T0 - L*height
+    
+    #==================================================================
+    # Pressure
+    #==================================================================
+    P = P0 * (1. - L*height/T0)**(g*M/(R*L))
+    
+    #==================================================================
+    # Density 
+    #==================================================================
+    density = P*M / (R*T)
+    
+    #==================================================================
+    # Dynamic Viscosity (Sutherland equation with two constants)   
+    #==================================================================
+    dyn_viscosity = (C1 * T**(3./2)) / (T+C2)
+    
+    return {'Density': density, 'Dynamic Viscosity': dyn_viscosity,
+            'Atmospheric Temperature': T, 'R air': R_air, 
+            'Atmospheric Pressure': P}
+
+def Reynolds(height, V, c):
+    """Simple function to calculate Reynolds for a given height.
+
+    @author: Pedro Leal
+    Created in Jul 17 2015    
+    """
+    Air_Data = air_properties(height, unit='feet')
+    rho = Air_Data['Density']
+    L = c
+    nu = Air_Data['Dynamic Viscosity']
+    return rho*V*L/nu      
 if __name__ == '__main__':
     print LLT_calculator(alpha_L_0_root=1., c_D_xfoil=0.01)

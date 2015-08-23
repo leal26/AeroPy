@@ -1,0 +1,432 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>1. Documentation for Xfoil Functions &mdash; pyXFOIL 0.0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="pyXFOIL 0.0.1 documentation" href="index.html" />
+    <link rel="prev" title="Welcome to pyXFOIL’s documentation!" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="documentation-for-xfoil-functions">
+<h1>1. Documentation for Xfoil Functions<a class="headerlink" href="#documentation-for-xfoil-functions" title="Permalink to this headline">¶</a></h1>
+<p>The functions herein defined are purposely made for use with Xfoil.</p>
+<div class="section" id="core-function">
+<h2>1.1. Core Function<a class="headerlink" href="#core-function" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="xfoil_tools.call">
+<tt class="descclassname">xfoil_tools.</tt><tt class="descname">call</tt><big>(</big><em>airfoil</em>, <em>alfas='none'</em>, <em>output='Cp'</em>, <em>Reynolds=0</em>, <em>Mach=0</em>, <em>plots=False</em>, <em>NACA=False</em>, <em>GDES=False</em>, <em>iteration=10</em><big>)</big><a class="reference internal" href="_modules/xfoil_tools.html#call"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_tools.call" title="Permalink to this definition">¶</a></dt>
+<dd><p>Call xfoil through Python.</p>
+<p>The input variables are:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>airfoil</strong> &#8211; if NACA is false, airfoil is the name of the plain
+filewhere the airfoil geometry is stored (variable airfoil).
+If NACA is True, airfoil is the naca series of the airfoil
+(i.e.: naca2244). By default NACA is False.</li>
+<li><strong>alfas</strong> &#8211; list/array/float/int of angles of attack.</li>
+<li><strong>output</strong> &#8211; <dl class="docutils">
+<dt>defines the kind of output desired from xfoil.  There</dt>
+<dd>are four posssible choices (by default, Cp is chosen):</dd>
+</dl>
+<ul>
+<li><dl class="first docutils">
+<dt>Cp: generates files with Pressure coefficients for</dt>
+<dd>desired alfas.</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Dump: generates file with Velocity along surface, Delta</dt>
+<dd>star,theta and Cf vs s,x,y for several alfas.</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Polar: generates file with CL, CD, CM, CDp, Top_Xtr,</dt>
+<dd>Bot_Xtr.</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Alfa_L_0: generates a file with the value of the angle</dt>
+<dd>of attack that lift is equal to zero.</dd>
+</dl>
+</li>
+<li>Coordinates: returns the coordinates of a NACA airfoil.</li>
+</ul>
+</li>
+<li><strong>Reynolds</strong> &#8211; Reynolds number in case the simulation is for a
+viscous flow. In case not informed, the code will assume
+inviscid.</li>
+<li><strong>Mach</strong> &#8211; Mach number in case the simulation has to take in
+account compressibility effects through the Prandtl-Glauert
+correlation. If not informed, the code will not use the
+correction. For logical reasons, if Mach is informed a
+Reynolds number different from zero must also be informed.</li>
+<li><strong>plots</strong> &#8211; the code is able to save in a .ps file all the plots
+of Cp vs.alfa. By default, this option is deactivated.</li>
+<li><strong>NACA</strong> &#8211; Boolean variable that defines if the code imports an
+airfoil from a file or generates a NACA airfoil.</li>
+<li><strong>GDES</strong> &#8211; XFOIL function that improves the airfoil shape in case
+the selected points do not provide a good shape. The CADD
+function is also used. For more information about these
+functions, use the XFOIL manual.</li>
+<li><strong>iteration</strong> &#8211; changes how many times XFOIL will try to make the
+results converge. Speciallt important for viscous flows</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dictionary with outputs relevant to the specific output type</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>As a side note, it is much more eficient to run a single run with
+multiple angles of attack rather than multiple runs, each with a
+single angle of attack.</p>
+<p>Created on Sun Mar  9 14:58:25 2014</p>
+<p>Last update Fr Jul 13 15:38:40 2015</p>
+<p>&#64;author: Pedro Leal (Based on Hakan Tiftikci&#8217;s code)</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-xfoil_tools">
+<span id="auxiliary-functions"></span><h2>1.2. Auxiliary Functions<a class="headerlink" href="#module-xfoil_tools" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="xfoil_tools.alfa_for_file">
+<tt class="descclassname">xfoil_tools.</tt><tt class="descname">alfa_for_file</tt><big>(</big><em>alfa</em><big>)</big><a class="reference internal" href="_modules/xfoil_tools.html#alfa_for_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_tools.alfa_for_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate standard name for angles. This is mainly used by the
+file_name function.</p>
+<p>&#64;author: Pedro Leal</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="xfoil_tools.create_input">
+<tt class="descclassname">xfoil_tools.</tt><tt class="descname">create_input</tt><big>(</big><em>x</em>, <em>y_u</em>, <em>y_l</em>, <em>filename</em><big>)</big><a class="reference internal" href="_modules/xfoil_tools.html#create_input"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_tools.create_input" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a plain file that XFOIL can read.</p>
+<p>XFOIL only reads file from the TE to the LE from the upper part
+first and then from the LE to the TE through the pressure surface.</p>
+<dl class="docutils">
+<dt>Inputs:</dt>
+<dd><ul class="first last simple">
+<li>x: list of coordinates along the chord</li>
+<li>y_u: list of coordinates normal to the chord for the upper 
+surface</li>
+<li>y_l: list of coordinates normal to the chord for the lower
+surface</li>
+<li>file_name: label used for the file created</li>
+</ul>
+</dd>
+</dl>
+<p>Created on Thu Feb 27 2014</p>
+<p>&#64;author: Pedro Leal</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="xfoil_tools.create_x">
+<tt class="descclassname">xfoil_tools.</tt><tt class="descname">create_x</tt><big>(</big><em>c</em><big>)</big><a class="reference internal" href="_modules/xfoil_tools.html#create_x"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_tools.create_x" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create set of points along the chord befitting for Xfoil. The x
+output is conviniently ordered from TE to LE.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>c</strong> &#8211; float value for the chord.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">x: numpy.array of values of x</td>
+</tr>
+</tbody>
+</table>
+<p>Because Xfoil it is not efficient or sometimes possible to create a
+uniform distribution of points because the front part of the 
+airfoil requires a big amount of points to create a smooth surface 
+representing the round leading edge. However there is a maximum of 
+points that Xfoil will accept, therefore there is a need to 
+overcome this obstacle. This was done by dividing the airfoil in 
+to 3 parts.</p>
+<ul class="simple">
+<li>tip: correpondent to 0 to .3% of the chord length, it is the
+most densily populated part of the airfoil to compensate the
+wide variation of slopes</li>
+<li>middle: correpondent to .3% to 30% of the chord length (
+Shortly above a quarter of the chord length). The second most
+densily populated and the segment with the most amount of 
+points. Represents the round section of the airfoil except 
+for the tip. Such an amount of points is necessary because it
+is where most of the lift is generated.</li>
+<li>endbody: correspondent to 30% to 100% of the chord length. 
+The less densily populated section. Such unrefined mesh is
+possible because of the simplistic geometry of endbody&#8217;s
+airfoil, just straight lines.</li>
+</ul>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">create_x</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="go">    array([  1.00000000e+00,   9.82051282e-01,   9.64102564e-01,</span>
+<span class="go">    ...</span>
+<span class="go">    6.66666667e-04,   3.33333333e-04,   0.00000000e+00])</span>
+</pre></div>
+</div>
+<p>Created on Thu Feb 27 2014
+&#64;author: Pedro Leal</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="xfoil_tools.file_name">
+<tt class="descclassname">xfoil_tools.</tt><tt class="descname">file_name</tt><big>(</big><em>airfoil</em>, <em>alfas='none'</em>, <em>output='Cp'</em><big>)</big><a class="reference internal" href="_modules/xfoil_tools.html#file_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_tools.file_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create stnadard name for the files generated by XFOIL.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>airfoil</strong> &#8211; the name of the plain file where the airfoil 
+geometry is stored (variable airfoil).</li>
+<li><strong>alfas</strong> &#8211; list/array/float/int of a single angle of attack for
+Cp and Dump, but the whole list for a Polar. Only the initial
+and the final values are used</li>
+<li><strong>output</strong> &#8211; <p>defines the kind of output desired from xfoil. There
+are three posssible choices:
+- Cp: generates files with Pressure coefficients for</p>
+<blockquote>
+<div>desired alfas</div></blockquote>
+<ul>
+<li><dl class="first docutils">
+<dt>Dump: generates file with Velocity along surface, Delta</dt>
+<dd>star and theta and Cf vs s,x,y for several alfas</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Polar: generates file with CL, CD, CM, CDp, Top_Xtr,</dt>
+<dd><blockquote class="first">
+<div>Bot_Xtr</div></blockquote>
+<ul class="last">
+<li><dl class="first docutils">
+<dt>Alpha_L_0: calculate the angle of attack that lift is</dt>
+<dd>zero</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><p>The output has the following format (by default, Cp is chosen):</p>
+<ul>
+<li><dl class="first docutils">
+<dt>for Cp and Dump: output_airfoil_alfa</dt>
+<dd><div class="first last highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">file_name</span><span class="p">(</span><span class="s">&#39;naca2244&#39;</span><span class="p">,</span> <span class="n">alfas</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Cp&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Cp_naca2244_0200</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>for Polar: Polar_airfoil_alfa_i_alfa_f</dt>
+<dd><div class="first last highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">file_name</span><span class="p">(</span><span class="s">&#39;naca2244&#39;</span><span class="p">,</span> <span class="n">alfas</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">],</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Polar&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Polar_naca2244_n0200_0200</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>for Alpha_L_0: Alpha_L_0_airfoil</dt>
+<dd><div class="first last highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">file_name</span><span class="p">(</span><span class="s">&#39;naca2244&#39;</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Alpha_L_0&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Alpha_L_0_naca2244</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Created on Thu Mar 16 2014
+&#64;author: Pedro Leal</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="xfoil_tools.output_reader">
+<tt class="descclassname">xfoil_tools.</tt><tt class="descname">output_reader</tt><big>(</big><em>filename</em>, <em>separator='\t'</em>, <em>output=None</em>, <em>rows_to_skip=0</em>, <em>header=0</em><big>)</big><a class="reference internal" href="_modules/xfoil_tools.html#output_reader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_tools.output_reader" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Function that opens files of any kind. Able to skip rows and</dt>
+<dd><p class="first">read headers if necessary.</p>
+<dl class="last docutils">
+<dt>Inputs:</dt>
+<dd><ul class="first last simple">
+<li>filename: just the name of the file to read.</li>
+<li>separator: Main kind of separator in file. The code will
+replace any variants of this separator for processing. Extra
+components such as</li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>kg m are all eliminated.</p>
+<blockquote>
+<div><blockquote>
+<div><ul class="simple">
+<li>output: defines what the kind of file we are opening to
+ensure we can skip the right amount of lines. By default it 
+is None so it can open any other file.</li>
+<li>rows_to_skip: amount of rows to initialy skip in the file. If
+the output is different then None, for the different types of
+files it is defined as:
+- Polar files = 10
+- Dump files = 0
+- Cp files = 2</li>
+<li>header: The header list will act as the keys of the output
+dictionary. For the function to work, a header IS necessary.
+If not specified by the user, the function will assume that
+the header can be found in the file that it is opening.</li>
+</ul>
+</div></blockquote>
+<dl class="docutils">
+<dt>Output:</dt>
+<dd><ul class="first last simple">
+<li>Dictionary with all the header values as keys</li>
+</ul>
+</dd>
+</dl>
+<p>Created on Thu Mar 14 2014
+&#64;author: Pedro Leal</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="xfoil_tools.prepare_xfoil">
+<tt class="descclassname">xfoil_tools.</tt><tt class="descname">prepare_xfoil</tt><big>(</big><em>Coordinates_Upper</em>, <em>Coordinates_Lower</em>, <em>chord</em>, <em>reposition=False</em>, <em>FSI=False</em><big>)</big><a class="reference internal" href="_modules/xfoil_tools.html#prepare_xfoil"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_tools.prepare_xfoil" title="Permalink to this definition">¶</a></dt>
+<dd><p>The upper and lower functions will be the points in ordered 
+fashion. Because of the way that XFOIL works the points start at
+the Trailing Edge on the upper surface going trough the Leading 
+Edge and returning to the Trailing Edge form the bottom surface.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="utility-functions">
+<h2>1.3. Utility Functions<a class="headerlink" href="#utility-functions" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="xfoil_tools.find_coefficients">
+<tt class="descclassname">xfoil_tools.</tt><tt class="descname">find_coefficients</tt><big>(</big><em>airfoil</em>, <em>alpha</em>, <em>Reynolds=0</em>, <em>iteration=10</em>, <em>NACA=True</em><big>)</big><a class="reference internal" href="_modules/xfoil_tools.html#find_coefficients"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_tools.find_coefficients" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the coefficients of an airfoil</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="xfoil_tools.find_alpha_L_0">
+<tt class="descclassname">xfoil_tools.</tt><tt class="descname">find_alpha_L_0</tt><big>(</big><em>airfoil</em>, <em>Reynolds=0</em>, <em>iteration=10</em>, <em>NACA=True</em><big>)</big><a class="reference internal" href="_modules/xfoil_tools.html#find_alpha_L_0"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_tools.find_alpha_L_0" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the angle of attack where the lift coefficient is equal
+to zero.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="xfoil_tools.M_crit">
+<tt class="descclassname">xfoil_tools.</tt><tt class="descname">M_crit</tt><big>(</big><em>airfoil</em>, <em>pho</em>, <em>speed_sound</em>, <em>lift</em>, <em>c</em><big>)</big><a class="reference internal" href="_modules/xfoil_tools.html#M_crit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_tools.M_crit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the Critical Mach. This function was not validated.
+Therefore use it with caution and please improve it.</p>
+<p>&#64;author: Pedro Leal</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">1. Documentation for Xfoil Functions</a><ul>
+<li><a class="reference internal" href="#core-function">1.1. Core Function</a></li>
+<li><a class="reference internal" href="#module-xfoil_tools">1.2. Auxiliary Functions</a></li>
+<li><a class="reference internal" href="#utility-functions">1.3. Utility Functions</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to pyXFOIL&#8217;s documentation!</a></li>
+  </ul></li>
+</ul>
+</div>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/xfoil_functions.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Pedro Leal.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.2.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+      |
+      <a href="_sources/xfoil_functions.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

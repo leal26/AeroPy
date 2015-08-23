@@ -1,0 +1,830 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>xfoil_tools &mdash; pyXFOIL 0.0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="pyXFOIL 0.0.1 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for xfoil_tools</h1><div class="highlight"><pre>
+<span class="c">#Created on Mar  9 14:58:25 2014</span>
+<span class="c">#Last update Jul 20 16:26:40 2015</span>
+<span class="c">#@author: Pedro Leal</span>
+
+<span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+<span class="c">#                       Import necessary modules</span>
+<span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+
+<span class="kn">import</span> <span class="nn">subprocess</span> <span class="kn">as</span> <span class="nn">sp</span>
+<span class="kn">import</span> <span class="nn">os</span> <span class="c"># To check for already existing files and delete them</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">shutil</span> <span class="c"># Modules necessary for saving multiple plots</span>
+
+<span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+<span class="c">#                       	Core Functions</span>
+<span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+<div class="viewcode-block" id="call"><a class="viewcode-back" href="../xfoil_functions.html#xfoil_tools.call">[docs]</a><span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alfas</span><span class="o">=</span><span class="s">&#39;none&#39;</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Cp&#39;</span><span class="p">,</span> <span class="n">Reynolds</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">Mach</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">plots</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+         <span class="n">NACA</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">GDES</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">iteration</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Call xfoil through Python.</span>
+
+<span class="sd">    The input variables are:</span>
+<span class="sd">    </span>
+<span class="sd">    :param airfoil: if NACA is false, airfoil is the name of the plain</span>
+<span class="sd">           filewhere the airfoil geometry is stored (variable airfoil).</span>
+<span class="sd">           If NACA is True, airfoil is the naca series of the airfoil</span>
+<span class="sd">           (i.e.: naca2244). By default NACA is False.</span>
+
+<span class="sd">    :param alfas: list/array/float/int of angles of attack.</span>
+
+<span class="sd">    :param output: defines the kind of output desired from xfoil.  There</span>
+<span class="sd">           are four posssible choices (by default, Cp is chosen):</span>
+<span class="sd">           </span>
+<span class="sd">          - Cp: generates files with Pressure coefficients for</span>
+<span class="sd">                desired alfas.</span>
+<span class="sd">          - Dump: generates file with Velocity along surface, Delta</span>
+<span class="sd">                  star,theta and Cf vs s,x,y for several alfas.</span>
+<span class="sd">          - Polar: generates file with CL, CD, CM, CDp, Top_Xtr,</span>
+<span class="sd">                   Bot_Xtr.</span>
+<span class="sd">          - Alfa_L_0: generates a file with the value of the angle</span>
+<span class="sd">                      of attack that lift is equal to zero.</span>
+<span class="sd">          - Coordinates: returns the coordinates of a NACA airfoil.</span>
+
+<span class="sd">    :param Reynolds: Reynolds number in case the simulation is for a</span>
+<span class="sd">          viscous flow. In case not informed, the code will assume</span>
+<span class="sd">          inviscid.</span>
+
+<span class="sd">    :param Mach: Mach number in case the simulation has to take in</span>
+<span class="sd">          account compressibility effects through the Prandtl-Glauert</span>
+<span class="sd">          correlation. If not informed, the code will not use the</span>
+<span class="sd">          correction. For logical reasons, if Mach is informed a</span>
+<span class="sd">          Reynolds number different from zero must also be informed.</span>
+
+<span class="sd">    :param  plots: the code is able to save in a .ps file all the plots</span>
+<span class="sd">          of Cp vs.alfa. By default, this option is deactivated.</span>
+
+<span class="sd">    :param NACA: Boolean variable that defines if the code imports an</span>
+<span class="sd">          airfoil from a file or generates a NACA airfoil.</span>
+
+<span class="sd">    :param GDES: XFOIL function that improves the airfoil shape in case</span>
+<span class="sd">          the selected points do not provide a good shape. The CADD</span>
+<span class="sd">          function is also used. For more information about these</span>
+<span class="sd">          functions, use the XFOIL manual.</span>
+
+<span class="sd">    :param iteration: changes how many times XFOIL will try to make the</span>
+<span class="sd">          results converge. Speciallt important for viscous flows</span>
+
+<span class="sd">    :rtype: dictionary with outputs relevant to the specific output type</span>
+<span class="sd">    </span>
+<span class="sd">    As a side note, it is much more eficient to run a single run with</span>
+<span class="sd">    multiple angles of attack rather than multiple runs, each with a</span>
+<span class="sd">    single angle of attack.</span>
+
+<span class="sd">    Created on Sun Mar  9 14:58:25 2014</span>
+<span class="sd">    </span>
+<span class="sd">    Last update Fr Jul 13 15:38:40 2015</span>
+
+<span class="sd">    @author: Pedro Leal (Based on Hakan Tiftikci&#39;s code)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+    <span class="c">#                               Functions</span>
+    <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+    <span class="k">def</span> <span class="nf">issueCmd</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">echo</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Submit a command through PIPE to the command line, therefore</span>
+<span class="sd">        leading the commands to xfoil.</span>
+<span class="sd">        </span>
+<span class="sd">        @author: Hakan Tiftikci</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">ps</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">cmd</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">echo</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">cmd</span>
+
+    <span class="k">def</span> <span class="nf">submit</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">alfa</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Submit job to xfoil and saves file.</span>
+<span class="sd">        </span>
+<span class="sd">        Standard output file= function_airfoil_alfa.txt, where alfa has</span>
+<span class="sd">        4 digits, where two of them are for decimals. i.e. </span>
+<span class="sd">        cp_naca2244_0200. Analysis for Pressure Coefficients for a </span>
+<span class="sd">        naca2244 at an angle of degrees.</span>
+<span class="sd">        </span>
+<span class="sd">        Possible to output other results such as theta, delta star </span>
+<span class="sd">        through the choice of the ouput, but not implemented here.</span>
+<span class="sd">        </span>
+<span class="sd">        @author: Pedro Leal (Based on Hakan Tiftikci&#39;s code)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">if</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&quot;Alfa_L_0&quot;</span><span class="p">:</span>
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;CL 0&#39;</span><span class="p">)</span>
+			
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># Submit job for given angle of attack</span>
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;ALFA </span><span class="si">%.4f</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">alfa</span><span class="p">,))</span>
+            <span class="k">if</span> <span class="n">plots</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;HARD&#39;</span><span class="p">)</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">copyfile</span><span class="p">(</span><span class="s">&#39;plot.ps&#39;</span><span class="p">,</span> <span class="s">&#39;plot_{!s}_{!s}_{!s}.ps&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                <span class="n">output</span><span class="p">,</span> <span class="n">airfoil</span><span class="p">,</span> <span class="n">alfa</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&#39;Cp&#39;</span><span class="p">:</span>    
+                <span class="c"># Creating the file with the Pressure Coefficients</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="n">file_name</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alfas</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+                    <span class="k">pass</span> 
+                <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;CPWR </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&#39;Dump&#39;</span><span class="p">:</span>    
+                <span class="c"># Creating the file with the Pressure Coefficients</span>
+                <span class="n">filename</span><span class="o">=</span><span class="n">file_name</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alfas</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+                    <span class="k">pass</span>      
+        
+                <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;DUMP </span><span class="si">%r</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
+     
+    <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+    <span class="c">#                Characteristics of the simulation</span>
+    <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+    <span class="c"># By default the code considers the flow to be inviscid.</span>
+    <span class="n">Viscid</span> <span class="o">=</span> <span class="bp">False</span>    
+    <span class="k">if</span> <span class="n">Reynolds</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">Viscid</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="c"># Is alpha given or not?(in case of Alfa_L_0, then alfas=False)</span>
+    <span class="k">if</span> <span class="n">alfas</span> <span class="o">!=</span> <span class="s">&#39;none&#39;</span><span class="p">:</span>
+        <span class="k">print</span> <span class="nb">type</span><span class="p">(</span><span class="n">alfas</span><span class="p">)</span>
+        <span class="c"># Single or multiple runs?</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">alfas</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">alfas</span><span class="p">)</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="n">Multiple</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">alfas</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">alfas</span><span class="p">)</span> <span class="o">==</span> <span class="nb">float</span><span class="p">:</span>
+            <span class="n">Multiple</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">elif</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&quot;Alfa_L_0&quot;</span> <span class="ow">and</span> <span class="n">alfas</span> <span class="o">==</span> <span class="s">&#39;none&#39;</span><span class="p">:</span>
+        <span class="n">Multiple</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">elif</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&quot;Alfa_L_0&quot;</span> <span class="ow">and</span> <span class="n">alfas</span> <span class="o">!=</span> <span class="s">&#39;none&#39;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;To find alpha_L_0, alfas must not be defined&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">output</span> <span class="o">!=</span> <span class="s">&quot;Alfa_L_0&quot;</span> <span class="ow">and</span> <span class="n">alfas</span> <span class="o">==</span> <span class="s">&#39;none&#39;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;To find anything except alpha_L_0, you need to &quot;</span>
+		    <span class="s">&quot;define the values for alfa&quot;</span><span class="p">)</span>	
+    
+    <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+    <span class="c">#                           Start Xfoil</span>
+    <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+    
+    <span class="sd">&quot;&quot;&quot;For communication with the xfoil through the command line the </span>
+<span class="sd">    Popen class from subprocess is used. stdin and stdout both </span>
+<span class="sd">    represent inputs and outputs with the process run on the command </span>
+<span class="sd">    line, in this case, xfoil.</span>
+<span class="sd">    </span>
+<span class="sd">    class Popen(args, bufsize=0, executable=None,</span>
+<span class="sd">                stdin=None, stdout=None, stderr=None,</span>
+<span class="sd">                preexec_fn=None, close_fds=False, shell=False,</span>
+<span class="sd">                cwd=None, env=None, universal_newlines=False,</span>
+<span class="sd">                startupinfo=None, creationflags=0):</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Calling xfoil with Poper </span>
+    <span class="n">ps</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">Popen</span><span class="p">([</span><span class="s">&#39;xfoil.exe&#39;</span><span class="p">],</span>
+                  <span class="n">stdin</span><span class="o">=</span><span class="n">sp</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+                  <span class="n">stdout</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                  <span class="n">stderr</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+                  
+    <span class="c"># Loading geometry</span>
+    <span class="k">if</span> <span class="n">NACA</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;load </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">airfoil</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">airfoil</span><span class="p">)</span>
+
+    <span class="c"># If output equals Coordinates, no analysis will be realized, only the </span>
+    <span class="c"># coordinates of the shape will be outputed        </span>
+    <span class="k">if</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&#39;Coordinates&#39;</span><span class="p">:</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;SAVE&#39;</span><span class="p">)</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="n">airfoil</span> <span class="o">+</span> <span class="s">&#39;.txt&#39;</span><span class="p">)</span>
+        <span class="c"># In case there is alread a file with that name, it will replace it.</span>
+        <span class="c"># The yes stands for YES otherwise Xfoil will do nothing with it.</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;Y&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c"># Once you load a set of points in Xfoil you need to create a </span>
+        <span class="c"># name, however we do not need to give it a name</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+        
+        <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+        <span class="c">#             Adapting points for better plots</span>
+        <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+         
+        <span class="sd">&quot;&quot;&quot; The following part of the code was not implemented in hope</span>
+<span class="sd">        that the Cp be given for the given airfoil points, not for </span>
+<span class="sd">        points created by xfoil.    </span>
+<span class="sd">        </span>
+<span class="sd">        GDES   (enter GDES menu)        |</span>
+<span class="sd">        CADD   (add points at corners)  |  These commands are optional,</span>
+<span class="sd">               (accept default input)   |  and are recommended only for</span>
+<span class="sd">               (accept default input)   |  Eppler and Selig airfoils</span>
+<span class="sd">               (accept default input)   |  to give smoother LE shapes</span>
+<span class="sd">               (return to Top Level)    |</span>
+<span class="sd">         </span>
+<span class="sd">        PANEL  (regenerate paneling since better panel node spacing is</span>
+<span class="sd">                needed)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">GDES</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;GDES&#39;</span><span class="p">)</span>  <span class="c"># enter GDES menu</span>
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;CADD&#39;</span><span class="p">)</span>  <span class="c"># add points at corners</span>
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>      <span class="c"># accept default input</span>
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>      <span class="c"># accept default input</span>
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>      <span class="c"># accept default input</span>
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>      <span class="c"># accept default input</span>
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;PANEL&#39;</span><span class="p">)</span> <span class="c"># regenerate paneling</span>
+        <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+        <span class="c"># Opening OPER module in Xfoil</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;OPER&#39;</span><span class="p">)</span>
+    
+        <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+        <span class="c">#                Applying effects of vicosity</span>
+        <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;iter&#39;</span><span class="p">)</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">iteration</span><span class="p">)</span>
+        
+        <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+        <span class="c">#                Applying effects of vicosity</span>
+        <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    </span>
+        <span class="k">if</span> <span class="n">Viscid</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="c"># Defining the system as viscous</span>
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;v&#39;</span><span class="p">)</span>
+            <span class="c"># Defining Reynolds number</span>
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%f</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">Reynolds</span><span class="p">)</span>
+    
+        <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+        <span class="c">#    Defining Mach number for Prandtl-Gauber correlation</span>
+        <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ </span>
+        <span class="c">#issueCmd(&#39;MACH {!s}&#39;.format(Mach))</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;MACH </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">Mach</span><span class="p">)</span>
+        
+        <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+        <span class="c">#                     Submitting</span>
+        <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+        <span class="k">if</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&#39;Polar&#39;</span> <span class="ow">or</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&#39;Alfa_L_0&#39;</span><span class="p">:</span>
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;PACC&#39;</span><span class="p">)</span>
+            <span class="c"># All file names in this library are generated by the</span>
+            <span class="c"># filename functon.</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">file_name</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alfas</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+                <span class="k">pass</span>
+                
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
+            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+        
+        <span class="c"># For several angles of attack</span>
+        <span class="k">if</span> <span class="n">Multiple</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">alfa</span> <span class="ow">in</span> <span class="n">alfas</span><span class="p">:</span>
+                <span class="n">submit</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">alfa</span><span class="p">)</span>
+            
+        <span class="c"># For only one angle of attack</span>
+        <span class="k">if</span> <span class="n">Multiple</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+            <span class="n">submit</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">alfas</span><span class="p">)</span>
+            
+        <span class="c"># Exiting</span>
+        <span class="c"># From OPER mode</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+    <span class="c"># From xfoil</span>
+    <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;QUIT&#39;</span><span class="p">)</span>
+    <span class="c"># From stdin</span>
+    <span class="n">ps</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="c"># From popen</span>
+    <span class="n">ps</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+    </div>
+<div class="viewcode-block" id="create_x"><a class="viewcode-back" href="../xfoil_functions.html#xfoil_tools.create_x">[docs]</a><span class="k">def</span> <span class="nf">create_x</span><span class="p">(</span><span class="n">c</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Create set of points along the chord befitting for Xfoil. The x</span>
+<span class="sd">    output is conviniently ordered from TE to LE. </span>
+
+<span class="sd">    :param c: float value for the chord.</span>
+<span class="sd">    :rtype: x: numpy.array of values of x</span>
+<span class="sd">    </span>
+<span class="sd">    Because Xfoil it is not efficient or sometimes possible to create a</span>
+<span class="sd">    uniform distribution of points because the front part of the </span>
+<span class="sd">    airfoil requires a big amount of points to create a smooth surface </span>
+<span class="sd">    representing the round leading edge. However there is a maximum of </span>
+<span class="sd">    points that Xfoil will accept, therefore there is a need to </span>
+<span class="sd">    overcome this obstacle. This was done by dividing the airfoil in </span>
+<span class="sd">    to 3 parts.</span>
+<span class="sd">    </span>
+<span class="sd">    - tip: correpondent to 0 to .3% of the chord length, it is the</span>
+<span class="sd">      most densily populated part of the airfoil to compensate the</span>
+<span class="sd">      wide variation of slopes</span>
+<span class="sd">           </span>
+<span class="sd">    - middle: correpondent to .3% to 30% of the chord length (</span>
+<span class="sd">      Shortly above a quarter of the chord length). The second most</span>
+<span class="sd">      densily populated and the segment with the most amount of </span>
+<span class="sd">      points. Represents the round section of the airfoil except </span>
+<span class="sd">      for the tip. Such an amount of points is necessary because it</span>
+<span class="sd">      is where most of the lift is generated.</span>
+<span class="sd">        </span>
+<span class="sd">    - endbody: correspondent to 30% to 100% of the chord length. </span>
+<span class="sd">      The less densily populated section. Such unrefined mesh is</span>
+<span class="sd">      possible because of the simplistic geometry of endbody&#39;s</span>
+<span class="sd">      airfoil, just straight lines.</span>
+
+<span class="sd">    &gt;&gt;&gt; print create_x(1.0)</span>
+<span class="sd">        array([  1.00000000e+00,   9.82051282e-01,   9.64102564e-01,</span>
+<span class="sd">        ...</span>
+<span class="sd">        6.66666667e-04,   3.33333333e-04,   0.00000000e+00])</span>
+<span class="sd">    </span>
+<span class="sd">    Created on Thu Feb 27 2014</span>
+<span class="sd">    @author: Pedro Leal</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">max_point</span> <span class="o">=</span> <span class="n">c</span><span class="o">/</span><span class="mf">4.</span>
+    <span class="n">limit</span> <span class="o">=</span> <span class="n">max_point</span> <span class="o">+</span> <span class="mf">0.05</span><span class="o">*</span><span class="n">c</span>    
+    <span class="n">nose_tip</span> <span class="o">=</span> <span class="mf">0.003</span><span class="o">*</span><span class="n">c</span>
+
+    <span class="c"># Amount of points for each part</span>
+    <span class="n">N_tip</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="n">N_middle</span> <span class="o">=</span> <span class="mi">180</span>
+    <span class="n">N_endbody</span> <span class="o">=</span> <span class="mi">40</span>
+
+    <span class="n">x_endbody</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">limit</span><span class="p">,</span> <span class="n">N_endbody</span><span class="p">)</span>  
+    <span class="n">x_middle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">limit</span><span class="p">,</span> <span class="n">nose_tip</span><span class="p">,</span> <span class="n">N_middle</span><span class="p">)</span>
+    <span class="n">x_tip</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">nose_tip</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">N_tip</span><span class="p">)</span>
+    
+    <span class="c"># Organizing the x lists in a unique list without repeating any</span>
+    <span class="c"># numbers</span>
+    <span class="n">x2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_middle</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">x_tip</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_endbody</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">x2</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">x</span>
+
+</div>
+<div class="viewcode-block" id="create_input"><a class="viewcode-back" href="../xfoil_functions.html#xfoil_tools.create_input">[docs]</a><span class="k">def</span> <span class="nf">create_input</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y_u</span><span class="p">,</span> <span class="n">y_l</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a plain file that XFOIL can read.</span>
+<span class="sd">    </span>
+<span class="sd">    XFOIL only reads file from the TE to the LE from the upper part</span>
+<span class="sd">    first and then from the LE to the TE through the pressure surface.</span>
+<span class="sd">    </span>
+<span class="sd">    Inputs:</span>
+<span class="sd">        - x: list of coordinates along the chord</span>
+<span class="sd">        </span>
+<span class="sd">        - y_u: list of coordinates normal to the chord for the upper </span>
+<span class="sd">          surface</span>
+<span class="sd">        </span>
+<span class="sd">        - y_l: list of coordinates normal to the chord for the lower</span>
+<span class="sd">          surface</span>
+<span class="sd">        </span>
+<span class="sd">        - file_name: label used for the file created</span>
+<span class="sd">        </span>
+<span class="sd">    Created on Thu Feb 27 2014</span>
+<span class="sd">    </span>
+<span class="sd">    @author: Pedro Leal</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c"># XFOIL likes to read the files from the TE to the LE from the</span>
+    <span class="c"># upper part first and then from the LE to the TE through the</span>
+    <span class="c"># pressure surface</span>
+    <span class="n">x_upper</span> <span class="o">=</span> <span class="n">x</span>
+    <span class="n">x_under</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">x_upper</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_upper</span><span class="p">,</span> <span class="n">x_under</span><span class="p">)</span>
+    
+    <span class="n">y_l</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">y_l</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y_u</span><span class="p">,</span> <span class="n">y_l</span><span class="p">)</span>
+    
+    <span class="c"># Creating files for xfoil processing</span>
+    <span class="n">DataFile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)):</span>
+        <span class="n">DataFile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;     </span><span class="si">%f</span><span class="s">    </span><span class="si">%f</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+    <span class="n">DataFile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="mi">0</span>
+    </div>
+<div class="viewcode-block" id="prepare_xfoil"><a class="viewcode-back" href="../xfoil_functions.html#xfoil_tools.prepare_xfoil">[docs]</a><span class="k">def</span> <span class="nf">prepare_xfoil</span><span class="p">(</span><span class="n">Coordinates_Upper</span><span class="p">,</span> <span class="n">Coordinates_Lower</span><span class="p">,</span> <span class="n">chord</span><span class="p">,</span> 
+                  <span class="n">reposition</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">FSI</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; The upper and lower functions will be the points in ordered </span>
+<span class="sd">    fashion. Because of the way that XFOIL works the points start at</span>
+<span class="sd">    the Trailing Edge on the upper surface going trough the Leading </span>
+<span class="sd">    Edge and returning to the Trailing Edge form the bottom surface.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="nf">Reposition</span><span class="p">(</span><span class="n">CoordinatesU</span><span class="p">,</span> <span class="n">CoordinatesL</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reposition the airfoils coordinates so that the leading</span>
+<span class="sd">        edge is at x=y=0 and that the the trailing edge is on x=0 axis.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c"># Find the coordinates of the trailing edge</span>
+        <span class="n">LE</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;x&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span> <span class="s">&#39;y&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">}</span>
+        <span class="n">cx</span> <span class="o">=</span> <span class="n">CoordinatesU</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">]</span>
+        <span class="n">LE</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">cx</span><span class="p">)</span>
+        <span class="n">index_LE</span> <span class="o">=</span> <span class="n">cx</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">LE</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])</span>
+        <span class="n">LE</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cx</span><span class="p">[</span><span class="n">index_LE</span><span class="p">]</span>
+        
+        <span class="n">All_Rotated_Coordinates</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">Coordinates</span> <span class="ow">in</span> <span class="p">[</span><span class="n">CoordinatesU</span><span class="p">,</span> <span class="n">CoordinatesL</span><span class="p">]:</span> 
+            <span class="c"># Repositioning Leading Edge</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">Coordinates</span><span class="p">:</span>
+                <span class="n">c</span> <span class="o">=</span> <span class="n">Coordinates</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+                <span class="n">c</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="n">LE</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">c</span><span class="p">]</span>
+                <span class="n">Coordinates</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">c</span>  
+        <span class="sd">&quot;&quot;&quot; Find the coordinates of the trailing edge. Because of the </span>
+<span class="sd">        thickness of the TE, it is necessary to find the point with</span>
+<span class="sd">        max(x) for both surfaces and take the average between them</span>
+<span class="sd">        to find the actual TE.   </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">TE</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;x&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span> <span class="s">&#39;y&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">}</span>
+        
+        <span class="n">cxU</span> <span class="o">=</span> <span class="n">CoordinatesU</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">]</span>
+        <span class="n">cyU</span> <span class="o">=</span> <span class="n">CoordinatesU</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">]</span>
+        <span class="n">TExU</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">cxU</span><span class="p">)</span>
+        <span class="n">index_TE</span> <span class="o">=</span> <span class="n">cxU</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">TExU</span><span class="p">)</span>
+        <span class="n">TEyU</span> <span class="o">=</span> <span class="n">cyU</span><span class="p">[</span><span class="n">index_TE</span><span class="p">]</span>
+        
+        <span class="n">cxL</span> <span class="o">=</span> <span class="n">CoordinatesL</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">]</span>
+        <span class="n">cyL</span> <span class="o">=</span> <span class="n">CoordinatesL</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">]</span>
+        <span class="n">TExL</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">cxL</span><span class="p">)</span>
+        <span class="n">index_TE</span> <span class="o">=</span> <span class="n">cxL</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">TExL</span><span class="p">)</span>
+        <span class="n">TEyL</span> <span class="o">=</span> <span class="n">cyL</span><span class="p">[</span><span class="n">index_TE</span><span class="p">]</span>
+        
+        <span class="n">TE</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">TExU</span><span class="o">+</span><span class="n">TExL</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span>
+        <span class="n">TE</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">TEyU</span><span class="o">+</span><span class="n">TEyL</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span>
+        
+        <span class="c"># Rotating according to the position of the trailing edge</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">TE</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">TE</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])</span>
+        
+        <span class="c"># Rotation transformation Matrix</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="p">[[</span><span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">),</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)],</span>
+            <span class="p">[</span><span class="o">-</span><span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">),</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)]]</span>
+            
+        <span class="k">for</span> <span class="n">Coordinates</span> <span class="ow">in</span> <span class="p">[</span><span class="n">CoordinatesU</span><span class="p">,</span> <span class="n">CoordinatesL</span><span class="p">]:</span>         
+            <span class="n">Rotated_Coordinates</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;x&#39;</span><span class="p">:[],</span> <span class="s">&#39;y&#39;</span><span class="p">:[]}</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Coordinates</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])):</span>
+                <span class="n">cx</span> <span class="o">=</span> <span class="n">Coordinates</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">cy</span> <span class="o">=</span> <span class="n">Coordinates</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">rot_x</span> <span class="o">=</span> <span class="n">T</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">cx</span> <span class="o">+</span> <span class="n">T</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">cy</span>
+                <span class="n">rot_y</span> <span class="o">=</span> <span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">cx</span> <span class="o">+</span> <span class="n">T</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">cy</span>
+                <span class="n">Rotated_Coordinates</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rot_x</span><span class="p">)</span>
+                <span class="n">Rotated_Coordinates</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rot_y</span><span class="p">)</span>
+            <span class="n">All_Rotated_Coordinates</span><span class="p">[</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">count</span><span class="p">]</span> <span class="o">=</span> <span class="n">Rotated_Coordinates</span>
+            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">All_Rotated_Coordinates</span><span class="p">[</span><span class="s">&#39;0&#39;</span><span class="p">],</span> <span class="n">All_Rotated_Coordinates</span><span class="p">[</span><span class="s">&#39;1&#39;</span><span class="p">]</span>
+        
+    <span class="n">upper</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">lower</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">print</span> <span class="s">&quot;Starting to prepare points&quot;</span>
+        
+    <span class="c"># At first we&#39;ll organize the files by its x values</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Coordinates_Upper</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])):</span>
+        <span class="c"># For each x value, we will check the correpondent y value so</span>
+        <span class="c"># that we can classify them as upper or lower</span>
+        <span class="n">upper</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">Coordinates_Upper</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">chord</span><span class="p">,</span>
+                      <span class="n">Coordinates_Upper</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">chord</span><span class="p">])</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Coordinates_Lower</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])):</span>
+        <span class="c"># For each x value, we will check the correpondent y value so </span>
+        <span class="c"># that we  can classify them as upper or lower</span>
+        <span class="n">lower</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">Coordinates_Lower</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">chord</span><span class="p">,</span>
+                      <span class="n">Coordinates_Lower</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">chord</span><span class="p">])</span>
+    <span class="k">print</span> <span class="s">&quot;Sorting Stuff up&quot;</span>
+
+    <span class="k">if</span> <span class="n">reposition</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="c"># Sort in a convenient way for calculating the error</span>
+        <span class="n">upper</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">upper</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">coord</span><span class="p">:</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">lower</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">coord</span><span class="p">:</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&#39;Repositioning&#39;</span>
+        <span class="n">cu</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;x&#39;</span><span class="p">:[],</span> <span class="s">&#39;y&#39;</span><span class="p">:[]}</span>
+        <span class="n">cl</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;x&#39;</span><span class="p">:[],</span> <span class="s">&#39;y&#39;</span><span class="p">:[]}</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">upper</span><span class="p">)):</span>
+            <span class="n">cu</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">upper</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">cu</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">upper</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lower</span><span class="p">)):</span>
+            <span class="n">cl</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">lower</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">cl</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">lower</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">upper</span><span class="p">,</span> <span class="n">lower</span> <span class="o">=</span> <span class="n">Reposition</span><span class="p">(</span><span class="n">cu</span><span class="p">,</span> <span class="n">cl</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Done preparing points&quot;</span>
+        <span class="k">return</span> <span class="n">upper</span><span class="p">,</span><span class="n">lower</span>
+    <span class="k">elif</span> <span class="n">FSI</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">upper</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">upper</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">coord</span><span class="p">:</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">lower</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">coord</span><span class="p">:</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>   
+        <span class="k">print</span> <span class="s">&quot;Done preparing points&quot;</span>
+        <span class="k">return</span> <span class="n">upper</span><span class="p">,</span> <span class="n">lower</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c"># Sort in a way that comprehensible for xfoil and elimates the</span>
+        <span class="c"># repeated point at the LE</span>
+        <span class="n">upper</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">upper</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">coord</span><span class="p">:</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">lower</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">coord</span><span class="p">:</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">False</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="n">Coordinates</span> <span class="o">=</span> <span class="n">upper</span> <span class="o">+</span> <span class="n">lower</span>
+        <span class="k">print</span> <span class="s">&quot;Done preparing points&quot;</span>
+        <span class="k">return</span> <span class="n">Coordinates</span>
+    </div>
+<div class="viewcode-block" id="output_reader"><a class="viewcode-back" href="../xfoil_functions.html#xfoil_tools.output_reader">[docs]</a><span class="k">def</span> <span class="nf">output_reader</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">separator</span><span class="o">=</span><span class="s">&#39;</span><span class="se">\t</span><span class="s">&#39;</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">rows_to_skip</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                  <span class="n">header</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Function that opens files of any kind. Able to skip rows and</span>
+<span class="sd">    read headers if necessary.</span>
+<span class="sd">    </span>
+<span class="sd">    Inputs:</span>
+<span class="sd">        - filename: just the name of the file to read.</span>
+<span class="sd">        </span>
+<span class="sd">        - separator: Main kind of separator in file. The code will</span>
+<span class="sd">          replace any variants of this separator for processing. Extra</span>
+<span class="sd">          components such as \n kg m are all eliminated.</span>
+<span class="sd">          </span>
+<span class="sd">        - output: defines what the kind of file we are opening to</span>
+<span class="sd">          ensure we can skip the right amount of lines. By default it </span>
+<span class="sd">          is None so it can open any other file.</span>
+<span class="sd">          </span>
+<span class="sd">        - rows_to_skip: amount of rows to initialy skip in the file. If</span>
+<span class="sd">          the output is different then None, for the different types of</span>
+<span class="sd">          files it is defined as:</span>
+<span class="sd">          - Polar files = 10</span>
+<span class="sd">          - Dump files = 0</span>
+<span class="sd">          - Cp files = 2</span>
+<span class="sd">          </span>
+<span class="sd">        - header: The header list will act as the keys of the output</span>
+<span class="sd">          dictionary. For the function to work, a header IS necessary.</span>
+<span class="sd">          If not specified by the user, the function will assume that</span>
+<span class="sd">          the header can be found in the file that it is opening.</span>
+<span class="sd">    Output:</span>
+<span class="sd">        - Dictionary with all the header values as keys</span>
+<span class="sd">    </span>
+<span class="sd">    Created on Thu Mar 14 2014</span>
+<span class="sd">    @author: Pedro Leal</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c"># In case we are using an XFOIL file, we define the number of rows</span>
+    <span class="c"># skipped</span>
+    <span class="k">if</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&#39;Polar&#39;</span> <span class="ow">or</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&#39;Alfa_L_0&#39;</span><span class="p">:</span>
+        <span class="n">rows_to_skip</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="k">elif</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&#39;Dump&#39;</span><span class="p">:</span>
+        <span class="n">rows_to_skip</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">elif</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&#39;Cp&#39;</span><span class="p">:</span>
+        <span class="n">rows_to_skip</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="c"># n is the amount of lines to skip</span>
+    <span class="n">Data</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">header_done</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">count_skip</span> <span class="o">=</span> <span class="mi">0</span>
+    
+    <span class="k">with</span> <span class="nb">open</span> <span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">myfile</span><span class="p">:</span>
+        <span class="c"># Jump first lines which are useless</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">myfile</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">count_skip</span> <span class="o">&lt;</span> <span class="n">rows_to_skip</span><span class="p">:</span>
+                <span class="n">count_skip</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c"># Basically do nothing</span>
+            <span class="k">elif</span> <span class="n">header_done</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+                <span class="c"># If the user did not specify the header the code will</span>
+                <span class="c"># read the first line after the skipped rows as the</span>
+                <span class="c"># header</span>
+                <span class="k">if</span> <span class="n">header</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="c"># Open line and replace anything we do not want (</span>
+                    <span class="c"># variants of the separator and units)</span>
+                    <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span> <span class="o">+</span>
+                    <span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span><span class="p">,</span> <span class="s">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">separator</span>
+                    <span class="o">+</span> <span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span><span class="p">,</span>
+                    <span class="s">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span> <span class="o">+</span>
+                    <span class="n">separator</span><span class="p">,</span> <span class="s">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span><span class="p">,</span>
+                    <span class="s">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span><span class="p">,</span> <span class="s">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+                    <span class="s">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;(kg)&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;(m)&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;(Pa)&quot;</span><span class="p">,</span>
+                    <span class="s">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;(in)&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;#&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+                    
+                    <span class="n">header</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">)</span>
+                    <span class="n">n_del</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">n_del</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_del</span><span class="p">):</span>
+                        <span class="n">header</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">head</span> <span class="ow">in</span> <span class="n">header</span><span class="p">:</span>
+                        <span class="n">Data</span><span class="p">[</span><span class="n">head</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="c"># To avoid having two headers, we assign the False </span>
+                    <span class="c"># value to header which will not let it happen</span>
+                    <span class="n">header_done</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="c"># If the user defines a list of values for the header, </span>
+                <span class="c"># the code reads it and creates libraries with it.</span>
+                <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">header</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">head</span> <span class="ow">in</span> <span class="n">header</span><span class="p">:</span>
+                        <span class="n">Data</span><span class="p">[</span><span class="n">head</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">header_done</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span><span class="p">,</span>
+                <span class="s">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">separator</span> <span class="o">+</span> <span class="n">separator</span><span class="p">,</span> <span class="s">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">separator</span><span class="p">,</span>
+                <span class="s">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;---------&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+                <span class="s">&#39;--------&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;-------&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;------&#39;</span><span class="p">,</span> 
+                <span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;-&#39;</span><span class="p">,</span><span class="s">&#39; -&#39;</span><span class="p">)</span>
+                
+                <span class="n">line_components</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">)</span>    
+                
+                <span class="n">n_del</span> <span class="o">=</span> <span class="n">line_components</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_del</span><span class="p">):</span>
+                    <span class="n">line_components</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+                   
+                <span class="k">if</span> <span class="n">line_components</span> <span class="o">!=</span> <span class="p">[]:</span>
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">line_components</span><span class="p">)):</span>
+                        <span class="n">Data</span><span class="p">[</span><span class="n">header</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">line_components</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span>
+                <span class="c"># else DO NOTHING!</span>
+    <span class="k">return</span> <span class="n">Data</span>
+    </div>
+<div class="viewcode-block" id="alfa_for_file"><a class="viewcode-back" href="../xfoil_functions.html#xfoil_tools.alfa_for_file">[docs]</a><span class="k">def</span> <span class="nf">alfa_for_file</span><span class="p">(</span><span class="n">alfa</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate standard name for angles. This is mainly used by the</span>
+<span class="sd">    file_name function.</span>
+<span class="sd">    </span>
+<span class="sd">    @author: Pedro Leal </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">alfa</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%.2f</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">alfa</span>
+    <span class="n">inter</span><span class="p">,</span> <span class="n">dec</span> <span class="o">=</span> <span class="n">alfa</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+    <span class="n">inter_number</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">inter</span><span class="p">)</span>
+    <span class="n">inter</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%.2d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">inter_number</span>
+    <span class="k">if</span> <span class="n">inter_number</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">inter</span> <span class="o">=</span> <span class="s">&#39;n&#39;</span> <span class="o">+</span> <span class="n">inter</span>
+    <span class="n">alfa</span> <span class="o">=</span> <span class="n">inter</span> <span class="o">+</span> <span class="n">dec</span>
+    <span class="k">return</span> <span class="n">alfa</span>
+    </div>
+<div class="viewcode-block" id="file_name"><a class="viewcode-back" href="../xfoil_functions.html#xfoil_tools.file_name">[docs]</a><span class="k">def</span> <span class="nf">file_name</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alfas</span><span class="o">=</span><span class="s">&#39;none&#39;</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Cp&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create stnadard name for the files generated by XFOIL.</span>
+<span class="sd">    </span>
+<span class="sd">    :param airfoil: the name of the plain file where the airfoil </span>
+<span class="sd">           geometry is stored (variable airfoil).</span>
+<span class="sd">          </span>
+<span class="sd">    :param alfas: list/array/float/int of a single angle of attack for</span>
+<span class="sd">          Cp and Dump, but the whole list for a Polar. Only the initial</span>
+<span class="sd">          and the final values are used</span>
+<span class="sd">        </span>
+<span class="sd">    :param output: defines the kind of output desired from xfoil. There</span>
+<span class="sd">           are three posssible choices:</span>
+<span class="sd">           - Cp: generates files with Pressure coefficients for </span>
+<span class="sd">                 desired alfas</span>
+<span class="sd">           - Dump: generates file with Velocity along surface, Delta</span>
+<span class="sd">                   star and theta and Cf vs s,x,y for several alfas</span>
+<span class="sd">           - Polar: generates file with CL, CD, CM, CDp, Top_Xtr,</span>
+<span class="sd">                    Bot_Xtr</span>
+<span class="sd">		 - Alpha_L_0: calculate the angle of attack that lift is</span>
+<span class="sd">                       zero</span>
+<span class="sd">    :returns: The output has the following format (by default, Cp is chosen):</span>
+<span class="sd">    </span>
+<span class="sd">        - for Cp and Dump: output_airfoil_alfa</span>
+<span class="sd">           &gt;&gt;&gt; file_name(&#39;naca2244&#39;, alfas=2.0, output=&#39;Cp&#39;)</span>
+<span class="sd">           &gt;&gt;&gt; Cp_naca2244_0200</span>
+
+<span class="sd">        - for Polar: Polar_airfoil_alfa_i_alfa_f</span>
+<span class="sd">           &gt;&gt;&gt; file_name(&#39;naca2244&#39;, alfas=[-2.0, 2.0], output=&#39;Polar&#39;)</span>
+<span class="sd">           &gt;&gt;&gt; Polar_naca2244_n0200_0200</span>
+
+<span class="sd">        - for Alpha_L_0: Alpha_L_0_airfoil</span>
+<span class="sd">           &gt;&gt;&gt; file_name(&#39;naca2244&#39;, output=&#39;Alpha_L_0&#39;)</span>
+<span class="sd">           &gt;&gt;&gt; Alpha_L_0_naca2244</span>
+
+<span class="sd">    Created on Thu Mar 16 2014</span>
+<span class="sd">    @author: Pedro Leal </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+	<span class="c"># At first verify if alfas was defined</span>
+    <span class="k">if</span> <span class="n">alfas</span> <span class="o">==</span> <span class="s">&#39;none&#39;</span><span class="p">:</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">airfoil</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">alfas</span> <span class="o">!=</span> <span class="s">&#39;none&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&#39;Cp&#39;</span> <span class="ow">or</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&#39;Dump&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">alfas</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+                <span class="n">alfas</span> <span class="o">=</span> <span class="n">alfas</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">alfa</span> <span class="o">=</span> <span class="n">alfa_for_file</span><span class="p">(</span><span class="n">alfas</span><span class="p">)</span>
+
+            <span class="n">filename</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">airfoil</span><span class="p">,</span> <span class="n">alfa</span><span class="p">)</span>
+				
+        <span class="k">if</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&#39;Polar&#39;</span><span class="p">:</span>
+            <span class="c"># In case it is only for one angle of attack, the same</span>
+            <span class="c"># angle will be repeated. This is done to keep the </span>
+            <span class="c"># formating</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">alfas</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">alfas</span><span class="p">)</span> <span class="o">==</span> <span class="nb">float</span><span class="p">:</span>
+                <span class="n">alfas</span> <span class="o">=</span> <span class="p">[</span><span class="n">alfas</span><span class="p">]</span>
+                <span class="n">alfa_i</span> <span class="o">=</span> <span class="n">alfa_for_file</span><span class="p">(</span><span class="n">alfas</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">alfa_f</span> <span class="o">=</span> <span class="n">alfa_for_file</span><span class="p">(</span><span class="n">alfas</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="c"># Name of file with polar information</span>
+
+            <span class="n">filename</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">airfoil</span><span class="p">,</span> <span class="n">alfa_i</span><span class="p">,</span> <span class="n">alfa_f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">filename</span>
+  
+<span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+<span class="c">#                       	Utility functions</span>
+<span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+</div>
+<div class="viewcode-block" id="find_coefficients"><a class="viewcode-back" href="../xfoil_functions.html#xfoil_tools.find_coefficients">[docs]</a><span class="k">def</span> <span class="nf">find_coefficients</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">Reynolds</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">iteration</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">NACA</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate the coefficients of an airfoil&quot;&quot;&quot;</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">file_name</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Polar&#39;</span><span class="p">)</span>
+    <span class="c"># If file already exists, there is no need to recalculate it.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+		<span class="n">call</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">Reynolds</span><span class="o">=</span><span class="n">Reynolds</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Polar&#39;</span><span class="p">,</span> <span class="n">iteration</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+           <span class="n">NACA</span><span class="o">=</span><span class="n">NACA</span><span class="p">)</span>
+    <span class="n">coefficients</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c"># Data from file    </span>
+    <span class="n">Data</span> <span class="o">=</span> <span class="n">output_reader</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Polar&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">Data</span><span class="p">:</span>
+        <span class="n">coefficients</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Data</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">coefficients</span>
+
+	</div>
+<div class="viewcode-block" id="find_alpha_L_0"><a class="viewcode-back" href="../xfoil_functions.html#xfoil_tools.find_alpha_L_0">[docs]</a><span class="k">def</span> <span class="nf">find_alpha_L_0</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">Reynolds</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">iteration</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">NACA</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the angle of attack where the lift coefficient is equal</span>
+<span class="sd">    to zero.&quot;&quot;&quot;</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">file_name</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Alfa_L_0&#39;</span><span class="p">)</span>
+    <span class="c"># If file already exists, there no need to recalculate it.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+        <span class="n">call</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Alfa_L_0&#39;</span><span class="p">,</span> <span class="n">NACA</span><span class="o">=</span><span class="n">NACA</span><span class="p">)</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">output_reader</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Alfa_L_0&#39;</span><span class="p">)[</span><span class="s">&#39;alpha&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">alpha</span>
+</div>
+<div class="viewcode-block" id="M_crit"><a class="viewcode-back" href="../xfoil_functions.html#xfoil_tools.M_crit">[docs]</a><span class="k">def</span> <span class="nf">M_crit</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">pho</span><span class="p">,</span> <span class="n">speed_sound</span><span class="p">,</span> <span class="n">lift</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate the Critical Mach. This function was not validated.</span>
+<span class="sd">    Therefore use it with caution and please improve it.</span>
+<span class="sd">    </span>
+<span class="sd">    @author: Pedro Leal</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">M_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+    <span class="n">alfas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">15</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">21</span><span class="p">)</span>
+    <span class="n">Data_crit</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">Data_crit</span><span class="p">[</span><span class="s">&#39;M&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">Data_crit</span><span class="p">[</span><span class="s">&#39;CL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">Data_crit</span><span class="p">[</span><span class="s">&#39;alpha&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">M</span> <span class="ow">in</span> <span class="n">M_list</span><span class="p">:</span>
+        <span class="n">cl</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">M</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">M</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span> <span class="o">*</span><span class="mi">2</span><span class="o">*</span><span class="n">lift</span><span class="o">/</span><span class="n">pho</span> <span class="o">/</span> <span class="p">(</span><span class="n">speed_sound</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="n">c</span>
+        <span class="n">call</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alfas</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Polar&#39;</span><span class="p">,</span> <span class="n">NACA</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">file_name</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alfas</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Polar&#39;</span><span class="p">)</span>
+        <span class="n">Data</span> <span class="o">=</span> <span class="n">output_reader</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&#39; &#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="n">previous_iteration</span> <span class="o">=</span> <span class="n">Data_crit</span><span class="p">[</span><span class="s">&#39;CL&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="s">&#39;CL&#39;</span><span class="p">])):</span>
+            <span class="k">if</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;CL&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">cl</span> <span class="ow">and</span> <span class="n">M</span> <span class="o">&gt;</span> <span class="n">Data_crit</span><span class="p">[</span><span class="s">&#39;M&#39;</span><span class="p">]:</span>
+                <span class="k">print</span> <span class="n">M</span>
+                <span class="n">Data_crit</span><span class="p">[</span><span class="s">&#39;M&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">M</span>
+                <span class="n">Data_crit</span><span class="p">[</span><span class="s">&#39;CL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;CL&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">Data_crit</span><span class="p">[</span><span class="s">&#39;alpha&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;alpha&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+<span class="c">#        if Data_crit[&#39;CL&#39;]==previous_iteration:</span>
+    <span class="k">return</span> <span class="n">Data_crit</span>
+    </div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="k">print</span> <span class="n">find_coefficients</span><span class="p">(</span><span class="s">&#39;naca0012&#39;</span><span class="p">,</span><span class="mf">1.</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Pedro Leal.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.2.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
