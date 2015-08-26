@@ -34,7 +34,7 @@ def LLT_calculator(alpha_L_0_root, c_D_xfoil, N=10, b=10., taper=1.,
         elif Output == 'theta':
             raise Exception('I did not program this')
         return output
-            
+
     def geometric_calculator(taper, chord_root, b, N, Type='Linear'):
         """Calculate the following geometric properties:
         - S: Platform Area (currently rectangle)
@@ -45,25 +45,25 @@ def LLT_calculator(alpha_L_0_root, c_D_xfoil, N=10, b=10., taper=1.,
         x = x_theta_converter(theta, b, Output='x')
 
         c = chord_root * (np.ones(N) - (1-taper)*abs(x)/chord_root)
-        
+
         if Type == 'Linear':
             S = (1+taper) * (b/2) * chord_root
             AR = b**2/S # Aspect Ratio
         else:
             raise Exception('I did not program this')
         return c, AR
-        
+
     def A_calculator(N, b, taper, alpha_root, chord_root, alpha_L_0_root):
         """Solve the system of N linear equations with N variables.
         DEFINITION OF A IS IN IPYTHON.
         """
         # Calculate geometric properties
         c, AR = geometric_calculator(taper, chord_root, b, N, Type='Linear')
-        
+
         # Converting angles to radians
         alpha_root = alpha_root*np.pi/180.
         alpha_L_0_root = alpha_L_0_root*np.pi/180.
-    
+
         # Avoid using theta = 0,pi,etc, because of zero division
         # Since sine is an odd function and the wing is symmetric, avoid
         # points on the other side of the wing.
@@ -72,7 +72,7 @@ def LLT_calculator(alpha_L_0_root, c_D_xfoil, N=10, b=10., taper=1.,
         theta = np.linspace(np.pi/2, np.pi*N/(N+1), N)
         alpha = alpha_root * np.ones(N)
         alpha_L_0 = alpha_L_0_root * np.ones(N) # CONSTANT AIRFOIL SECTION
-    
+
         D = np.zeros(N)
         C = np.zeros((N,N))
         for i in range(0,N):
@@ -82,9 +82,9 @@ def LLT_calculator(alpha_L_0_root, c_D_xfoil, N=10, b=10., taper=1.,
                 C[i][j] = ((2*b) / (np.pi*c[i]) + n/np.sin(theta[i])) * \
                           np.sin(n*theta[i])
         A = np.linalg.solve(C, D)
-        
+
         return A, theta
-    
+
     def gamma_calculator(b, V, A, theta):
         """Calculate the source strengths."""
         N = len(theta)
@@ -99,20 +99,20 @@ def LLT_calculator(alpha_L_0_root, c_D_xfoil, N=10, b=10., taper=1.,
         # For tensor manipulation, the data needs to be an np.array object
         gamma = np.array(gamma)
         return gamma
-    
+
     def coefficient_calculator(A, gamma, c, AR, b, V):
         """Calculate 3D Lift, Drag and efficiency coefficients. The
         section lift coefficient and the lift distribution (roughly equal
         to the pressure distribution) are also caulculated.
-        
+
         Output: Dictionary with the following keys:
         - cls : section lift coefficient.
         - C_L : 3D Lift Coefficient.
         - C_D : 3D Drag Coefficient.
         - e : efficiency. (as defined in Anderson's Aerodynamics book)
-              Between 0 an 1, where 1 is equal to the efficiency of an 
+              Between 0 an 1, where 1 is equal to the efficiency of an
               elliptical wing.
-        - distribution : distribution along axis perpendicular to the 
+        - distribution : distribution along axis perpendicular to the
                          the cross section."""
         N = len(gamma)
         # Calculating section lift coefficients
@@ -131,20 +131,20 @@ def LLT_calculator(alpha_L_0_root, c_D_xfoil, N=10, b=10., taper=1.,
             e = 'Does not make sense. All A coefficients are zero and' \
               ' there is a division by zero at the calculation of delta'
             C_Di = 0
-        
+
         distribution = cl/cl[0]
         return {'cls':cl, 'C_L':C_L, 'C_Di':C_Di, 'e':e,
                 'distribution':distribution}
-    
+
     def total_drag_calculator(coefficients, c_D_xfoil, b, x):
         """
-        From xfoil we have the friction and pressure drag components for 
+        From xfoil we have the friction and pressure drag components for
         2D. From LLT we have the 3D induced drag component and the
         pressure distribution. Integrating the 2D over the distribution
-        and adding to the 3D induced drag, we obtain the overall drag 
+        and adding to the 3D induced drag, we obtain the overall drag
         coefficient.
-        
-        CURRENTLY WRITTEN FOR SYMMETRIC AIRFOIL."""    
+
+        CURRENTLY WRITTEN FOR SYMMETRIC AIRFOIL."""
         def trapezoid(y,x):
             s = 0
             n = len(y)
@@ -152,15 +152,15 @@ def LLT_calculator(alpha_L_0_root, c_D_xfoil, N=10, b=10., taper=1.,
                 s += (y[i+1]+y[i]) * (x[i+1]-x[i])/2.
             return s
         # Add the wingtip where the circulation is euqal to zero
-        distribution = list(coefficients['distribution']) 
+        distribution = list(coefficients['distribution'])
         distribution.append(0)
-        x = list(x) 
+        x = list(x)
         x.append(b/2.)
-    
+
         C_D_xfoil = 2 * c_D_xfoil * trapezoid(distribution,x)/b
         C_D = C_D_xfoil + coefficients['C_Di']
         return C_D
-    
+
     # Calculate the Fourrier Constants and theta
     A, theta = A_calculator(N, b, taper, alpha_root, chord_root,
                             alpha_L_0_root)
@@ -177,7 +177,7 @@ def LLT_calculator(alpha_L_0_root, c_D_xfoil, N=10, b=10., taper=1.,
     C_D = total_drag_calculator(coefficients, c_D_xfoil, b, x)
     coefficients['C_D'] = C_D
     return coefficients
- 
+
 #==============================================================================
 # Functions Intended for use with FInite ELement Methods
 #==============================================================================
@@ -186,7 +186,7 @@ def force_shell(Data, chord, half_span, height, Velocity, thickness=0,
     # Height is in feet
     # If the Shell is an extrude, it needs to take in consideration
     # that there is a skin thickness outwards of the outer mold.
-    # If the Shell is na planar, there is no need for such a 
+    # If the Shell is na planar, there is no need for such a
     # consideration
     Air_properties = air_properties(height, unit='feet')
     atm_pressure = Air_properties['Atmospheric Pressure']
@@ -199,13 +199,13 @@ def force_shell(Data, chord, half_span, height, Velocity, thickness=0,
     else:
         Data['Force'] = map(lambda Cp:(Cp*0.5*air_density * Velocity**2 +
                             atm_pressure) * chord*half_span, Data['Cp'])
-        Data['x'] = map(lambda x: (chord - 2.*thickness) * x + thickness, 
+        Data['x'] = map(lambda x: (chord - 2.*thickness) * x + thickness,
                         Data['x'])
         Data['y'] = map(lambda x: (chord - 2.*thickness) * x, Data['y'])
     Data['z'] = [0] * len(Data['x'])
-    
+
     PressureDistribution = zip(Data['x'], Data['y'], Data['z'], Data['Force'])
-#    elliptical_distribution=np.sqrt(1.-(Data['z']/half_span)**2) 
+#    elliptical_distribution=np.sqrt(1.-(Data['z']/half_span)**2)
 #    if txt==True:
 #        DataFile = open('Force_shell.txt','w')
 #        DataFile.close()
@@ -228,10 +228,10 @@ def force_shell(Data, chord, half_span, height, Velocity, thickness=0,
 #                        elliptical_distribution[j]*Data['Pressure'][i]),)
     return PressureDistribution
 
-def pressure_shell(Data, chord, thickness, half_span, air_density, Velocity, 
-                   N, txt=False, llt_distribution=False, 
-                   distribution='Elliptical'): 
-                       
+def pressure_shell(Data, chord, thickness, half_span, air_density, Velocity,
+                   N, txt=False, llt_distribution=False,
+                   distribution='Elliptical'):
+
     Data['Pressure'] = map(lambda Cp: Cp*0.5*air_density* Velocity**2 *chord,
                             Data['Cp'])
     Data['x'] = map(lambda x: (chord - 2.*thickness)*x + thickness, Data['x'])
@@ -240,7 +240,7 @@ def pressure_shell(Data, chord, thickness, half_span, air_density, Velocity,
     DataFile.close()
     if distribution == 'Elliptical':
         Data['z'] = np.linspace(0, half_span, N)
-        distribution = np.sqrt(1. - (Data['z']/half_span)**2) 
+        distribution = np.sqrt(1. - (Data['z']/half_span)**2)
     elif distribution == 'LLT':
         Data['z'] = np.linspace(0, half_span, len(distribution))
         distribution = llt_distribution
@@ -264,13 +264,13 @@ def pressure_shell(Data, chord, thickness, half_span, air_density, Velocity,
                                               Data['z'][j], distribution[j]*
                                               Data['Pressure'][i]), )
         return PressureDistribution
-        
+
 def pressure_shell_2D(Data, chord, thickness, half_span, height, Velocity, N,
                       txt=False):
     """Calculate pressure field for a 2D Shell."""
     Air_properties = air_properties(height, unit='feet')
     air_density = Air_properties['Density']
-    
+
     Data['Pressure'] = map(lambda Cp: Cp*0.5*air_density* Velocity**2 *chord,
                             Data['Cp'])
     Data['x'] = map(lambda x: (chord - 2.*thickness)*x + thickness, Data['x'])
@@ -301,11 +301,11 @@ def pressure_shell_2D(Data, chord, thickness, half_span, height, Velocity, N,
 
 def air_properties(height, unit='feet'):
     """ Function to calculate air properties for a given height (m or ft).
-    
-    Sources: 
+
+    Sources:
       - http://en.wikipedia.org/wiki/Density_of_air#Altitude
       - http://aerojet.engr.ucdavis.edu/fluenthelp/html/ug/node337.htm
-      
+
     Created on Thu May 15 14:59:43 2014
     @author: Pedro Leal
     """
@@ -314,7 +314,7 @@ def air_properties(height, unit='feet'):
         height = 0.3048*height
     elif unit != 'meter':
         raise Exception('air_properties can onlu understand feet and meters')
-        
+
     #==================================================================
     # Constants
     #==================================================================
@@ -335,43 +335,43 @@ def air_properties(height, unit='feet'):
     # Sutherland's law coefficients
     C1 = 1.458e-6 #kg/m.s.sqrt(K)
     C2 = 110.4 #K
-    
+
     #==================================================================
     # Temperature
     #==================================================================
-    #Temperature at altitude h meters above sea level is approximated 
+    #Temperature at altitude h meters above sea level is approximated
     # by the following formula (only valid inside the troposphere):
     T = T0 - L*height
-    
+
     #==================================================================
     # Pressure
     #==================================================================
     P = P0 * (1. - L*height/T0)**(g*M/(R*L))
-    
+
     #==================================================================
-    # Density 
+    # Density
     #==================================================================
     density = P*M / (R*T)
-    
+
     #==================================================================
-    # Dynamic Viscosity (Sutherland equation with two constants)   
+    # Dynamic Viscosity (Sutherland equation with two constants)
     #==================================================================
     dyn_viscosity = (C1 * T**(3./2)) / (T+C2)
-    
+
     return {'Density': density, 'Dynamic Viscosity': dyn_viscosity,
-            'Atmospheric Temperature': T, 'R air': R_air, 
+            'Atmospheric Temperature': T, 'R air': R_air,
             'Atmospheric Pressure': P}
 
 def Reynolds(height, V, c):
     """Simple function to calculate Reynolds for a given height.
 
     @author: Pedro Leal
-    Created in Jul 17 2015    
+    Created in Jul 17 2015
     """
     Air_Data = air_properties(height, unit='feet')
     rho = Air_Data['Density']
     L = c
     nu = Air_Data['Dynamic Viscosity']
-    return rho*V*L/nu      
+    return rho*V*L/nu
 if __name__ == '__main__':
     print LLT_calculator(alpha_L_0_root=1., c_D_xfoil=0.01)

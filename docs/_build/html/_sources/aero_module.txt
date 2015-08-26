@@ -1,4 +1,4 @@
-Documentation for Aerodynamic Functions
+Aerodynamic Module Documentation
 ***************************************
 
 Lifting Line Theory
@@ -17,11 +17,11 @@ Each equation has :math:`N` unknowns (:math:`A_n`), so if there are N :math:`\th
 
 where, :math:`i=0,...,N`, :math:`j=0,...,N` and :
 
-.. math::    
+.. math::
    C_{ij}= \left( \frac{2b}{\pi c(j)} + \frac{n}{sin \theta(i)} \right) sin(n \theta(i))
    :label: C
 
-.. math::   
+.. math::
    A_i=A(i)
    :label: A
 

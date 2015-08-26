@@ -1,21 +1,22 @@
-.. pyXFOIL Documentation
+.. pyFOIL Documentation
 
 .. include xfoil_functions.rsf
 
-Welcome to pyXFOIL's documentation!
+Welcome to pyFOIL's documentation, an easy to use aerodynamic tool
 ===================================
-Easy and simple to use aerodynamic tool:
+Python interface for XFOIL. THe objective of this library is to be able to be
+able to call XFOIL from Python iteratively for any simulation in a total of 4
+lines total (one line for most uses). For a thorough explanation and tutorials
+please check ...
 
-.. code-block:: python
-
-    from xfoil_tools import *
-    find_coefficients(0)
-    >>{'CD',}
-
-.. math:: e^{i\pi} + 1 = 0
-   :label: euler
-   
-:eq:`euler`
+This project was elaborated because of the need of optimizing an airfoil
+according to its aerodynamic and structural performance (conference paper).
+Contrary to available options such as XFLR5, pyXFOIL aims to be an open source
+Python code. It is a quick and easy way to find the aerodynamic pressure and the
+drag and lift coefficients through the use of MIT's XFOIL embedded in Python.
+Contrary to the other libraries, pyXFOIL does not have a GUI and is intended
+to be used in Python codes for optimizations or any other process that requires
+several aerodynamic analysis.
 
 Contents:
 
@@ -23,10 +24,11 @@ Contents:
    :numbered:
    :titlesonly:
    :maxdepth: 2
-   
-   xfoil_functions
-   aero_doc
-   pyxfoil_doc
+
+   xfoil_module
+   aero_module
+   main_module
+   tutorial
 
 Indices and tables
 ==================
@@ -37,3 +39,9 @@ Indices and tables
 
 Examples
 ==================
+
+.. code-block:: python
+
+    from xfoil_tools import *
+    find_coefficients(airfoil='naca0012', alpha=12.,NACA=True)
+    >>{'CD',}
