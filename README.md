@@ -1,11 +1,2 @@
-# pyXFOIL
-Python interface for XFOIL. THe objective of this library is to be able to be able to call XFOIL from Python iteratively for any simulation in a total of 4 lines total (one line for most uses). For a thorough explanation and tutorials please check the pyXFOIL [Wiki](https://github.com/leal26/pyXFOIL/wiki)
-
-The codes in this repository follow the conventions of [PEP 0008](https://www.python.org/dev/peps/pep-0008/)
-TODO list:
-* fork other works for airfoil generation and merge with CST library
-* Make lifting line theory more brand
-* Include Velocity in filename
-* include option for elliptical distribution
-* output_reader lacks Coordinates options
-* where is the height option the high level functions
+# AeroPy
+AeroPy is an library for calculating aerodynamic properties. The main feature of this library is the Python interface with XFOIL. The main objective of this library is to be able to use XFOIL via Python iteratively in a total of 4 lines total (one line for most uses). Through this interface coupling with other softwares (Abaqus, Ansys, etc) is possible and iterative processes (optimization, design sensitivity) are possible. For a thorough explanation please check the documentation and the tutorials. For thorough documentation and tutorials please check the [AeroPy website](http://aeropy.readthedocs.org/)
