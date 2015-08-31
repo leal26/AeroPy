@@ -1,22 +1,15 @@
-.. pyFOIL Documentation
+.. AeroPy Documentation
 
 .. include xfoil_functions.rsf
 
-Welcome to pyFOIL's documentation, an easy to use aerodynamic tool
-===================================
-Python interface for XFOIL. THe objective of this library is to be able to be
-able to call XFOIL from Python iteratively for any simulation in a total of 4
-lines total (one line for most uses). For a thorough explanation and tutorials
-please check ...
-
-This project was elaborated because of the need of optimizing an airfoil
-according to its aerodynamic and structural performance (conference paper).
-Contrary to available options such as XFLR5, pyXFOIL aims to be an open source
-Python code. It is a quick and easy way to find the aerodynamic pressure and the
-drag and lift coefficients through the use of MIT's XFOIL embedded in Python.
-Contrary to the other libraries, pyXFOIL does not have a GUI and is intended
-to be used in Python codes for optimizations or any other process that requires
-several aerodynamic analysis.
+Welcome to AeroPy's, an easy to use aerodynamic tool
+==================================================================
+AeroPy is an library for calculating aerodynamic properties. The main feature of
+this library is the Python interface with XFOIL. The main objective of this library is to be able 
+to use XFOIL via Python iteratively in a total of 4 lines total (one line for most uses). 
+Through this interface coupling with other softwares (Abaqus, Ansys, etc) is possible
+and iterative processes (optimization, design sensitivity) are possible.
+For a thorough explanation please check the documentation and the tutorials.
 
 Contents:
 
@@ -25,9 +18,9 @@ Contents:
    :titlesonly:
    :maxdepth: 2
 
+   main_module
    xfoil_module
    aero_module
-   main_module
    tutorial
 
 To Do

@@ -1,4 +1,4 @@
-Documentation for Xfoil Functions
+Xfoil Module Documentation
 *********************************
 
 The functions herein defined are purposely made for use with Xfoil.
