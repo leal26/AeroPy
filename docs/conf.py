@@ -17,6 +17,7 @@ import os
 import shlex
 import alabaster
 
+from mock import Mock # To include C dependent libs in ReadtheDocs
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -298,10 +299,10 @@ texinfo_documents = [
 intersphinx_mapping = {'https://docs.python.org/': None}
 
 # For importing C dependent Libraries
-class Mock(MagicMock):
+class m_Mock(Mock):
     @classmethod
     def __getattr__(cls, name):
-            return Mock()
+            return m_Mock()
 
 MOCK_MODULES = ['numpy'] #'pygtk', 'gtk', 'gobject', 'argparse', 'numpy', 'pandas'
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+sys.modules.update((mod_name, m_Mock()) for mod_name in MOCK_MODULES)
