@@ -50,8 +50,10 @@ Indices and tables
 Examples
 ==================
 
+A simple example demonstrating how to use AeroPy.
+
 .. code-block:: python
 
-    from xfoil_tools import *
-    find_coefficients(airfoil='naca0012', alpha=12.,NACA=True)
-    >>{'CD',}
+    from AeroPy import find_coefficients
+    find_coefficients(airfoil='naca0012', Reynolds = 1e6, alpha=12.,NACA=True)
+    >>> {'CM': 0.0134, 'CL': 1.2453, 'Top_Xtr': 0.0194, 'CD': 0.01934, 'CDp': 0.01379, 'alpha': 12.0, 'Bot_Xtr': 1.0}
