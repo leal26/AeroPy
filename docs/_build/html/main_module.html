@@ -85,6 +85,41 @@ module can be easily inserted)</p>
 <span id="code"></span><h2>1.1. Code<a class="headerlink" href="#module-AeroPy" title="Permalink to this headline">¶</a></h2>
 <p>Created on Sun Aug 16 20:59:22 2015</p>
 <p>&#64;author: Pedro</p>
+<dl class="function">
+<dt id="AeroPy.find_3D_coefficients">
+<code class="descclassname">AeroPy.</code><code class="descname">find_3D_coefficients</code><span class="sig-paren">(</span><em>airfoil</em>, <em>alpha</em>, <em>Reynolds=0</em>, <em>iteration=10</em>, <em>NACA=True</em>, <em>N=10</em>, <em>span=10.0</em>, <em>taper=1.0</em>, <em>chord_root=1</em>, <em>alpha_root=1.0</em>, <em>velocity=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AeroPy.html#find_3D_coefficients"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AeroPy.find_3D_coefficients" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the 3D distribution using the Lifting Line Theory.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>airfoil</strong> &#8211; if NACA is false, airfoil is the name of the plain
+filewhere the airfoil geometry is stored (variable airfoil).
+If NACA is True, airfoil is the naca series of the airfoil
+(i.e.: naca2244). By default NACA is False.</li>
+<li><strong>Reynolds</strong> &#8211; Reynolds number in case the simulation is for a
+viscous flow. In case not informed, the code will assume
+inviscid. (Use the aero_module function to calculate reynolds)</li>
+<li><strong>alpha</strong> &#8211; list/array/float/int of angles of attack.</li>
+<li><strong>iteration</strong> &#8211; changes how many times XFOIL will try to make the
+results converge. Specialy important for viscous flows</li>
+<li><strong>NACA</strong> &#8211; Boolean variable that defines if the code imports an
+airfoil from a file or generates a NACA airfoil.</li>
+<li><strong>N</strong> &#8211; number of cross sections on the wing</li>
+<li><strong>span</strong> &#8211; span in meters</li>
+<li><strong>taper</strong> &#8211; unidimendional taper (This options is still not 100%
+operational)</li>
+<li><strong>chord_root</strong> &#8211; value of the chord at the the root</li>
+<li><strong>alpha_root</strong> &#8211; angle of attack of the chord at the root (degrees)</li>
+<li><strong>velocity</strong> &#8211; velocity in m/s</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 </div>
 </div>
 
