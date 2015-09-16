@@ -1,0 +1,473 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>aero_module &mdash; AeroPy 0.0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="AeroPy 0.0.1 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">AeroPy 0.0.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for aero_module</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Created on Mon Jul 20 17:26:19 2015</span>
+
+<span class="sd">@author: Pedro Leal</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="c">#class Wing():</span>
+<span class="c">#    def __init__(self, alpha_L_0_root, c_D_xfoil, N=10, b=10., taper=1.,</span>
+<span class="c">#                   chord_root=1, alpha_root=0., V=1.):</span>
+<span class="c">#        self.alpha_L_0_root = alpha_L_0_root</span>
+<span class="c">#        self.c_D_xfoil = c_D_xfoil</span>
+<span class="c">#        self.N = N</span>
+<span class="c">#        self.b = b</span>
+<span class="c">#        self.taper = taper</span>
+<span class="c">#        self.chord_root = chord_root</span>
+<span class="c">#        self.alpha_root = alpha_root</span>
+<span class="c">#        self.V = V</span>
+
+<div class="viewcode-block" id="LLT_calculator"><a class="viewcode-back" href="../aero_module.html#aero_module.LLT_calculator">[docs]</a><span class="k">def</span> <span class="nf">LLT_calculator</span><span class="p">(</span><span class="n">alpha_L_0_root</span><span class="p">,</span> <span class="n">c_D_xfoil</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">10.</span><span class="p">,</span> <span class="n">taper</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span>
+                   <span class="n">chord_root</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">alpha_root</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">V</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the coefficients for a Wing.</span>
+<span class="sd">    TODO :  - Include elliptical wing</span>
+<span class="sd">            - When alpha_L_0_root = zero, nan!</span>
+<span class="sd">            - Include non rectangular wings</span>
+<span class="sd">            - something else?</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">x_theta_converter</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">Output</span><span class="o">=</span><span class="s">&#39;x&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Converts cartesian coordinate in a polar coordinate.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">Output</span> <span class="o">==</span> <span class="s">&#39;x&#39;</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">b</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">Output</span> <span class="o">==</span> <span class="s">&#39;theta&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;I did not program this&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="k">def</span> <span class="nf">geometric_calculator</span><span class="p">(</span><span class="n">taper</span><span class="p">,</span> <span class="n">chord_root</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">Type</span><span class="o">=</span><span class="s">&#39;Linear&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate the following geometric properties:</span>
+<span class="sd">        - S: Platform Area (currently rectangle)</span>
+<span class="sd">        - AR: Aspect Ratio</span>
+<span class="sd">        - c: array containg chord values along all the wing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">N</span><span class="o">/</span><span class="p">(</span><span class="n">N</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span> <span class="n">N</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x_theta_converter</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">Output</span><span class="o">=</span><span class="s">&#39;x&#39;</span><span class="p">)</span>
+
+        <span class="n">c</span> <span class="o">=</span> <span class="n">chord_root</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">taper</span><span class="p">)</span><span class="o">*</span><span class="nb">abs</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">/</span><span class="n">chord_root</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">Type</span> <span class="o">==</span> <span class="s">&#39;Linear&#39;</span><span class="p">:</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">taper</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">b</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">chord_root</span>
+            <span class="n">AR</span> <span class="o">=</span> <span class="n">b</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="n">S</span> <span class="c"># Aspect Ratio</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;I did not program this&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">c</span><span class="p">,</span> <span class="n">AR</span>
+
+    <span class="k">def</span> <span class="nf">A_calculator</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">taper</span><span class="p">,</span> <span class="n">alpha_root</span><span class="p">,</span> <span class="n">chord_root</span><span class="p">,</span> <span class="n">alpha_L_0_root</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Solve the system of N linear equations with N variables.</span>
+<span class="sd">        DEFINITION OF A IS IN IPYTHON.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Calculate geometric properties</span>
+        <span class="n">c</span><span class="p">,</span> <span class="n">AR</span> <span class="o">=</span> <span class="n">geometric_calculator</span><span class="p">(</span><span class="n">taper</span><span class="p">,</span> <span class="n">chord_root</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">Type</span><span class="o">=</span><span class="s">&#39;Linear&#39;</span><span class="p">)</span>
+
+        <span class="c"># Converting angles to radians</span>
+        <span class="n">alpha_root</span> <span class="o">=</span> <span class="n">alpha_root</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mf">180.</span>
+        <span class="n">alpha_L_0_root</span> <span class="o">=</span> <span class="n">alpha_L_0_root</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mf">180.</span>
+
+        <span class="c"># Avoid using theta = 0,pi,etc, because of zero division</span>
+        <span class="c"># Since sine is an odd function and the wing is symmetric, avoid</span>
+        <span class="c"># points on the other side of the wing.</span>
+        <span class="c"># Otherwise, certain terms would cancel eash other.</span>
+        <span class="c"># That is why: N=1+2*j</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">N</span><span class="o">/</span><span class="p">(</span><span class="n">N</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span> <span class="n">N</span><span class="p">)</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha_root</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+        <span class="n">alpha_L_0</span> <span class="o">=</span> <span class="n">alpha_L_0_root</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="c"># CONSTANT AIRFOIL SECTION</span>
+
+        <span class="n">D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span><span class="n">N</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">N</span><span class="p">):</span>
+            <span class="n">D</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">alpha</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">alpha_L_0</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">N</span><span class="p">):</span>
+                <span class="n">n</span> <span class="o">=</span> <span class="mi">1</span><span class="o">+</span><span class="mi">2</span><span class="o">*</span><span class="n">j</span>
+                <span class="n">C</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="mi">2</span><span class="o">*</span><span class="n">b</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">+</span> <span class="n">n</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="o">*</span> \
+                          <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">n</span><span class="o">*</span><span class="n">theta</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">D</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">A</span><span class="p">,</span> <span class="n">theta</span>
+
+    <span class="k">def</span> <span class="nf">gamma_calculator</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">theta</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate the source strengths.&quot;&quot;&quot;</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+        <span class="c"># Calculating gammas</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">th</span> <span class="ow">in</span> <span class="n">theta</span><span class="p">:</span>
+            <span class="n">gamma_temp</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">N</span><span class="p">):</span>
+                <span class="n">n</span> <span class="o">=</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span>
+                <span class="n">gamma_temp</span> <span class="o">+=</span> <span class="mi">2</span><span class="o">*</span><span class="n">b</span><span class="o">*</span><span class="n">V</span><span class="o">*</span><span class="n">A</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">n</span><span class="o">*</span><span class="n">th</span><span class="p">)</span>
+            <span class="n">gamma</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gamma_temp</span><span class="p">)</span>
+        <span class="c"># For tensor manipulation, the data needs to be an np.array object</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">gamma</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">gamma</span>
+
+    <span class="k">def</span> <span class="nf">coefficient_calculator</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">AR</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">V</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate 3D Lift, Drag and efficiency coefficients. The</span>
+<span class="sd">        section lift coefficient and the lift distribution (roughly equal</span>
+<span class="sd">        to the pressure distribution) are also caulculated.</span>
+
+<span class="sd">        Output: Dictionary with the following keys:</span>
+<span class="sd">        - cls : section lift coefficient.</span>
+<span class="sd">        - C_L : 3D Lift Coefficient.</span>
+<span class="sd">        - C_D : 3D Drag Coefficient.</span>
+<span class="sd">        - e : efficiency. (as defined in Anderson&#39;s Aerodynamics book)</span>
+<span class="sd">              Between 0 an 1, where 1 is equal to the efficiency of an</span>
+<span class="sd">              elliptical wing.</span>
+<span class="sd">        - distribution : distribution along axis perpendicular to the</span>
+<span class="sd">                         the cross section.&quot;&quot;&quot;</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">gamma</span><span class="p">)</span>
+        <span class="c"># Calculating section lift coefficients</span>
+        <span class="n">cl</span> <span class="o">=</span> <span class="mf">2.</span><span class="o">*</span><span class="n">gamma</span><span class="o">/</span><span class="p">(</span><span class="n">c</span><span class="o">*</span><span class="n">V</span><span class="p">)</span>
+        <span class="c"># Lift Coefficient</span>
+        <span class="n">C_L</span> <span class="o">=</span> <span class="n">A</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">AR</span>
+        <span class="c"># Drag Coefficient</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">delta</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">N</span><span class="p">):</span>
+                <span class="n">n</span> <span class="o">=</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span>
+                <span class="n">delta</span> <span class="o">+=</span> <span class="n">n</span> <span class="o">*</span> <span class="p">(</span><span class="n">A</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">/</span><span class="n">A</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span>
+            <span class="n">e</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">delta</span><span class="p">)</span>
+            <span class="n">C_Di</span> <span class="o">=</span> <span class="n">C_L</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">e</span><span class="o">*</span><span class="n">AR</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">e</span> <span class="o">=</span> <span class="s">&#39;Does not make sense. All A coefficients are zero and&#39;</span> \
+              <span class="s">&#39; there is a division by zero at the calculation of delta&#39;</span>
+            <span class="n">C_Di</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">distribution</span> <span class="o">=</span> <span class="n">cl</span><span class="o">/</span><span class="n">cl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;cls&#39;</span><span class="p">:</span><span class="n">cl</span><span class="p">,</span> <span class="s">&#39;C_L&#39;</span><span class="p">:</span><span class="n">C_L</span><span class="p">,</span> <span class="s">&#39;C_Di&#39;</span><span class="p">:</span><span class="n">C_Di</span><span class="p">,</span> <span class="s">&#39;e&#39;</span><span class="p">:</span><span class="n">e</span><span class="p">,</span>
+                <span class="s">&#39;distribution&#39;</span><span class="p">:</span><span class="n">distribution</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">total_drag_calculator</span><span class="p">(</span><span class="n">coefficients</span><span class="p">,</span> <span class="n">c_D_xfoil</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        From xfoil we have the friction and pressure drag components for</span>
+<span class="sd">        2D. From LLT we have the 3D induced drag component and the</span>
+<span class="sd">        pressure distribution. Integrating the 2D over the distribution</span>
+<span class="sd">        and adding to the 3D induced drag, we obtain the overall drag</span>
+<span class="sd">        coefficient.</span>
+
+<span class="sd">        CURRENTLY WRITTEN FOR SYMMETRIC AIRFOIL.&quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">trapezoid</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="n">x</span><span class="p">):</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">/</span><span class="mf">2.</span>
+            <span class="k">return</span> <span class="n">s</span>
+        <span class="c"># Add the wingtip where the circulation is euqal to zero</span>
+        <span class="n">distribution</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">coefficients</span><span class="p">[</span><span class="s">&#39;distribution&#39;</span><span class="p">])</span>
+        <span class="n">distribution</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">x</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">b</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+
+        <span class="n">C_D_xfoil</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">c_D_xfoil</span> <span class="o">*</span> <span class="n">trapezoid</span><span class="p">(</span><span class="n">distribution</span><span class="p">,</span><span class="n">x</span><span class="p">)</span><span class="o">/</span><span class="n">b</span>
+        <span class="n">C_D</span> <span class="o">=</span> <span class="n">C_D_xfoil</span> <span class="o">+</span> <span class="n">coefficients</span><span class="p">[</span><span class="s">&#39;C_Di&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">C_D</span>
+
+    <span class="c"># Calculate the Fourrier Constants and theta</span>
+    <span class="n">A</span><span class="p">,</span> <span class="n">theta</span> <span class="o">=</span> <span class="n">A_calculator</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">taper</span><span class="p">,</span> <span class="n">alpha_root</span><span class="p">,</span> <span class="n">chord_root</span><span class="p">,</span>
+                            <span class="n">alpha_L_0_root</span><span class="p">)</span>
+
+    <span class="c"># For plotting we calculate the postion along the span</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">x_theta_converter</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">Output</span><span class="o">=</span><span class="s">&#39;x&#39;</span><span class="p">)</span>
+    <span class="c"># Calculate the circulation coefficients, the gammas</span>
+    <span class="n">gamma</span> <span class="o">=</span> <span class="n">gamma_calculator</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">theta</span><span class="p">)</span>
+    <span class="c"># Calculate certain geometric properties such as chord and AR</span>
+    <span class="n">c</span><span class="p">,</span> <span class="n">AR</span> <span class="o">=</span> <span class="n">geometric_calculator</span><span class="p">(</span><span class="n">taper</span><span class="p">,</span> <span class="n">chord_root</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+    <span class="c"># Calculate the coefficients</span>
+    <span class="n">coefficients</span> <span class="o">=</span> <span class="n">coefficient_calculator</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">AR</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">V</span><span class="p">)</span>
+    <span class="c"># Calculate the total drag</span>
+    <span class="n">C_D</span> <span class="o">=</span> <span class="n">total_drag_calculator</span><span class="p">(</span><span class="n">coefficients</span><span class="p">,</span> <span class="n">c_D_xfoil</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+    <span class="n">coefficients</span><span class="p">[</span><span class="s">&#39;C_D&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">C_D</span>
+    <span class="k">return</span> <span class="n">coefficients</span>
+
+<span class="c">#==============================================================================</span>
+<span class="c"># Functions Intended for use with FInite ELement Methods</span>
+<span class="c">#==============================================================================</span></div>
+<span class="k">def</span> <span class="nf">force_shell</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span> <span class="n">chord</span><span class="p">,</span> <span class="n">half_span</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">Velocity</span><span class="p">,</span> <span class="n">thickness</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="n">txt</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="c"># Height is in feet</span>
+    <span class="c"># If the Shell is an extrude, it needs to take in consideration</span>
+    <span class="c"># that there is a skin thickness outwards of the outer mold.</span>
+    <span class="c"># If the Shell is na planar, there is no need for such a</span>
+    <span class="c"># consideration</span>
+    <span class="n">Air_properties</span> <span class="o">=</span> <span class="n">air_properties</span><span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s">&#39;feet&#39;</span><span class="p">)</span>
+    <span class="n">atm_pressure</span> <span class="o">=</span> <span class="n">Air_properties</span><span class="p">[</span><span class="s">&#39;Atmospheric Pressure&#39;</span><span class="p">]</span>
+    <span class="n">air_density</span> <span class="o">=</span> <span class="n">Air_properties</span><span class="p">[</span><span class="s">&#39;Density&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">thickness</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">Data</span><span class="p">[</span><span class="s">&#39;Force&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">Cp</span><span class="p">:(</span><span class="n">Cp</span><span class="o">*</span><span class="mf">0.5</span><span class="o">*</span><span class="n">air_density</span> <span class="o">*</span> <span class="n">Velocity</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span>
+                            <span class="n">atm_pressure</span><span class="p">)</span> <span class="o">*</span> <span class="n">chord</span><span class="o">*</span><span class="n">half_span</span><span class="p">,</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;Cp&#39;</span><span class="p">])</span>
+        <span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">chord</span><span class="p">)</span><span class="o">*</span><span class="n">x</span><span class="p">,</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])</span>
+        <span class="n">Data</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">chord</span><span class="p">)</span><span class="o">*</span><span class="n">x</span><span class="p">,</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">Data</span><span class="p">[</span><span class="s">&#39;Force&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">Cp</span><span class="p">:(</span><span class="n">Cp</span><span class="o">*</span><span class="mf">0.5</span><span class="o">*</span><span class="n">air_density</span> <span class="o">*</span> <span class="n">Velocity</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span>
+                            <span class="n">atm_pressure</span><span class="p">)</span> <span class="o">*</span> <span class="n">chord</span><span class="o">*</span><span class="n">half_span</span><span class="p">,</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;Cp&#39;</span><span class="p">])</span>
+        <span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">chord</span> <span class="o">-</span> <span class="mf">2.</span><span class="o">*</span><span class="n">thickness</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="n">thickness</span><span class="p">,</span>
+                        <span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])</span>
+        <span class="n">Data</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">chord</span> <span class="o">-</span> <span class="mf">2.</span><span class="o">*</span><span class="n">thickness</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span><span class="p">,</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">])</span>
+    <span class="n">Data</span><span class="p">[</span><span class="s">&#39;z&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])</span>
+
+    <span class="n">PressureDistribution</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">],</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">],</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;z&#39;</span><span class="p">],</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;Force&#39;</span><span class="p">])</span>
+<span class="c">#    elliptical_distribution=np.sqrt(1.-(Data[&#39;z&#39;]/half_span)**2)</span>
+<span class="c">#    if txt==True:</span>
+<span class="c">#        DataFile = open(&#39;Force_shell.txt&#39;,&#39;w&#39;)</span>
+<span class="c">#        DataFile.close()</span>
+<span class="c">#        for j in range(N):</span>
+<span class="c">#            for i in range(len(Data[&#39;x&#39;])):</span>
+<span class="c">#                    DataFile = open(&#39;Force_shell.txt&#39;,&#39;a&#39;)</span>
+<span class="c">#                    DataFile.write(&#39;%f\t%f\t%f\t%f\n&#39; % (</span>
+<span class="c">#                        Data[&#39;x&#39;][i],</span>
+<span class="c">#                        Data[&#39;y&#39;][i],</span>
+<span class="c">#                        Data[&#39;z&#39;][j],</span>
+<span class="c">#                        elliptical_distribution[j]*Data[&#39;Force&#39;][i]))</span>
+<span class="c">#                    DataFile.close()</span>
+<span class="c">#        return 0</span>
+<span class="c">#    else:</span>
+<span class="c">#        PressureDistribution=()</span>
+<span class="c">#        for j in range(N):</span>
+<span class="c">#            for i in range(len(Data[&#39;x&#39;])):</span>
+<span class="c">#                    PressureDistribution=PressureDistribution+((Data[&#39;x&#39;][i],</span>
+<span class="c">#                        Data[&#39;y&#39;][i],Data[&#39;z&#39;][j],</span>
+<span class="c">#                        elliptical_distribution[j]*Data[&#39;Pressure&#39;][i]),)</span>
+    <span class="k">return</span> <span class="n">PressureDistribution</span>
+
+<span class="k">def</span> <span class="nf">pressure_shell</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span> <span class="n">chord</span><span class="p">,</span> <span class="n">thickness</span><span class="p">,</span> <span class="n">half_span</span><span class="p">,</span> <span class="n">air_density</span><span class="p">,</span> <span class="n">Velocity</span><span class="p">,</span>
+                   <span class="n">N</span><span class="p">,</span> <span class="n">txt</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">llt_distribution</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                   <span class="n">distribution</span><span class="o">=</span><span class="s">&#39;Elliptical&#39;</span><span class="p">):</span>
+
+    <span class="n">Data</span><span class="p">[</span><span class="s">&#39;Pressure&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">Cp</span><span class="p">:</span> <span class="n">Cp</span><span class="o">*</span><span class="mf">0.5</span><span class="o">*</span><span class="n">air_density</span><span class="o">*</span> <span class="n">Velocity</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span><span class="n">chord</span><span class="p">,</span>
+                            <span class="n">Data</span><span class="p">[</span><span class="s">&#39;Cp&#39;</span><span class="p">])</span>
+    <span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">chord</span> <span class="o">-</span> <span class="mf">2.</span><span class="o">*</span><span class="n">thickness</span><span class="p">)</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span> <span class="n">thickness</span><span class="p">,</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])</span>
+    <span class="n">Data</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">chord</span> <span class="o">-</span> <span class="mf">2.</span><span class="o">*</span><span class="n">thickness</span><span class="p">)</span><span class="o">*</span><span class="n">x</span><span class="p">,</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">])</span>
+    <span class="n">DataFile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;Pressure_shell.txt&#39;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">DataFile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">distribution</span> <span class="o">==</span> <span class="s">&#39;Elliptical&#39;</span><span class="p">:</span>
+        <span class="n">Data</span><span class="p">[</span><span class="s">&#39;z&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">half_span</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+        <span class="n">distribution</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="s">&#39;z&#39;</span><span class="p">]</span><span class="o">/</span><span class="n">half_span</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">distribution</span> <span class="o">==</span> <span class="s">&#39;LLT&#39;</span><span class="p">:</span>
+        <span class="n">Data</span><span class="p">[</span><span class="s">&#39;z&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">half_span</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">distribution</span><span class="p">))</span>
+        <span class="n">distribution</span> <span class="o">=</span> <span class="n">llt_distribution</span>
+    <span class="k">if</span> <span class="n">txt</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])):</span>
+                <span class="n">DataFile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;Pressure_shell.txt&#39;</span><span class="p">,</span><span class="s">&#39;a&#39;</span><span class="p">)</span>
+                <span class="n">DataFile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%f</span><span class="se">\t</span><span class="si">%f</span><span class="se">\t</span><span class="si">%f</span><span class="se">\t</span><span class="si">%f</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">],</span>
+                    <span class="n">Data</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">],</span>
+                    <span class="n">Data</span><span class="p">[</span><span class="s">&#39;z&#39;</span><span class="p">][</span><span class="n">j</span><span class="p">],</span>
+                    <span class="n">distribution</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">*</span><span class="n">Data</span><span class="p">[</span><span class="s">&#39;Pressure&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]))</span>
+                <span class="n">DataFile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">PressureDistribution</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])):</span>
+                    <span class="n">PressureDistribution</span> <span class="o">=</span> <span class="n">PressureDistribution</span> <span class="o">+</span> <span class="p">(</span>
+                                             <span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">],</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">],</span>
+                                              <span class="n">Data</span><span class="p">[</span><span class="s">&#39;z&#39;</span><span class="p">][</span><span class="n">j</span><span class="p">],</span> <span class="n">distribution</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">*</span>
+                                              <span class="n">Data</span><span class="p">[</span><span class="s">&#39;Pressure&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]),</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">PressureDistribution</span>
+
+<div class="viewcode-block" id="pressure_shell_2D"><a class="viewcode-back" href="../aero_module.html#aero_module.pressure_shell_2D">[docs]</a><span class="k">def</span> <span class="nf">pressure_shell_2D</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span> <span class="n">chord</span><span class="p">,</span> <span class="n">thickness</span><span class="p">,</span> <span class="n">half_span</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">Velocity</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span>
+                      <span class="n">txt</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate pressure field for a 2D Shell.&quot;&quot;&quot;</span>
+    <span class="n">Air_properties</span> <span class="o">=</span> <span class="n">air_properties</span><span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s">&#39;feet&#39;</span><span class="p">)</span>
+    <span class="n">air_density</span> <span class="o">=</span> <span class="n">Air_properties</span><span class="p">[</span><span class="s">&#39;Density&#39;</span><span class="p">]</span>
+
+    <span class="n">Data</span><span class="p">[</span><span class="s">&#39;Pressure&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">Cp</span><span class="p">:</span> <span class="n">Cp</span><span class="o">*</span><span class="mf">0.5</span><span class="o">*</span><span class="n">air_density</span><span class="o">*</span> <span class="n">Velocity</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span><span class="n">chord</span><span class="p">,</span>
+                            <span class="n">Data</span><span class="p">[</span><span class="s">&#39;Cp&#39;</span><span class="p">])</span>
+    <span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">chord</span> <span class="o">-</span> <span class="mf">2.</span><span class="o">*</span><span class="n">thickness</span><span class="p">)</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span> <span class="n">thickness</span><span class="p">,</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])</span>
+    <span class="n">Data</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">chord</span> <span class="o">-</span> <span class="mf">2.</span><span class="o">*</span><span class="n">thickness</span><span class="p">)</span><span class="o">*</span><span class="n">x</span><span class="p">,</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">])</span>
+    <span class="n">DataFile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;Pressure_shell.txt&#39;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">DataFile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">Data</span><span class="p">[</span><span class="s">&#39;z&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">half_span</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">txt</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])):</span>
+                    <span class="n">DataFile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;Pressure_shell.txt&#39;</span><span class="p">,</span> <span class="s">&#39;a&#39;</span><span class="p">)</span>
+                    <span class="n">DataFile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%f</span><span class="se">\t</span><span class="si">%f</span><span class="se">\t</span><span class="si">%f</span><span class="se">\t</span><span class="si">%f</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                        <span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">],</span>
+                        <span class="n">Data</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">],</span>
+                        <span class="n">Data</span><span class="p">[</span><span class="s">&#39;z&#39;</span><span class="p">][</span><span class="n">j</span><span class="p">],</span>
+                        <span class="n">Data</span><span class="p">[</span><span class="s">&#39;Pressure&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]))</span>
+                    <span class="n">DataFile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">PressureDistribution</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">])):</span>
+                    <span class="n">PressureDistribution</span> <span class="o">=</span> <span class="n">PressureDistribution</span> <span class="o">+</span> <span class="p">(</span>
+                                            <span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="s">&#39;x&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">],</span> <span class="n">Data</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">],</span>
+                                             <span class="n">Data</span><span class="p">[</span><span class="s">&#39;z&#39;</span><span class="p">][</span><span class="n">j</span><span class="p">],</span>
+                                             <span class="n">Data</span><span class="p">[</span><span class="s">&#39;Pressure&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]),</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">PressureDistribution</span>
+</div>
+<div class="viewcode-block" id="air_properties"><a class="viewcode-back" href="../aero_module.html#aero_module.air_properties">[docs]</a><span class="k">def</span> <span class="nf">air_properties</span><span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s">&#39;feet&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function to calculate air properties for a given height (m or ft).</span>
+
+<span class="sd">    Sources:</span>
+<span class="sd">      - http://en.wikipedia.org/wiki/Density_of_air#Altitude</span>
+<span class="sd">      - http://aerojet.engr.ucdavis.edu/fluenthelp/html/ug/node337.htm</span>
+
+<span class="sd">    Created on Thu May 15 14:59:43 2014</span>
+<span class="sd">    @author: Pedro Leal</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># height is in m</span>
+    <span class="k">if</span> <span class="n">unit</span> <span class="o">==</span> <span class="s">&#39;feet&#39;</span><span class="p">:</span>
+        <span class="n">height</span> <span class="o">=</span> <span class="mf">0.3048</span><span class="o">*</span><span class="n">height</span>
+    <span class="k">elif</span> <span class="n">unit</span> <span class="o">!=</span> <span class="s">&#39;meter&#39;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;air_properties can onlu understand feet and meters&#39;</span><span class="p">)</span>
+
+    <span class="c">#==================================================================</span>
+    <span class="c"># Constants</span>
+    <span class="c">#==================================================================</span>
+    <span class="c"># Sea level standard atmospheric pressure</span>
+    <span class="n">P0</span> <span class="o">=</span> <span class="mf">101325.</span> <span class="c"># Pa</span>
+    <span class="c"># Sealevel standard atmospheric temperature</span>
+    <span class="n">T0</span> <span class="o">=</span> <span class="mf">288.15</span> <span class="c"># K</span>
+    <span class="c"># Earth-surface gravitational acceleration</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="mf">8.80655</span> <span class="c"># m/s2</span>
+    <span class="c"># Temperature lapse rate, 0.0065 K/m</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="mf">0.0065</span> <span class="c"># K/m</span>
+    <span class="c"># Ideal (Universal) gas constant</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="mf">8.31447</span> <span class="c"># J/(mol K)</span>
+    <span class="c"># Molar mass of dry air</span>
+    <span class="n">M</span> <span class="o">=</span> <span class="mf">0.0289644</span> <span class="c">#kg/mol</span>
+    <span class="c"># Specific R for air</span>
+    <span class="n">R_air</span> <span class="o">=</span> <span class="n">R</span><span class="o">/</span><span class="n">M</span>
+    <span class="c"># Sutherland&#39;s law coefficients</span>
+    <span class="n">C1</span> <span class="o">=</span> <span class="mf">1.458e-6</span> <span class="c">#kg/m.s.sqrt(K)</span>
+    <span class="n">C2</span> <span class="o">=</span> <span class="mf">110.4</span> <span class="c">#K</span>
+
+    <span class="c">#==================================================================</span>
+    <span class="c"># Temperature</span>
+    <span class="c">#==================================================================</span>
+    <span class="c">#Temperature at altitude h meters above sea level is approximated</span>
+    <span class="c"># by the following formula (only valid inside the troposphere):</span>
+    <span class="n">T</span> <span class="o">=</span> <span class="n">T0</span> <span class="o">-</span> <span class="n">L</span><span class="o">*</span><span class="n">height</span>
+
+    <span class="c">#==================================================================</span>
+    <span class="c"># Pressure</span>
+    <span class="c">#==================================================================</span>
+    <span class="n">P</span> <span class="o">=</span> <span class="n">P0</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="n">L</span><span class="o">*</span><span class="n">height</span><span class="o">/</span><span class="n">T0</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="n">g</span><span class="o">*</span><span class="n">M</span><span class="o">/</span><span class="p">(</span><span class="n">R</span><span class="o">*</span><span class="n">L</span><span class="p">))</span>
+
+    <span class="c">#==================================================================</span>
+    <span class="c"># Density</span>
+    <span class="c">#==================================================================</span>
+    <span class="n">density</span> <span class="o">=</span> <span class="n">P</span><span class="o">*</span><span class="n">M</span> <span class="o">/</span> <span class="p">(</span><span class="n">R</span><span class="o">*</span><span class="n">T</span><span class="p">)</span>
+
+    <span class="c">#==================================================================</span>
+    <span class="c"># Dynamic Viscosity (Sutherland equation with two constants)</span>
+    <span class="c">#==================================================================</span>
+    <span class="n">dyn_viscosity</span> <span class="o">=</span> <span class="p">(</span><span class="n">C1</span> <span class="o">*</span> <span class="n">T</span><span class="o">**</span><span class="p">(</span><span class="mf">3.</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">T</span><span class="o">+</span><span class="n">C2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;Density&#39;</span><span class="p">:</span> <span class="n">density</span><span class="p">,</span> <span class="s">&#39;Dynamic Viscosity&#39;</span><span class="p">:</span> <span class="n">dyn_viscosity</span><span class="p">,</span>
+            <span class="s">&#39;Atmospheric Temperature&#39;</span><span class="p">:</span> <span class="n">T</span><span class="p">,</span> <span class="s">&#39;R air&#39;</span><span class="p">:</span> <span class="n">R_air</span><span class="p">,</span>
+            <span class="s">&#39;Atmospheric Pressure&#39;</span><span class="p">:</span> <span class="n">P</span><span class="p">}</span>
+</div>
+<div class="viewcode-block" id="Reynolds"><a class="viewcode-back" href="../aero_module.html#aero_module.Reynolds">[docs]</a><span class="k">def</span> <span class="nf">Reynolds</span><span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Simple function to calculate Reynolds for a given height.</span>
+
+<span class="sd">    @author: Pedro Leal</span>
+<span class="sd">    Created in Jul 17 2015</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Air_Data</span> <span class="o">=</span> <span class="n">air_properties</span><span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s">&#39;feet&#39;</span><span class="p">)</span>
+    <span class="n">rho</span> <span class="o">=</span> <span class="n">Air_Data</span><span class="p">[</span><span class="s">&#39;Density&#39;</span><span class="p">]</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="n">c</span>
+    <span class="n">nu</span> <span class="o">=</span> <span class="n">Air_Data</span><span class="p">[</span><span class="s">&#39;Dynamic Viscosity&#39;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">rho</span><span class="o">*</span><span class="n">V</span><span class="o">*</span><span class="n">L</span><span class="o">/</span><span class="n">nu</span></div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="k">print</span> <span class="n">LLT_calculator</span><span class="p">(</span><span class="n">alpha_L_0_root</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">c_D_xfoil</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Pedro Leal.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.4</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/leal26/AeroPy" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

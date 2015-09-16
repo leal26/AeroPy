@@ -55,7 +55,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'pyXFOIL'
+project = u'AeroPy'
 copyright = u'2015, Pedro Leal'
 author = u'Pedro Leal'
 
@@ -122,7 +122,12 @@ html_theme = 'alabaster'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+html_theme_options = {'logo': 'logo.png',
+                      'description': 'An easy to use aerodynamic tool',
+                      'github_user': 'leal26',
+                      'github_repo': 'AeroPy',
+                      'logo_name': 'AeroPy',
+                      'github_banner': True}
 
 # Add any paths that contain custom themes here, relative to this directory.
 html_theme_path = [alabaster.get_path()]

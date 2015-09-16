@@ -33,3 +33,8 @@ where  :math:`n=1,3,5,...,N-1`. Since we are considering a symmetric wing, all o
 
 .. figure:: images/elliptical_LLT.png
    :align: center
+
+The code
+========
+.. automodule:: aero_module
+   :members:

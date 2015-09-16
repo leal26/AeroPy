@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>2. Aerodynamic Module Documentation &mdash; pyXFOIL 0.0.1 documentation</title>
+    <title>2. Aerodynamic Module Documentation &mdash; AeroPy 0.0.1 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="pyXFOIL 0.0.1 documentation" href="index.html" />
+    <link rel="top" title="AeroPy 0.0.1 documentation" href="index.html" />
     <link rel="next" title="3. PyFOIL Documentation" href="main_module.html" />
     <link rel="prev" title="1. Documentation for Xfoil Functions" href="xfoil_module.html" />
    
@@ -48,7 +48,7 @@
         <li class="right" >
           <a href="xfoil_module.html" title="1. Documentation for Xfoil Functions"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">pyXFOIL 0.0.1 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">AeroPy 0.0.1 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -79,6 +79,55 @@
 <img alt="_images/elliptical_LLT.png" src="_images/elliptical_LLT.png" />
 </div>
 </div>
+<div class="section" id="module-aero_module">
+<span id="the-code"></span><h2>2.2. The code<a class="headerlink" href="#module-aero_module" title="Permalink to this headline">¶</a></h2>
+<p>Created on Mon Jul 20 17:26:19 2015</p>
+<p>&#64;author: Pedro Leal</p>
+<dl class="function">
+<dt id="aero_module.LLT_calculator">
+<code class="descclassname">aero_module.</code><code class="descname">LLT_calculator</code><span class="sig-paren">(</span><em>alpha_L_0_root</em>, <em>c_D_xfoil</em>, <em>N=10</em>, <em>b=10.0</em>, <em>taper=1.0</em>, <em>chord_root=1</em>, <em>alpha_root=0.0</em>, <em>V=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aero_module.html#LLT_calculator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aero_module.LLT_calculator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the coefficients for a Wing.
+TODO :  - Include elliptical wing</p>
+<blockquote>
+<div><ul class="simple">
+<li>When alpha_L_0_root = zero, nan!</li>
+<li>Include non rectangular wings</li>
+<li>something else?</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="aero_module.Reynolds">
+<code class="descclassname">aero_module.</code><code class="descname">Reynolds</code><span class="sig-paren">(</span><em>height</em>, <em>V</em>, <em>c</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aero_module.html#Reynolds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aero_module.Reynolds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple function to calculate Reynolds for a given height.</p>
+<p>&#64;author: Pedro Leal
+Created in Jul 17 2015</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="aero_module.air_properties">
+<code class="descclassname">aero_module.</code><code class="descname">air_properties</code><span class="sig-paren">(</span><em>height</em>, <em>unit='feet'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aero_module.html#air_properties"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aero_module.air_properties" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to calculate air properties for a given height (m or ft).</p>
+<dl class="docutils">
+<dt>Sources:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://en.wikipedia.org/wiki/Density_of_air#Altitude">http://en.wikipedia.org/wiki/Density_of_air#Altitude</a></li>
+<li><a class="reference external" href="http://aerojet.engr.ucdavis.edu/fluenthelp/html/ug/node337.htm">http://aerojet.engr.ucdavis.edu/fluenthelp/html/ug/node337.htm</a></li>
+</ul>
+</dd>
+</dl>
+<p>Created on Thu May 15 14:59:43 2014
+&#64;author: Pedro Leal</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="aero_module.pressure_shell_2D">
+<code class="descclassname">aero_module.</code><code class="descname">pressure_shell_2D</code><span class="sig-paren">(</span><em>Data</em>, <em>chord</em>, <em>thickness</em>, <em>half_span</em>, <em>height</em>, <em>Velocity</em>, <em>N</em>, <em>txt=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aero_module.html#pressure_shell_2D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aero_module.pressure_shell_2D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate pressure field for a 2D Shell.</p>
+</dd></dl>
+
+</div>
 </div>
 
 
@@ -91,6 +140,7 @@
   <ul>
 <li><a class="reference internal" href="#">2. Aerodynamic Module Documentation</a><ul>
 <li><a class="reference internal" href="#lifting-line-theory">2.1. Lifting Line Theory</a></li>
+<li><a class="reference internal" href="#module-aero_module">2.2. The code</a></li>
 </ul>
 </li>
 </ul>
@@ -137,6 +187,10 @@
           rel="nofollow">Page source</a></li>
     </div>
 
+    
+    <a href="https://github.com/leal26/AeroPy" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
     
 
     
