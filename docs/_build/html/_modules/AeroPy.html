@@ -1,0 +1,153 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>AeroPy &mdash; AeroPy 0.0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="AeroPy 0.0.2 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">AeroPy 0.0.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for AeroPy</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Created on Sun Aug 16 20:59:22 2015</span>
+
+<span class="sd">@author: Pedro</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">aero_module</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">xfoil_module</span> <span class="kn">import</span> <span class="o">*</span>
+
+<div class="viewcode-block" id="find_3D_coefficients"><a class="viewcode-back" href="../main_module.html#AeroPy.find_3D_coefficients">[docs]</a><span class="k">def</span> <span class="nf">find_3D_coefficients</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">Reynolds</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">iteration</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">NACA</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                         <span class="n">N</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">span</span><span class="o">=</span><span class="mf">10.</span><span class="p">,</span> <span class="n">taper</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">chord_root</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">alpha_root</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span>
+                         <span class="n">velocity</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Calculate the 3D distribution using the Lifting Line Theory.</span>
+<span class="sd">    </span>
+<span class="sd">    :param airfoil: if NACA is false, airfoil is the name of the plain</span>
+<span class="sd">           filewhere the airfoil geometry is stored (variable airfoil).</span>
+<span class="sd">           If NACA is True, airfoil is the naca series of the airfoil</span>
+<span class="sd">           (i.e.: naca2244). By default NACA is False.</span>
+
+<span class="sd">    :param Reynolds: Reynolds number in case the simulation is for a</span>
+<span class="sd">          viscous flow. In case not informed, the code will assume</span>
+<span class="sd">          inviscid. (Use the aero_module function to calculate reynolds)</span>
+<span class="sd">          </span>
+<span class="sd">    :param alpha: list/array/float/int of angles of attack.</span>
+
+<span class="sd">    :param iteration: changes how many times XFOIL will try to make the</span>
+<span class="sd">          results converge. Specialy important for viscous flows</span>
+
+<span class="sd">    :param NACA: Boolean variable that defines if the code imports an</span>
+<span class="sd">          airfoil from a file or generates a NACA airfoil.</span>
+<span class="sd">    </span>
+<span class="sd">    :param N: number of cross sections on the wing</span>
+<span class="sd">    </span>
+<span class="sd">    :param span: span in meters</span>
+<span class="sd">    </span>
+<span class="sd">    :param taper: unidimendional taper (This options is still not 100%</span>
+<span class="sd">            operational)</span>
+<span class="sd">    </span>
+<span class="sd">    :param chord_root: value of the chord at the the root</span>
+<span class="sd">    </span>
+<span class="sd">    :param alpha_root: angle of attack of the chord at the root (degrees)</span>
+
+<span class="sd">    :param velocity: velocity in m/s</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+    <span class="n">coefficients</span> <span class="o">=</span> <span class="n">find_coefficients</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">Reynolds</span><span class="p">,</span> <span class="n">iteration</span><span class="p">,</span>
+                                     <span class="n">NACA</span><span class="p">)</span>
+    <span class="n">alpha_L_0_root</span> <span class="o">=</span> <span class="n">find_alpha_L_0</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">Reynolds</span><span class="p">,</span> <span class="n">iteration</span><span class="p">,</span> <span class="n">NACA</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">LLT_calculator</span><span class="p">(</span><span class="n">alpha_L_0_root</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">[</span><span class="s">&#39;CD&#39;</span><span class="p">],</span> <span class="n">N</span><span class="p">,</span> <span class="n">span</span><span class="p">,</span> <span class="n">taper</span><span class="p">,</span> <span class="n">chord_root</span><span class="p">,</span>
+                          <span class="n">alpha_root</span><span class="p">,</span> <span class="n">velocity</span><span class="p">)</span>
+
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="k">print</span> <span class="n">find_3D_coefficients</span><span class="p">(</span><span class="n">airfoil</span><span class="o">=</span><span class="s">&#39;naca0012&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Pedro Leal.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.4</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/leal26/AeroPy" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

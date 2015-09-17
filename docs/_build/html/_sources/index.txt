@@ -1,14 +1,15 @@
-.. pyFOIL Documentation
+.. AeroPy Documentation
 
 .. include xfoil_functions.rsf
 
-Welcome to pyFOIL's documentation, an easy to use aerodynamic tool
+Welcome to AeroPy's, an easy to use aerodynamic tool
 ==================================================================
-
-Python interface for XFOIL. THe objective of this library is to be able to be
-able to call XFOIL from Python iteratively for any simulation in a total of 4
-lines total (one line for most uses). For a thorough explanation and tutorials
-please check the table of contents.
+AeroPy is an library for calculating aerodynamic properties. The main feature of
+this library is the Python interface with XFOIL. The main objective of this library is to be able 
+to use XFOIL via Python iteratively in a total of 4 lines total (one line for most uses). 
+Through this interface coupling with other softwares (Abaqus, Ansys, etc) is possible
+and iterative processes (optimization, design sensitivity) are possible.
+For a thorough explanation please check the documentation and the tutorials.
 
 Contents:
 
@@ -17,9 +18,9 @@ Contents:
    :titlesonly:
    :maxdepth: 2
 
+   main_module
    xfoil_module
    aero_module
-   main_module
    tutorial
 
 To Do
@@ -49,8 +50,10 @@ Indices and tables
 Examples
 ==================
 
+A simple example demonstrating how to use AeroPy.
+
 .. code-block:: python
 
-    from xfoil_tools import *
-    find_coefficients(airfoil='naca0012', alpha=12.,NACA=True)
-    >>{'CD',}
+    from AeroPy import find_coefficients
+    find_coefficients(airfoil='naca0012', Reynolds = 1e6, alpha=12.,NACA=True)
+    >>> {'CM': 0.0134, 'CL': 1.2453, 'Top_Xtr': 0.0194, 'CD': 0.01934, 'CDp': 0.01379, 'alpha': 12.0, 'Bot_Xtr': 1.0}

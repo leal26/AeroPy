@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>3. PyFOIL Documentation &mdash; AeroPy 0.0.1 documentation</title>
+    <title>1. AeroPy Documentation &mdash; AeroPy 0.0.2 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.0.1',
+        VERSION:     '0.0.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,9 +24,9 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="AeroPy 0.0.1 documentation" href="index.html" />
-    <link rel="next" title="5. Tutorial" href="tutorial.html" />
-    <link rel="prev" title="2. Aerodynamic Module Documentation" href="aero_module.html" />
+    <link rel="top" title="AeroPy 0.0.2 documentation" href="index.html" />
+    <link rel="next" title="2. Xfoil Module Documentation" href="xfoil_module.html" />
+    <link rel="prev" title="Welcome to AeroPy’s, an easy to use aerodynamic tool" href="index.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
@@ -43,12 +43,12 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="tutorial.html" title="5. Tutorial"
+          <a href="xfoil_module.html" title="2. Xfoil Module Documentation"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="aero_module.html" title="2. Aerodynamic Module Documentation"
+          <a href="index.html" title="Welcome to AeroPy’s, an easy to use aerodynamic tool"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">AeroPy 0.0.1 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">AeroPy 0.0.2 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -57,9 +57,17 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="pyfoil-documentation">
-<h1>3. PyFOIL Documentation<a class="headerlink" href="#pyfoil-documentation" title="Permalink to this headline">¶</a></h1>
-<p>pyFOIL is separated in thre modules: (it is programmed in such a way that a new
+  <div class="section" id="aeropy-documentation">
+<h1>1. AeroPy Documentation<a class="headerlink" href="#aeropy-documentation" title="Permalink to this headline">¶</a></h1>
+<p>This project was elaborated because of the need of optimizing an airfoil
+according to its aerodynamic and structural performance (conference paper).
+Contrary to available options such as XFLR5, AeroPy aims to be an open source
+Python code. It is a quick and easy way to find the aerodynamic pressure and the
+drag and lift coefficients through the use of MIT&#8217;s XFOIL embedded in Python.
+Contrary to the other libraries, AeroPy does not have a GUI and is intended
+to be used in Python codes for optimizations or any other process that requires
+several aerodynamic analysis.</p>
+<p>AeroPy is separated in three modules: (it is programmed in such a way that a new
 module can be easily inserted)</p>
 <ul>
 <li><p class="first">xfoil: contains all the functions relating to XFOIL.</p>
@@ -73,11 +81,46 @@ module can be easily inserted)</p>
 </dl>
 </li>
 </ul>
-</div>
-<div class="section" id="module-pyFOIL">
-<span id="code"></span><h1>4. Code<a class="headerlink" href="#module-pyFOIL" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-AeroPy">
+<span id="code"></span><h2>1.1. Code<a class="headerlink" href="#module-AeroPy" title="Permalink to this headline">¶</a></h2>
 <p>Created on Sun Aug 16 20:59:22 2015</p>
 <p>&#64;author: Pedro</p>
+<dl class="function">
+<dt id="AeroPy.find_3D_coefficients">
+<code class="descclassname">AeroPy.</code><code class="descname">find_3D_coefficients</code><span class="sig-paren">(</span><em>airfoil</em>, <em>alpha</em>, <em>Reynolds=0</em>, <em>iteration=10</em>, <em>NACA=True</em>, <em>N=10</em>, <em>span=10.0</em>, <em>taper=1.0</em>, <em>chord_root=1</em>, <em>alpha_root=1.0</em>, <em>velocity=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AeroPy.html#find_3D_coefficients"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AeroPy.find_3D_coefficients" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the 3D distribution using the Lifting Line Theory.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>airfoil</strong> &#8211; if NACA is false, airfoil is the name of the plain
+filewhere the airfoil geometry is stored (variable airfoil).
+If NACA is True, airfoil is the naca series of the airfoil
+(i.e.: naca2244). By default NACA is False.</li>
+<li><strong>Reynolds</strong> &#8211; Reynolds number in case the simulation is for a
+viscous flow. In case not informed, the code will assume
+inviscid. (Use the aero_module function to calculate reynolds)</li>
+<li><strong>alpha</strong> &#8211; list/array/float/int of angles of attack.</li>
+<li><strong>iteration</strong> &#8211; changes how many times XFOIL will try to make the
+results converge. Specialy important for viscous flows</li>
+<li><strong>NACA</strong> &#8211; Boolean variable that defines if the code imports an
+airfoil from a file or generates a NACA airfoil.</li>
+<li><strong>N</strong> &#8211; number of cross sections on the wing</li>
+<li><strong>span</strong> &#8211; span in meters</li>
+<li><strong>taper</strong> &#8211; unidimendional taper (This options is still not 100%
+operational)</li>
+<li><strong>chord_root</strong> &#8211; value of the chord at the the root</li>
+<li><strong>alpha_root</strong> &#8211; angle of attack of the chord at the root (degrees)</li>
+<li><strong>velocity</strong> &#8211; velocity in m/s</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
 </div>
 
 
@@ -86,18 +129,23 @@ module can be easily inserted)</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.png" alt="Logo"/>
+            </a></p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">3. PyFOIL Documentation</a></li>
-<li><a class="reference internal" href="#module-pyFOIL">4. Code</a></li>
+<li><a class="reference internal" href="#">1. AeroPy Documentation</a><ul>
+<li><a class="reference internal" href="#module-AeroPy">1.1. Code</a></li>
+</ul>
+</li>
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="aero_module.html"
-                        title="previous chapter">2. Aerodynamic Module Documentation</a></p>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Welcome to AeroPy&#8217;s, an easy to use aerodynamic tool</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="tutorial.html"
-                        title="next chapter">5. Tutorial</a></p>
+  <p class="topless"><a href="xfoil_module.html"
+                        title="next chapter">2. Xfoil Module Documentation</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Welcome to pyFOIL’s documentation, an easy to use aerodynamic tool &mdash; AeroPy 0.0.1 documentation</title>
+    <title>Welcome to AeroPy’s, an easy to use aerodynamic tool &mdash; AeroPy 0.0.2 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.0.1',
+        VERSION:     '0.0.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,8 +24,8 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="AeroPy 0.0.1 documentation" href="#" />
-    <link rel="next" title="1. Documentation for Xfoil Functions" href="xfoil_module.html" />
+    <link rel="top" title="AeroPy 0.0.2 documentation" href="#" />
+    <link rel="next" title="1. AeroPy Documentation" href="main_module.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
@@ -42,9 +42,9 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="xfoil_module.html" title="1. Documentation for Xfoil Functions"
+          <a href="main_module.html" title="1. AeroPy Documentation"
              accesskey="N">next</a> |</li>
-        <li class="nav-item nav-item-0"><a href="#">AeroPy 0.0.1 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="#">AeroPy 0.0.2 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -53,24 +53,27 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="welcome-to-pyfoil-s-documentation-an-easy-to-use-aerodynamic-tool">
-<h1>Welcome to pyFOIL&#8217;s documentation, an easy to use aerodynamic tool<a class="headerlink" href="#welcome-to-pyfoil-s-documentation-an-easy-to-use-aerodynamic-tool" title="Permalink to this headline">¶</a></h1>
-<p>Python interface for XFOIL. THe objective of this library is to be able to be
-able to call XFOIL from Python iteratively for any simulation in a total of 4
-lines total (one line for most uses). For a thorough explanation and tutorials
-please check the table of contents.</p>
+  <div class="section" id="welcome-to-aeropy-s-an-easy-to-use-aerodynamic-tool">
+<h1>Welcome to AeroPy&#8217;s, an easy to use aerodynamic tool<a class="headerlink" href="#welcome-to-aeropy-s-an-easy-to-use-aerodynamic-tool" title="Permalink to this headline">¶</a></h1>
+<p>AeroPy is an library for calculating aerodynamic properties. The main feature of
+this library is the Python interface with XFOIL. The main objective of this library is to be able
+to use XFOIL via Python iteratively in a total of 4 lines total (one line for most uses).
+Through this interface coupling with other softwares (Abaqus, Ansys, etc) is possible
+and iterative processes (optimization, design sensitivity) are possible.
+For a thorough explanation please check the documentation and the tutorials.</p>
 <p>Contents:</p>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="xfoil_module.html">1. Documentation for Xfoil Functions</a><ul class="simple">
+<li class="toctree-l1"><a class="reference internal" href="main_module.html">1. AeroPy Documentation</a><ul class="simple">
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="aero_module.html">2. Aerodynamic Module Documentation</a><ul class="simple">
+<li class="toctree-l1"><a class="reference internal" href="xfoil_module.html">2. Xfoil Module Documentation</a><ul class="simple">
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="main_module.html">3. PyFOIL Documentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="main_module.html#module-pyFOIL">4. Code</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial.html">5. Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="aero_module.html">3. Aerodynamic Module Documentation</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">4. Tutorial</a></li>
 </ul>
 </div>
 </div>
@@ -102,9 +105,10 @@ I am <em>strongly</em> recommending the following collaborations:</p>
 </div>
 <div class="section" id="examples">
 <h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
-<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">xfoil_tools</span> <span class="kn">import</span> <span class="o">*</span>
-<span class="n">find_coefficients</span><span class="p">(</span><span class="n">airfoil</span><span class="o">=</span><span class="s">&#39;naca0012&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">12.</span><span class="p">,</span><span class="n">NACA</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-<span class="o">&gt;&gt;</span><span class="p">{</span><span class="s">&#39;CD&#39;</span><span class="p">,}</span>
+<p>A simple example demonstrating how to use AeroPy.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">AeroPy</span> <span class="kn">import</span> <span class="n">find_coefficients</span>
+<span class="n">find_coefficients</span><span class="p">(</span><span class="n">airfoil</span><span class="o">=</span><span class="s">&#39;naca0012&#39;</span><span class="p">,</span> <span class="n">Reynolds</span> <span class="o">=</span> <span class="mf">1e6</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">12.</span><span class="p">,</span><span class="n">NACA</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">{</span><span class="s">&#39;CM&#39;</span><span class="p">:</span> <span class="mf">0.0134</span><span class="p">,</span> <span class="s">&#39;CL&#39;</span><span class="p">:</span> <span class="mf">1.2453</span><span class="p">,</span> <span class="s">&#39;Top_Xtr&#39;</span><span class="p">:</span> <span class="mf">0.0194</span><span class="p">,</span> <span class="s">&#39;CD&#39;</span><span class="p">:</span> <span class="mf">0.01934</span><span class="p">,</span> <span class="s">&#39;CDp&#39;</span><span class="p">:</span> <span class="mf">0.01379</span><span class="p">,</span> <span class="s">&#39;alpha&#39;</span><span class="p">:</span> <span class="mf">12.0</span><span class="p">,</span> <span class="s">&#39;Bot_Xtr&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">}</span>
 </pre></div>
 </div>
 </div>
@@ -115,9 +119,12 @@ I am <em>strongly</em> recommending the following collaborations:</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="#">
+              <img class="logo" src="_static/logo.png" alt="Logo"/>
+            </a></p>
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">Welcome to pyFOIL&#8217;s documentation, an easy to use aerodynamic tool</a></li>
+<li><a class="reference internal" href="#">Welcome to AeroPy&#8217;s, an easy to use aerodynamic tool</a></li>
 <li><a class="reference internal" href="#to-do">To Do</a></li>
 <li><a class="reference internal" href="#recommended-collaborations">Recommended Collaborations</a></li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
@@ -125,8 +132,8 @@ I am <em>strongly</em> recommending the following collaborations:</p>
 </ul>
 
   <h4>Next topic</h4>
-  <p class="topless"><a href="xfoil_module.html"
-                        title="next chapter">1. Documentation for Xfoil Functions</a></p>
+  <p class="topless"><a href="main_module.html"
+                        title="next chapter">1. AeroPy Documentation</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
