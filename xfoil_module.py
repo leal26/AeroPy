@@ -16,7 +16,7 @@ import shutil # Modules necessary for saving multiple plots
 #                       	Core Functions
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
-         NACA=False, GDES=False, iteration=10):
+         NACA=False, GDES=False, iteration=10, flap = None):
     """ Call xfoil through Python.
 
     The input variables are:
@@ -64,7 +64,11 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
 
     :param iteration: changes how many times XFOIL will try to make the
           results converge. Speciallt important for viscous flows
-
+          
+    :param flap: determines if there is a flap. In case there is the 
+          expected input is [x_hinge, y_hinge, deflection(angles)]. 
+          y_hinge is determined to be exactly in the middle between the 
+          upper and lower surfaces.
     :rtype: dictionary with outputs relevant to the specific output type
 
     As a side note, it is much more eficient to run a single run with
@@ -184,6 +188,32 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
     else:
         issueCmd('%s' % airfoil)
 
+    # Once you load a set of points in Xfoil you need to create a
+    # name, however we do not need to give it a name
+    issueCmd('')
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #             Adapting points for better plots
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    if GDES == True:
+        issueCmd('GDES')  # enter GDES menu
+        issueCmd('CADD')  # add points at corners
+        issueCmd('')      # accept default input
+        issueCmd('')      # accept default input
+        issueCmd('')      # accept default input
+        issueCmd('')      # accept default input
+        issueCmd('PANEL') # regenerate paneling
+    #==============================================================
+    #                              Flaps
+    #===============================================================       
+    if flap != None:
+        issueCmd('GDES')  # enter GDES menu
+        issueCmd('FLAP')  # enter FLAP menu
+        issueCmd('%f' % flap[0])      # insert x location
+        issueCmd('%f' % flap[1])      # insert y location
+        issueCmd('%f' % flap[2])      # ainsesrt deflection in degrees
+        issueCmd('eXec')      # set buffer airfoil as current airfoil
+        issueCmd('') # exit GDES menu  
     # If output equals Coordinates, no analysis will be realized, only the
     # coordinates of the shape will be outputed
     if output == 'Coordinates':
@@ -193,36 +223,6 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
         # The yes stands for YES otherwise Xfoil will do nothing with it.
         issueCmd('Y')
     else:
-        # Once you load a set of points in Xfoil you need to create a
-        # name, however we do not need to give it a name
-        issueCmd('')
-
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        #             Adapting points for better plots
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-#        """ The following part of the code was not implemented in hope
-#        that the Cp be given for the given airfoil points, not for
-#        points created by xfoil.
-#
-#        GDES   (enter GDES menu)        |
-#        CADD   (add points at corners)  |  These commands are optional,
-#               (accept default input)   |  and are recommended only for
-#               (accept default input)   |  Eppler and Selig airfoils
-#               (accept default input)   |  to give smoother LE shapes
-#               (return to Top Level)    |
-#
-#        PANEL  (regenerate paneling since better panel node spacing is
-#                needed)
-
-        if GDES == True:
-            issueCmd('GDES')  # enter GDES menu
-            issueCmd('CADD')  # add points at corners
-            issueCmd('')      # accept default input
-            issueCmd('')      # accept default input
-            issueCmd('')      # accept default input
-            issueCmd('')      # accept default input
-            issueCmd('PANEL') # regenerate paneling
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Opening OPER module in Xfoil
         issueCmd('OPER')
@@ -549,7 +549,12 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
         rows_to_skip = 2
     # n is the amount of lines to skip
     Data = {}
-    header_done = False
+    if header != 0:
+        header_done = True
+        for head in header:
+            Data[head] = []
+    else:
+        header_done = False
     count_skip = 0
 
     with open (filename, "r") as myfile:
