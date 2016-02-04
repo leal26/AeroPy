@@ -70,7 +70,7 @@
 <span class="c">#                       	Core Functions</span>
 <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
 <div class="viewcode-block" id="call"><a class="viewcode-back" href="../xfoil_module.html#xfoil_module.call">[docs]</a><span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alfas</span><span class="o">=</span><span class="s">&#39;none&#39;</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Cp&#39;</span><span class="p">,</span> <span class="n">Reynolds</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">Mach</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">plots</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
-         <span class="n">NACA</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">GDES</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">iteration</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+         <span class="n">NACA</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">GDES</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">iteration</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">flap</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Call xfoil through Python.</span>
 
 <span class="sd">    The input variables are:</span>
@@ -118,7 +118,11 @@
 
 <span class="sd">    :param iteration: changes how many times XFOIL will try to make the</span>
 <span class="sd">          results converge. Speciallt important for viscous flows</span>
-
+<span class="sd">          </span>
+<span class="sd">    :param flap: determines if there is a flap. In case there is the </span>
+<span class="sd">          expected input is [x_hinge, y_hinge, deflection(angles)]. </span>
+<span class="sd">          y_hinge is determined to be exactly in the middle between the </span>
+<span class="sd">          upper and lower surfaces.</span>
 <span class="sd">    :rtype: dictionary with outputs relevant to the specific output type</span>
 
 <span class="sd">    As a side note, it is much more eficient to run a single run with</span>
@@ -238,6 +242,32 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">airfoil</span><span class="p">)</span>
 
+    <span class="c"># Once you load a set of points in Xfoil you need to create a</span>
+    <span class="c"># name, however we do not need to give it a name</span>
+    <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+
+    <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+    <span class="c">#             Adapting points for better plots</span>
+    <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+    <span class="k">if</span> <span class="n">GDES</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;GDES&#39;</span><span class="p">)</span>  <span class="c"># enter GDES menu</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;CADD&#39;</span><span class="p">)</span>  <span class="c"># add points at corners</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>      <span class="c"># accept default input</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>      <span class="c"># accept default input</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>      <span class="c"># accept default input</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>      <span class="c"># accept default input</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;PANEL&#39;</span><span class="p">)</span> <span class="c"># regenerate paneling</span>
+    <span class="c">#==============================================================</span>
+    <span class="c">#                              Flaps</span>
+    <span class="c">#===============================================================       </span>
+    <span class="k">if</span> <span class="n">flap</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;GDES&#39;</span><span class="p">)</span>  <span class="c"># enter GDES menu</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;FLAP&#39;</span><span class="p">)</span>  <span class="c"># enter FLAP menu</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%f</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">flap</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>      <span class="c"># insert x location</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%f</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">flap</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>      <span class="c"># insert y location</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%f</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">flap</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>      <span class="c"># ainsesrt deflection in degrees</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;eXec&#39;</span><span class="p">)</span>      <span class="c"># set buffer airfoil as current airfoil</span>
+        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span> <span class="c"># exit GDES menu  </span>
     <span class="c"># If output equals Coordinates, no analysis will be realized, only the</span>
     <span class="c"># coordinates of the shape will be outputed</span>
     <span class="k">if</span> <span class="n">output</span> <span class="o">==</span> <span class="s">&#39;Coordinates&#39;</span><span class="p">:</span>
@@ -247,36 +277,6 @@
         <span class="c"># The yes stands for YES otherwise Xfoil will do nothing with it.</span>
         <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;Y&#39;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="c"># Once you load a set of points in Xfoil you need to create a</span>
-        <span class="c"># name, however we do not need to give it a name</span>
-        <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
-
-        <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
-        <span class="c">#             Adapting points for better plots</span>
-        <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
-
-<span class="c">#        &quot;&quot;&quot; The following part of the code was not implemented in hope</span>
-<span class="c">#        that the Cp be given for the given airfoil points, not for</span>
-<span class="c">#        points created by xfoil.</span>
-<span class="c">#</span>
-<span class="c">#        GDES   (enter GDES menu)        |</span>
-<span class="c">#        CADD   (add points at corners)  |  These commands are optional,</span>
-<span class="c">#               (accept default input)   |  and are recommended only for</span>
-<span class="c">#               (accept default input)   |  Eppler and Selig airfoils</span>
-<span class="c">#               (accept default input)   |  to give smoother LE shapes</span>
-<span class="c">#               (return to Top Level)    |</span>
-<span class="c">#</span>
-<span class="c">#        PANEL  (regenerate paneling since better panel node spacing is</span>
-<span class="c">#                needed)</span>
-
-        <span class="k">if</span> <span class="n">GDES</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;GDES&#39;</span><span class="p">)</span>  <span class="c"># enter GDES menu</span>
-            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;CADD&#39;</span><span class="p">)</span>  <span class="c"># add points at corners</span>
-            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>      <span class="c"># accept default input</span>
-            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>      <span class="c"># accept default input</span>
-            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>      <span class="c"># accept default input</span>
-            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>      <span class="c"># accept default input</span>
-            <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;PANEL&#39;</span><span class="p">)</span> <span class="c"># regenerate paneling</span>
         <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
         <span class="c"># Opening OPER module in Xfoil</span>
         <span class="n">issueCmd</span><span class="p">(</span><span class="s">&#39;OPER&#39;</span><span class="p">)</span>
@@ -603,7 +603,12 @@
         <span class="n">rows_to_skip</span> <span class="o">=</span> <span class="mi">2</span>
     <span class="c"># n is the amount of lines to skip</span>
     <span class="n">Data</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="n">header_done</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">if</span> <span class="n">header</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">header_done</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">for</span> <span class="n">head</span> <span class="ow">in</span> <span class="n">header</span><span class="p">:</span>
+            <span class="n">Data</span><span class="p">[</span><span class="n">head</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">header_done</span> <span class="o">=</span> <span class="bp">False</span>
     <span class="n">count_skip</span> <span class="o">=</span> <span class="mi">0</span>
 
     <span class="k">with</span> <span class="nb">open</span> <span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">myfile</span><span class="p">:</span>

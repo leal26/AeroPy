@@ -64,7 +64,7 @@
 <h2>2.1. Core Function<a class="headerlink" href="#core-function" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="xfoil_module.call">
-<code class="descclassname">xfoil_module.</code><code class="descname">call</code><span class="sig-paren">(</span><em>airfoil</em>, <em>alfas='none'</em>, <em>output='Cp'</em>, <em>Reynolds=0</em>, <em>Mach=0</em>, <em>plots=False</em>, <em>NACA=False</em>, <em>GDES=False</em>, <em>iteration=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xfoil_module.html#call"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_module.call" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">xfoil_module.</code><code class="descname">call</code><span class="sig-paren">(</span><em>airfoil</em>, <em>alfas='none'</em>, <em>output='Cp'</em>, <em>Reynolds=0</em>, <em>Mach=0</em>, <em>plots=False</em>, <em>NACA=False</em>, <em>GDES=False</em>, <em>iteration=10</em>, <em>flap=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xfoil_module.html#call"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_module.call" title="Permalink to this definition">¶</a></dt>
 <dd><p>Call xfoil through Python.</p>
 <p>The input variables are:</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -123,6 +123,10 @@ function is also used. For more information about these
 functions, use the XFOIL manual.</li>
 <li><strong>iteration</strong> &#8211; changes how many times XFOIL will try to make the
 results converge. Speciallt important for viscous flows</li>
+<li><strong>flap</strong> &#8211; determines if there is a flap. In case there is the 
+expected input is [x_hinge, y_hinge, deflection(angles)]. 
+y_hinge is determined to be exactly in the middle between the 
+upper and lower surfaces.</li>
 </ul>
 </td>
 </tr>

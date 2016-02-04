@@ -21,6 +21,7 @@ Contents:
    main_module
    xfoil_module
    aero_module
+   airfoil_module
    tutorial
 
 To Do
