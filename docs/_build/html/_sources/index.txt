@@ -51,10 +51,20 @@ Indices and tables
 Examples
 ==================
 
-A simple example demonstrating how to use AeroPy.
+A simple example demonstrating how to use AeroPy to calculate lift, drag and
+moment coefficients for a NACA0012 airfoil at angle of attack of 12 degrees.
 
 .. code-block:: python
 
     from AeroPy import find_coefficients
-    find_coefficients(airfoil='naca0012', Reynolds = 1e6, alpha=12.,NACA=True)
+    find_coefficients(airfoil='naca0012'alpha=12.)
     >>> {'CM': 0.0134, 'CL': 1.2453, 'Top_Xtr': 0.0194, 'CD': 0.01934, 'CDp': 0.01379, 'alpha': 12.0, 'Bot_Xtr': 1.0}
+
+Another example showing how to use AeroPy to calculate pressure coefficients for a
+NACA0012 in viscous flow at Reynolds = 10000000 and angle of attack of 12 degrees
+
+.. code-block:: python
+
+    from AeroPy import find_pressure_coefficients
+    find_pressure_coefficients(airfoil='naca0012', Reynolds = 1e6, alpha=12.,NACA=True)
+    >>> 'y': [0.00126, ..., -0.00126], 'x': [1.0, ..., 1.0], 'Cp': [0.41501, ..., 0.41501]}

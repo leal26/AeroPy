@@ -15,7 +15,7 @@ module can be easily inserted)
 
 - xfoil: contains all the functions relating to XFOIL.
 - aero: contains all functions related to aerodynamics, but not related to XFOIL.
-- PyXFOIL: imports all functions and acts as the intersection of all different
+- AeroPy: imports all functions and acts as the intersection of all different
    modules
 
 Code

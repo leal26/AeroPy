@@ -25,32 +25,14 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="AeroPy 0.0.2 documentation" href="index.html" />
-    <link rel="next" title="4. Tutorial" href="tutorial.html" />
+    <link rel="next" title="4. Airfoil Module Documentation" href="airfoil_module.html" />
     <link rel="prev" title="2. Xfoil Module Documentation" href="xfoil_module.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
 
   </head>
-  <body role="document">
-    <div class="related" role="navigation" aria-label="related navigation">
-      <h3>Navigation</h3>
-      <ul>
-        <li class="right" style="margin-right: 10px">
-          <a href="genindex.html" title="General Index"
-             accesskey="I">index</a></li>
-        <li class="right" >
-          <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="right" >
-          <a href="tutorial.html" title="4. Tutorial"
-             accesskey="N">next</a> |</li>
-        <li class="right" >
-          <a href="xfoil_module.html" title="2. Xfoil Module Documentation"
-             accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">AeroPy 0.0.2 documentation</a> &raquo;</li> 
-      </ul>
-    </div>  
+  <body role="document">  
 
     <div class="document">
       <div class="documentwrapper">
@@ -81,7 +63,12 @@
 </div>
 <div class="section" id="module-aero_module">
 <span id="the-code"></span><h2>3.2. The code<a class="headerlink" href="#module-aero_module" title="Permalink to this headline">¶</a></h2>
-<p>Created on Mon Jul 20 17:26:19 2015</p>
+<p>Current funcionatilities:
+- Lifting line theory
+- generate field pressures for Abaqus or other softwares
+- air properties calculator
+- Reynolds calculator
+Created on Mon Jul 20 17:26:19 2015</p>
 <p>&#64;author: Pedro Leal</p>
 <dl class="function">
 <dt id="aero_module.LLT_calculator">
@@ -122,6 +109,16 @@ Created in Jul 17 2015</p>
 </dd></dl>
 
 <dl class="function">
+<dt id="aero_module.calculate_moment_coefficient">
+<code class="descclassname">aero_module.</code><code class="descname">calculate_moment_coefficient</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>Cp</em>, <em>alpha</em>, <em>c=1.0</em>, <em>x_ref=0.0</em>, <em>y_ref=0.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aero_module.html#calculate_moment_coefficient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aero_module.calculate_moment_coefficient" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the moment coeffcient. Inputs are x and y coordinates, and
+pressure coefficients (Cp). Inputs can be in a list in xfoil format
+(counterclockwise starting from the trailing edge, in case necessary, 
+check create_input function from xfoil_module) or dictionaries with
+&#8216;upper&#8217; and &#8216;lower&#8217; keys.</p>
+</dd></dl>
+
+<dl class="function">
 <dt id="aero_module.pressure_shell_2D">
 <code class="descclassname">aero_module.</code><code class="descname">pressure_shell_2D</code><span class="sig-paren">(</span><em>Data</em>, <em>chord</em>, <em>thickness</em>, <em>half_span</em>, <em>height</em>, <em>Velocity</em>, <em>N</em>, <em>txt=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aero_module.html#pressure_shell_2D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aero_module.pressure_shell_2D" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate pressure field for a 2D Shell.</p>
@@ -147,13 +144,15 @@ Created in Jul 17 2015</p>
 </ul>
 </li>
 </ul>
-
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="xfoil_module.html"
-                        title="previous chapter">2. Xfoil Module Documentation</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="tutorial.html"
-                        title="next chapter">4. Tutorial</a></p>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="xfoil_module.html" title="previous chapter">2. Xfoil Module Documentation</a></li>
+      <li>Next: <a href="airfoil_module.html" title="next chapter">4. Airfoil Module Documentation</a></li>
+  </ul></li>
+</ul>
+</div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -183,16 +182,16 @@ Created in Jul 17 2015</p>
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
       
       |
       <a href="_sources/aero_module.txt"
-          rel="nofollow">Page source</a></li>
+          rel="nofollow">Page source</a>
     </div>
 
     
     <a href="https://github.com/leal26/AeroPy" class="github">
-        <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
     </a>
     
 

@@ -168,6 +168,8 @@ def CST(x,c,deltasz=None,Au=None,Al=None):
         return y['l']
     
 def find_closest(data, x_hinge, fwd, aft):
+    """ Find point x point in data closest to x_hinge for afterwards(aft) 
+    and forwards(fwd) part."""
     for i in range(len(data['x'])):
         xi = data['x'][i]
         yi = data['y'][i]

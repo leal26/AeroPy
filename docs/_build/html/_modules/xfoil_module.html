@@ -31,20 +31,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
 
   </head>
-  <body role="document">
-    <div class="related" role="navigation" aria-label="related navigation">
-      <h3>Navigation</h3>
-      <ul>
-        <li class="right" style="margin-right: 10px">
-          <a href="../genindex.html" title="General Index"
-             accesskey="I">index</a></li>
-        <li class="right" >
-          <a href="../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">AeroPy 0.0.2 documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
-      </ul>
-    </div>  
+  <body role="document">  
 
     <div class="document">
       <div class="documentwrapper">
@@ -752,7 +739,7 @@
 <span class="c">#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
 </div>
 <div class="viewcode-block" id="find_coefficients"><a class="viewcode-back" href="../xfoil_module.html#xfoil_module.find_coefficients">[docs]</a><span class="k">def</span> <span class="nf">find_coefficients</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">Reynolds</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">iteration</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">NACA</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Calculate the coefficients of an airfoil&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Calculate the lift, drag, moment, friction etc coefficients of an airfoil&quot;&quot;&quot;</span>
     <span class="n">filename</span> <span class="o">=</span> <span class="n">file_name</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Polar&#39;</span><span class="p">)</span>
     <span class="c"># If file already exists, there is no need to recalculate it.</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
@@ -764,7 +751,20 @@
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">Data</span><span class="p">:</span>
         <span class="n">coefficients</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Data</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">coefficients</span>
-
+</div>
+<div class="viewcode-block" id="find_pressure_coefficients"><a class="viewcode-back" href="../xfoil_module.html#xfoil_module.find_pressure_coefficients">[docs]</a><span class="k">def</span> <span class="nf">find_pressure_coefficients</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">Reynolds</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">iteration</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">NACA</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate the pressure coefficients of an airfoil&quot;&quot;&quot;</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">file_name</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Cp&#39;</span><span class="p">)</span>
+    <span class="c"># If file already exists, there is no need to recalculate it.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+		<span class="n">call</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">Reynolds</span><span class="o">=</span><span class="n">Reynolds</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Cp&#39;</span><span class="p">,</span> <span class="n">iteration</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+           <span class="n">NACA</span><span class="o">=</span><span class="n">NACA</span><span class="p">)</span>
+    <span class="n">coefficients</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c"># Data from file</span>
+    <span class="n">Data</span> <span class="o">=</span> <span class="n">output_reader</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Cp&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">Data</span><span class="p">:</span>
+        <span class="n">coefficients</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">coefficients</span>
 </div>
 <div class="viewcode-block" id="find_alpha_L_0"><a class="viewcode-back" href="../xfoil_module.html#xfoil_module.find_alpha_L_0">[docs]</a><span class="k">def</span> <span class="nf">find_alpha_L_0</span><span class="p">(</span><span class="n">airfoil</span><span class="p">,</span> <span class="n">Reynolds</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">iteration</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">NACA</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -815,7 +815,15 @@
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../index.html">
               <img class="logo" src="../_static/logo.png" alt="Logo"/>
-            </a></p>
+            </a></p><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../search.html" method="get">
@@ -838,13 +846,13 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
       
     </div>
 
     
     <a href="https://github.com/leal26/AeroPy" class="github">
-        <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
     </a>
     
 
