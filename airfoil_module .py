@@ -166,37 +166,82 @@ def CST(x,c,deltasz=None,Au=None,Al=None):
         return y['u']
     else:
         return y['l']
+
+#==============================================================================
+# The following function are related to the use of plain flaps
+#==============================================================================
     
-def find_closest(data, x_hinge, fwd, aft):
-    """ Find point x point in data closest to x_hinge for afterwards(aft) 
-    and forwards(fwd) part."""
-    for i in range(len(data['x'])):
-        xi = data['x'][i]
-        yi = data['y'][i]
-        error = abs(xi - x_hinge)
-
-        #If equal just save and break it
-        if x_hinge == xi:
-            aft['x'] = xi
-            aft['y'] = yi
-            aft['error'] = error
-            fwd['x'] = xi
-            fwd['y'] = yi
-            fwd['error'] = error
-            break
+def find_hinge(x_hinge, upper, lower):
+    """From the points of upper and lower surface find the y coordinate of
+    the hinge at x_hinge
+    
+    :param x_hinge: float x-coordinate of the hinge
+    :param upper: dictionary with keys x and y, coordiantes of upper surface
+    :param lower: dictionary with keys x and y, coordiantes of lower surface    
+    """
+    def find_closest(data, x_hinge, fwd, aft):
+        """ Find the points afterwards(aft) and forwards(fwd) that are closest
+        to x_hinge. Retuns dictionaries aft and fwd, each with keys x and y."""
+        for i in range(len(data['x'])):
+            xi = data['x'][i]
+            yi = data['y'][i]
+            error = abs(xi - x_hinge)
+    
+            #If equal just save and break it
+            if x_hinge == xi:
+                aft['x'] = xi
+                aft['y'] = yi
+                aft['error'] = error
+                fwd['x'] = xi
+                fwd['y'] = yi
+                fwd['error'] = error
+                break
+            
+            if xi > x_hinge and error < aft['error']:
+                aft['x'] = xi
+                aft['y'] = yi
+                aft['error'] = error
+    
+            if xi < x_hinge and error < fwd['error']:
+                fwd['x'] = xi
+                fwd['y'] = yi
+                fwd['error'] = error
+        return fwd, aft
         
-        if xi > x_hinge and error < aft['error']:
-            aft['x'] = xi
-            aft['y'] = yi
-            aft['error'] = error
+    #Find y hinge
+    upper_fwd = {'x': 9e9, 'y': 9e9, 'error': 9e9}
+    upper_aft = {'x': 9e9, 'y': 9e9, 'error': 9e9}
+    lower_fwd = {'x': 9e9, 'y': 9e9, 'error': 9e9}
+    lower_aft = {'x': 9e9, 'y': 9e9, 'error': 9e9}
+    hinge = {'x': x_hinge, 'y': 9e9}
+    
+    upper_fwd, upper_aft = find_closest(upper, x_hinge, upper_fwd, upper_aft)
+    lower_fwd, lower_aft = find_closest(lower, x_hinge, lower_fwd, lower_aft) 
+    
+    #Interpolate
+    hinge['y_upper'] =  upper_fwd['y'] + (
+                        hinge['x'] - upper_fwd['x'])*(
+                        upper_aft['y'] - upper_fwd['y'])/(
+                        upper_aft['x'] - upper_fwd['x'])
+    
+    hinge['y_lower'] =  lower_fwd['y'] + (
+                        hinge['x'] - lower_fwd['x'])*(
+                        lower_aft['y'] - lower_fwd['y'])/(
+                        lower_aft['x'] - lower_fwd['x'])
+    hinge['y']  = (hinge['y_upper'] + hinge['y_lower'])/2.
 
-        if xi < x_hinge and error < fwd['error']:
-            fwd['x'] = xi
-            fwd['y'] = yi
-            fwd['error'] = error
-    return fwd, aft
+    return hinge
+
 
 def find_flap(data, hinge):
+    """Create the static airfoil and flap dictionaries containing the outer
+    mold coordinates of both.
+    
+    :param data: dictionary with x and y cooridnates of the whole outer mold
+    
+    :param hinge: dictionary with x and y coordinates of hinge. Can be found
+                  via find_hinge."""
+    #Generate empty dictionaries which will store final data.
     flap_data = {'x':[], 'y':[]}
     static_data = {'x':[], 'y':[]}
     
@@ -237,41 +282,16 @@ def find_flap(data, hinge):
             static_data['x'].append(xi)
             static_data['y'].append(yi)
     return static_data, flap_data
-    
-def find_hinge(x_hinge, upper, lower):
-    #Find y hinge
-    upper_fwd = {'x': 9e9, 'y': 9e9, 'error': 9e9}
-    upper_aft = {'x': 9e9, 'y': 9e9, 'error': 9e9}
-    lower_fwd = {'x': 9e9, 'y': 9e9, 'error': 9e9}
-    lower_aft = {'x': 9e9, 'y': 9e9, 'error': 9e9}
-    hinge = {'x': x_hinge, 'y': 9e9}
-    
-    upper_fwd, upper_aft = find_closest(upper, x_hinge, upper_fwd, upper_aft)
-    lower_fwd, lower_aft = find_closest(lower, x_hinge, lower_fwd, lower_aft) 
-    
-    #Interpolate
-    hinge['y_upper'] =  upper_fwd['y'] + (
-                        hinge['x'] - upper_fwd['x'])*(
-                        upper_aft['y'] - upper_fwd['y'])/(
-                        upper_aft['x'] - upper_fwd['x'])
-    
-    hinge['y_lower'] =  lower_fwd['y'] + (
-                        hinge['x'] - lower_fwd['x'])*(
-                        lower_aft['y'] - lower_fwd['y'])/(
-                        lower_aft['x'] - lower_fwd['x'])
-    hinge['y']  = (hinge['y_upper'] + hinge['y_lower'])/2.
-
-    return hinge
 
 def rotate(upper, lower, origin, theta):
     """
-    param: upper: dictionary with keys x and y, each a list
+    :param upper: dictionary with keys x and y, each a list
     
-    param: lower: dictionary with heys x and y, each a list
+    :param lower: dictionary with heys x and y, each a list
     
-    param: origin: dictionary with keys x and y, each a float
+    :param origin: dictionary with keys x and y, each a float
     
-    param: theta: float representing angle in degrees clock-wise
+    :param theta: float representing angle in degrees clock-wise
     """
     output = []
     
@@ -300,7 +320,7 @@ def rotate(upper, lower, origin, theta):
 def clean(upper_static, upper_flap, lower_static, lower_flap, hinge, 
           deflection, N):
     """
-    Function to remove intersecting lines and round transition
+    Function to remove intersecting lines and to round transition
     on upper surface.
     
     :param N: number of points on smooth transition
@@ -310,7 +330,7 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
     intersection= intersect_curves(lower_static['x'], lower_static['y'],
                                    lower_flap['x'], lower_flap['y'],
                                    input_type = 'list')
-
+    print intersection
     intersection_x = intersection[0][0]
     intersection_y = intersection[1][0]
           
@@ -345,7 +365,8 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
     upper_smooth = {}
     upper_smooth['x'] = []
     upper_smooth['y'] = []
-    
+    # Need to create points connecting upper part in circle (part of plain flap
+    # exposed during flight)
     for i in range(N):
         theta = ((N-1-i)/(N-1.)) * deflection * np.pi/180.
         upper_smooth['x'].append(hinge['x'] + R*np.sin(theta))
@@ -690,3 +711,54 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
                 history['deflection'].append(deflection)
         return history
     return deflection, Cd, Cl, flapped_airfoil
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt    
+    
+    import xfoil_module as xf
+
+    airfoil = "naca0012"
+    xf.call(airfoil, output='Coordinates')
+    filename = xf.file_name(airfoil, output='Coordinates')
+    Data = xf.output_reader(filename, output='Coordinates', header=['x','y'])
+
+    def separate_upper_lower(x,y):
+        """Return dictionaries with upper and lower keys with respective
+        coordiantes. It is assumed the leading edge is frontmost point at
+        alpha=0"""
+        #TODO: when using list generated by xfoil, there are two points for
+        #the leading edge
+        def separate(variable_list, i_separator):
+            variable_dictionary = {'upper': variable_list[0:i_separator+1],
+                                   'lower': variable_list[i_separator+1:]}
+            return variable_dictionary
+        i_separator = x.index(min(x))
+        
+        x = separate(x, i_separator)
+        y = separate(y, i_separator)
+        return x, y,
+    
+    x, y = separate_upper_lower(Data['x'],Data['y'])
+    
+    upper = {'x': x['upper'], 'y': y['upper']}
+    lower = {'x': x['lower'], 'y': y['lower']}
+    
+ 
+    x_hinge = 0.75
+    hinge = find_hinge(x_hinge, upper, lower)
+    
+    upper_static, upper_flap = find_flap(upper, hinge)
+    lower_static, lower_flap = find_flap(lower, hinge)
+#    plt.scatter(upper_rotated['x'], upper_rotated['y'])
+#    plt.scatter(lower_static['x'], lower_static['y'])    
+    deflection = 5.4 # Deflection at which the flap and morphed have the same drag
+    
+    upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
+    
+    plt.scatter(upper_rotated['x'], upper_rotated['y'])
+    plt.scatter(lower_static['x'], lower_static['y'], c = 'r')
+    plt.scatter(lower_rotated['x'], lower_rotated['y'])
+    plt.scatter(upper_static['x'], upper_static['y'], c = 'r')
+    flapped_airfoil = clean(upper_static, upper_rotated, lower_static, 
+                            lower_rotated, hinge, deflection, N = 5)
+    

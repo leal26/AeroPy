@@ -9,6 +9,7 @@ Created on Mon Jul 20 17:26:19 2015
 
 @author: Pedro Leal
 """
+import math
 import numpy as np
 
 #class Wing():
@@ -187,7 +188,7 @@ def LLT_calculator(alpha_L_0_root, c_D_xfoil, N=10, b=10., taper=1.,
     coefficients['C_D'] = C_D
     return coefficients
 
-def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0., y_ref = 0.):
+def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25, y_ref = 0.):
     """
     Calculate the moment coeffcient. Inputs are x and y coordinates, and
     pressure coefficients (Cp). Inputs can be in a list in xfoil format
@@ -217,25 +218,49 @@ def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0., y_ref = 0.
     elif type(x) != dict and type(y) != dict and type(Cp) != dict:
         raise Exception("Not all inputs are the same required format (list/dict)")
     
+    #rotating coordinates
+    alpha = math.radians(alpha)
+    bar_x = {'upper':[], 'lower':[]}
+    bar_y = {'upper':[], 'lower':[]}
+    for key in x:
+        for i in range(len(x[key])):
+            bar_x[key].append(x[key][i]*math.cos(alpha) + y[key][i]*math.sin(alpha))
+            bar_y[key].append(y[key][i]*math.cos(alpha) - x[key][i]*math.sin(alpha))
+
+    bar_x_ref = x_ref*math.cos(alpha) + y_ref*math.sin(alpha)
+    bar_y_ref = y_ref*math.cos(alpha) - x_ref*math.sin(alpha)
+    #Rewriting coordinate variables
+    x = bar_x
+    y = bar_y
+    x_ref = bar_x_ref
+    y_ref = bar_y_ref
+    
+
     Cm = 0.
-#    print x
     for key in ['upper', 'lower']:
         for i in range(len(x[key])-1):
-            #component related to x
-            Cm += (1./2*c**2)*(Cp[key][i]*(x[key][i] - x_ref) + \
-                  Cp[key][i+1]*(x[key][i+1] - x_ref))*(x[key][i] - \
-                  x[key][i+1])
+            Cm += (1./2*c**2)*(Cp[key][i] + Cp[key][i+1])* \
+                  (((x[key][i] + x[key][i+1])/2. - x_ref) *(x[key][i] - x[key][i+1]) + \
+                  ((y[key][i] + y[key][i+1])/2. - y_ref) *(y[key][i] - y[key][i+1]))
 
-            #component related to y
-            Cm += (1./2*c**2)*(Cp[key][i]*(y[key][i] - y_ref) + \
-                  Cp[key][i+1]*(y[key][i+1] - y_ref))*(y[key][i] - \
-                  y[key][i+1])
-#            print 'increment, ', i, (1./2*c**2)*(Cp[key][i]*(x[key][i] - x_ref) + \
-#                  Cp[key][i+1]*(x[key][i+1] - x_ref))*(x[key][i] - \
-#                  x[key][i+1]) + (1./2*c**2)*(Cp[key][i]*(y[key][i] - y_ref) + \
-#                  Cp[key][i+1]*(y[key][i+1] - y_ref))*(y[key][i] - \
-#                  y[key][i+1])
-        print key, Cm
+    #Code from Xfoil, works well
+#    for i in range(len(x)):
+#        if i == len(x) -1:
+#            DX = (x[0] - x[i])*math.cos(alpha) + (y[0] - y[i])*math.sin(alpha)
+#            DY = (y[0] - y[i])*math.cos(alpha) - (x[0] - x[i])*math.sin(alpha)
+#            AX = (0.5*(x[0]+x[i])-x_ref)*math.cos(alpha) + (0.5*(y[0]+y[i])-y_ref)*math.sin(alpha)
+#            AY = (0.5*(y[0]+y[i])-y_ref)*math.cos(alpha)- (0.5*(x[0]+x[i])-x_ref)*math.sin(alpha)
+#            DG = (Cp[0] - Cp[i])/2.
+#        
+#        else: 
+#            DX = (x[i+1] - x[i])*math.cos(alpha) + (y[i+1] - y[i])*math.sin(alpha)
+#            DY = (y[i+1] - y[i])*math.cos(alpha) - (x[i+1] - x[i])*math.sin(alpha)
+#            DG = (Cp[i+1] - Cp[i])/2.
+#            AX = (0.5*(x[i+1]+x[i])-x_ref)*math.cos(alpha) + (0.5*(y[i+1]+y[i])-y_ref)*math.sin(alpha)
+#            AY = (0.5*(y[i+1]+y[i])-y_ref)*math.cos(alpha) - (0.5*(x[i+1]+x[i])-x_ref)*math.sin(alpha)
+#            AG = (Cp[i] + Cp[i+1])/2.
+#        Cm -= DX*(AG*AX)
+#        Cm -= DY*(AG*AY)
     return Cm
 #==============================================================================
 # Functions Intended for use with FInite ELement Methods
@@ -432,18 +457,32 @@ def Reynolds(height, V, c):
     L = c
     nu = Air_Data['Dynamic Viscosity']
     return rho*V*L/nu
+
 if __name__ == '__main__':
-#    print LLT_calculator(alpha_L_0_root=1., c_D_xfoil=0.01)
-#    x = [1., .5, 0., .5, 1.]
-#    y = [0., 0., 0., 0., 0.]
-#    Cp = [1., 1., 1., 1., 1.]
-#    C_m = calculate_moment_coefficient(x,y,Cp)
     
-    alpha  = 4.
+    alpha  = 0.
     import xfoil_module as xf
     data = xf.find_pressure_coefficients('naca0012', alpha)
-    C_m = calculate_moment_coefficient(data['x'], data['y'], data['Cp'])
+    C_m = calculate_moment_coefficient(data['x'], data['y'], data['Cp'], alpha)
     data_CM = xf.find_coefficients('naca0012', alpha)
     print 'calculated:', C_m
     
     print 'objective:', data_CM['CM']
+    
+    import matplotlib.pyplot as plt
+    
+    Cm_xfoil = []
+    Cm_aeropy = []
+    
+    alpha_list = np.linspace(0,10,11)
+    for alpha in alpha_list:
+        alpha = float(alpha)
+        data = xf.find_pressure_coefficients('naca0012', alpha)
+        Cm_aeropy.append(calculate_moment_coefficient(data['x'], data['y'], data['Cp'], alpha))
+        data_CM = xf.find_coefficients('naca0012', alpha)
+        Cm_xfoil.append(data_CM['CM'])
+    plt.plot(alpha_list, Cm_xfoil, 'b', label='XFOIL')
+    plt.plot(alpha_list, Cm_aeropy, 'g', label='AeroPy')
+    plt.legend()
+    plt.xlabel("Angle of attack($^{\circ}$)")
+    plt.ylabel("$C_m$")

@@ -16,7 +16,7 @@ import shutil # Modules necessary for saving multiple plots
 #                       	Core Functions
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
-         NACA=False, GDES=False, iteration=10, flap = None):
+         NACA=True, GDES=False, iteration=10, flap = None):
     """ Call xfoil through Python.
 
     The input variables are:
@@ -153,7 +153,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
             Multiple = True
         elif type(alfas) == int or type(alfas) == float:
             Multiple = False
-    elif output == "Alfa_L_0" and alfas == 'none':
+    elif (output == "Alfa_L_0" or output == "Coordinates") and alfas == 'none':
         Multiple = False
     elif output == "Alfa_L_0" and alfas != 'none':
         raise Exception("To find alpha_L_0, alfas must not be defined")
@@ -218,7 +218,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
     # coordinates of the shape will be outputed
     if output == 'Coordinates':
         issueCmd('SAVE')
-        issueCmd(airfoil + '.txt')
+        issueCmd(output + '_' + airfoil)
         # In case there is alread a file with that name, it will replace it.
         # The yes stands for YES otherwise Xfoil will do nothing with it.
         issueCmd('Y')
@@ -526,6 +526,7 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
           - Polar files = 10
           - Dump files = 0
           - Cp files = 2
+          - Coordinates = 1
 
         - header: The header list will act as the keys of the output
           dictionary. For the function to work, a header IS necessary.
@@ -547,6 +548,8 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
         rows_to_skip = 0
     elif output == 'Cp':
         rows_to_skip = 2
+    elif output == 'Coordinates':
+        rows_to_skip = 1
     # n is the amount of lines to skip
     Data = {}
     if header != 0:
