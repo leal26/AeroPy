@@ -343,7 +343,7 @@ def create_x(c):
     return x
 
 
-def create_input(x, y_u, y_l, filename):
+def create_input(x, y_u, y_l = None, filename = 'test', different_x_upper_lower = False):
     """Create a plain file that XFOIL can read.
 
     XFOIL only reads file from the TE to the LE from the upper part
@@ -353,7 +353,8 @@ def create_input(x, y_u, y_l, filename):
         - x: list of coordinates along the chord
 
         - y_u: list of coordinates normal to the chord for the upper
-          surface
+          surface. If y_l is not defined it is the y vector of the whole
+          upper surface,
 
         - y_l: list of coordinates normal to the chord for the lower
           surface
@@ -364,22 +365,25 @@ def create_input(x, y_u, y_l, filename):
 
     @author: Pedro Leal
     """
-
-    # XFOIL likes to read the files from the TE to the LE from the
-    # upper part first and then from the LE to the TE through the
-    # pressure surface
-    x_upper = x
-    x_under = np.delete(x_upper, -1)[::-1]
-    x = np.append(x_upper, x_under)
-
-    y_l = np.delete(y_l, -1)[::-1]
-    y = np.append(y_u, y_l)
-
+    
+    if different_x_upper_lower:
+        y = y_u
+    else:
+        # XFOIL likes to read the files from the TE to the LE from the
+        # upper part first and then from the LE to the TE through the
+        # pressure surface
+        x_upper = x
+        x_under = np.delete(x_upper, -1)[::-1]
+        x = np.append(x_upper, x_under)
+    
+        y_l = np.delete(y_l, -1)[::-1]
+        y = np.append(y_u, y_l)
     # Creating files for xfoil processing
     DataFile = open(filename, 'w')
     for i in range(0, len(x)):
         DataFile.write('     %f    %f\n' % (x[i], y[i]))
     DataFile.close()
+
     return 0
 
 def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,
