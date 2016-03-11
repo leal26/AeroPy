@@ -242,25 +242,6 @@ def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25, y_ref = 
             Cm += (1./2*c**2)*(Cp[key][i] + Cp[key][i+1])* \
                   (((x[key][i] + x[key][i+1])/2. - x_ref) *(x[key][i] - x[key][i+1]) + \
                   ((y[key][i] + y[key][i+1])/2. - y_ref) *(y[key][i] - y[key][i+1]))
-
-    #Code from Xfoil, works well
-#    for i in range(len(x)):
-#        if i == len(x) -1:
-#            DX = (x[0] - x[i])*math.cos(alpha) + (y[0] - y[i])*math.sin(alpha)
-#            DY = (y[0] - y[i])*math.cos(alpha) - (x[0] - x[i])*math.sin(alpha)
-#            AX = (0.5*(x[0]+x[i])-x_ref)*math.cos(alpha) + (0.5*(y[0]+y[i])-y_ref)*math.sin(alpha)
-#            AY = (0.5*(y[0]+y[i])-y_ref)*math.cos(alpha)- (0.5*(x[0]+x[i])-x_ref)*math.sin(alpha)
-#            DG = (Cp[0] - Cp[i])/2.
-#        
-#        else: 
-#            DX = (x[i+1] - x[i])*math.cos(alpha) + (y[i+1] - y[i])*math.sin(alpha)
-#            DY = (y[i+1] - y[i])*math.cos(alpha) - (x[i+1] - x[i])*math.sin(alpha)
-#            DG = (Cp[i+1] - Cp[i])/2.
-#            AX = (0.5*(x[i+1]+x[i])-x_ref)*math.cos(alpha) + (0.5*(y[i+1]+y[i])-y_ref)*math.sin(alpha)
-#            AY = (0.5*(y[i+1]+y[i])-y_ref)*math.cos(alpha) - (0.5*(x[i+1]+x[i])-x_ref)*math.sin(alpha)
-#            AG = (Cp[i] + Cp[i+1])/2.
-#        Cm -= DX*(AG*AX)
-#        Cm -= DY*(AG*AY)
     return Cm
 #==============================================================================
 # Functions Intended for use with FInite ELement Methods
