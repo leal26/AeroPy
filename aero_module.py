@@ -458,9 +458,9 @@ if __name__ == '__main__':
     alpha_list = np.linspace(0,10,11)
     for alpha in alpha_list:
         alpha = float(alpha)
-        data = xf.find_pressure_coefficients('naca0012', alpha)
+        data = xf.find_pressure_coefficients('flapped', alpha, NACA = False)
         Cm_aeropy.append(calculate_moment_coefficient(data['x'], data['y'], data['Cp'], alpha))
-        data_CM = xf.find_coefficients('naca0012', alpha)
+        data_CM = xf.find_coefficients('flapped', alpha, NACA = False)
         Cm_xfoil.append(data_CM['CM'])
     plt.plot(alpha_list, Cm_xfoil, 'b', label='XFOIL')
     plt.plot(alpha_list, Cm_aeropy, 'g', label='AeroPy')

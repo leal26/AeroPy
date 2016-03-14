@@ -50,10 +50,12 @@ def find_3D_coefficients(airfoil, alpha, Reynolds=0, iteration=10, NACA=True,
     return ar.LLT_calculator(alpha_L_0_root, coefficients['CD'], N, span, taper, chord_root,
                           alpha_root, velocity)
 
-def calculate_flap_moment(x, y, alpha, x_hinge, deflection):    
+def calculate_flap_moment(x, y, alpha, x_hinge, deflection,
+                          unit_deflection = 'rad'):    
     """For a given airfoil with coordinates x and y at angle of attack
-    alpha, calculate the moment coefficient around the joint at x_hinge
-    and deflection """
+    alpha (degrees), calculate the moment coefficient around the joint at x_hinge
+    and deflection in radians (unit_deflection = 'rad') or degrees 
+    (unit_deflection = 'deg')"""
 
     def separate_upper_lower(x, y, Cp = None, i_separator=None):
         """Return dictionaries with upper and lower keys with respective
@@ -99,38 +101,41 @@ def calculate_flap_moment(x, y, alpha, x_hinge, deflection):
         upper = {'x': x['upper'], 'y': y['upper']}
         lower = {'x': x['lower'], 'y': y['lower']}
     
-    #If deflection is equal or really close to zero, do not create extra
-    #points for calculating moment
-    if abs(deflection) >= 1e-3:
-        #Determining hinge
-        hinge = af.find_hinge(x_hinge, upper, lower)
-        
+    hinge = af.find_hinge(x_hinge, upper, lower)
+    
+    if deflection > 0:
         upper_static, upper_flap = af.find_flap(upper, hinge)
-        lower_static, lower_flap = af.find_flap(lower, hinge, lower = True)
-        
-        upper_rotated, lower_rotated = af.rotate(upper_flap, lower_flap, hinge, deflection)
-        
-        flapped_airfoil, i_separator = af.clean(upper_static, upper_rotated, lower_static, 
-                                lower_rotated, hinge, deflection, N = 5, 
-                                return_flap_i = True)
-        
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        #Third step: get new values of pressure coefficient
-        xf.create_input(x = flapped_airfoil['x'], y_u = flapped_airfoil['y'],
-                        filename = 'flapped', different_x_upper_lower = True)
+        lower_static, lower_flap = af.find_flap(lower, hinge,
+                                                extra_points = 'lower')
+    elif deflection < 0:
+        upper_static, upper_flap = af.find_flap(upper, hinge,
+                                                extra_points = 'upper')
+        lower_static, lower_flap = af.find_flap(lower, hinge)
     else:
-        xf.create_input(x = upper['x'] + lower['x'], y_u = upper['y'] + lower['y'],
-                        filename = 'flapped', different_x_upper_lower = True) 
-        
+       upper_static, upper_flap = af.find_flap(upper, hinge, 
+                                               extra_points = None)
+       lower_static, lower_flap = af.find_flap(lower, hinge,
+                                               extra_points = None)
+       
+    upper_rotated, lower_rotated = af.rotate(upper_flap, lower_flap,
+                                             hinge, deflection,
+                                             unit_theta = unit_deflection)
+    print 
+    flapped_airfoil, i_separator = af.clean(upper_static, upper_rotated, lower_static, 
+                            lower_rotated, hinge, deflection, N = None, 
+                            return_flap_i = True)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #Third step: get new values of pressure coefficient
+    xf.create_input(x = flapped_airfoil['x'], y_u = flapped_airfoil['y'],
+                    filename = 'flapped', different_x_upper_lower = True)
+
     Data = xf.find_pressure_coefficients('flapped', alpha, NACA = False)
 
-    if abs(deflection) >= 1e-3:
-        x, y, Cp = separate_upper_lower(x = Data['x'], y = Data['y'], 
+
+    x, y, Cp = separate_upper_lower(x = Data['x'], y = Data['y'], 
                                         Cp = Data['Cp'], i_separator = i_separator)
-    else:
-        x = Data['x']
-        y = Data['y']
-        Cp = Data['Cp']
+
     Cm = ar.calculate_moment_coefficient(x, y, Cp, alpha = alpha, c = 1., 
                                          x_ref = x_hinge, y_ref = 0.)
     return Cm
@@ -138,12 +143,13 @@ def calculate_flap_moment(x, y, alpha, x_hinge, deflection):
 if __name__ == '__main__':
 #    print find_3D_coefficients(airfoil='naca0012', alpha=1.)
     alpha = 0.
-    x_hinge = 0.75
-    deflection = 0.
+    x_hinge = 0.4048582995951417
+    deflection = -0.035060113724397865 #0.0010573527055
     
     # generate original airfoil
     airfoil = "naca0012"
     xf.call(airfoil, output='Coordinates')
     filename = xf.file_name(airfoil, output='Coordinates')
     Data = xf.output_reader(filename, output='Coordinates', header = ['x','y'])
-    Cm = calculate_flap_moment(Data['x'], Data['y'], alpha, x_hinge, deflection)
+    Cm = calculate_flap_moment(Data['x'], Data['y'], alpha, x_hinge,
+                               deflection, unit_deflection = 'rad')
