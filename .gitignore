@@ -189,6 +189,7 @@ $RECYCLE.BIN/
 #############
 
 *.py[cod]
+*.pyc
 
 # Packages
 *.egg
@@ -218,6 +219,4 @@ Cp_*
 Polar_*
 Coordinates*
 naca*
-flapped
-flapped
 flapped

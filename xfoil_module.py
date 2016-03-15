@@ -176,11 +176,20 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
 #                cwd=None, env=None, universal_newlines=False,
 #                startupinfo=None, creationflags=0):
 
+    # The following keys avoid the xfoil pop-up
+    # source: http://stackoverflow.com/questions/1765078/how-to-avoid- 
+    # console-window-with-pyw-file-containing-os-system-call
+    startupinfo = sp.STARTUPINFO()
+    startupinfo.dwFlags |= sp.STARTF_USESHOWWINDOW
+    # Random output variable to avoid writing stuff from xfoil on the
+    # console
+    sout = 0
     # Calling xfoil with Poper
     ps = sp.Popen(['xfoil.exe'],
                   stdin=sp.PIPE,
-                  stdout=None,
-                  stderr=None)
+                  stdout=sout,
+                  stderr=None,
+                  startupinfo = startupinfo)
 
     # Loading geometry
     if NACA == False:

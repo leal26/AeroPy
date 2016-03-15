@@ -553,7 +553,7 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
                                     upper_static[key] + lower_static[key] + \
                                     lower_flap[key]
         if return_flap_i == True:
-            i = [len(upper_flap[key]) + len(upper_smooth[key]) - 1,
+            i = [len(upper_flap[key]) + len(upper_smooth[key]),
                  len(upper_flap[key]) + len(upper_smooth[key]) + \
                  len(upper_static[key]) + len(lower_static[key])]
             return modified_airfoil, i
@@ -660,7 +660,7 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
             modified_airfoil[key] = upper_flap[key] + upper_static[key] + \
                                     lower_static[key] + lower_flap[key]
         if return_flap_i == True:
-            i = [len(upper_flap[key]) - 1,
+            i = [len(upper_flap[key]),
                  len(upper_flap[key]) + len(upper_static[key]) + \
                  len(lower_static[key])]
             return modified_airfoil, i

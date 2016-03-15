@@ -188,13 +188,18 @@ def LLT_calculator(alpha_L_0_root, c_D_xfoil, N=10, b=10., taper=1.,
     coefficients['C_D'] = C_D
     return coefficients
 
-def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25, y_ref = 0.):
+def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25,
+                                 y_ref = 0., flap = False):
     """
     Calculate the moment coeffcient. Inputs are x and y coordinates, and
     pressure coefficients (Cp). Inputs can be in a list in xfoil format
     (counterclockwise starting from the trailing edge, in case necessary, 
     check create_input function from xfoil_module) or dictionaries with
     'upper' and 'lower' keys.
+    
+    :param flap: if true, also calculates the moment contribution from
+                 the trailing edge and the panels in front of the flap
+                 (that are not directly in contact with the air)
     """
     def separate_upper_lower(x,y,Cp):
         """Return dictionaries with upper and lower keys with respective
@@ -242,6 +247,19 @@ def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25, y_ref = 
             Cm += (1./2*c**2)*(Cp[key][i] + Cp[key][i+1])* \
                   (((x[key][i] + x[key][i+1])/2. - x_ref) *(x[key][i] - x[key][i+1]) + \
                   ((y[key][i] + y[key][i+1])/2. - y_ref) *(y[key][i] - y[key][i+1]))
+    
+    if flap == True:
+        # Trailing edge contribution
+        Cm += (1./2*c**2)*(Cp['upper'][0] + Cp['lower'][-1])* \
+              (((x['upper'][0] + x['lower'][-1])/2. - x_ref) *(x['lower'][-1] - x['upper'][0]) + \
+               ((y['upper'][0] + y['lower'][-1])/2. - y_ref) *(y['lower'][-1] - y['upper'][0]))
+        # Contribution of panels not directly in contact with flow above the hinge
+        Cm += (1./2*c**2)*(Cp['upper'][-1])*(((x['upper'][-1] + x_ref)/2. - \
+              x_ref) *(x['upper'][-1] - x_ref) + ((y['upper'][-1] + y_ref)/2. - \
+              y_ref)*(y['upper'][-1] - y_ref))        
+        # Contribution of panels not directly in contact with flow below the hinge
+        Cm += (1./2*c**2)*(Cp['lower'][0])*(((x['lower'][0] + x_ref)/2. - x_ref) *(x_ref - x['lower'][0]) + \
+              ((y['lower'][0] + y_ref)/2. - y_ref) *(y_ref - y['lower'][0]))  
     return Cm
 #==============================================================================
 # Functions Intended for use with FInite ELement Methods

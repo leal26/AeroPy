@@ -135,16 +135,19 @@ def calculate_flap_moment(x, y, alpha, x_hinge, deflection,
 
     x, y, Cp = separate_upper_lower(x = Data['x'], y = Data['y'], 
                                         Cp = Data['Cp'], i_separator = i_separator)
-
-    Cm = ar.calculate_moment_coefficient(x, y, Cp, alpha = alpha, c = 1., 
-                                         x_ref = x_hinge, y_ref = 0.)
+    
+    #At the hinges, the reaction moment has the opposite sign of the
+    #actuated torque
+    Cm = - ar.calculate_moment_coefficient(x, y, Cp, alpha = alpha, c = 1., 
+                                         x_ref = x_hinge, y_ref = 0., 
+                                         flap = True)
     return Cm
 
 if __name__ == '__main__':
 #    print find_3D_coefficients(airfoil='naca0012', alpha=1.)
     alpha = 0.
-    x_hinge = 0.4048582995951417
-    deflection = -0.035060113724397865 #0.0010573527055
+    x_hinge = 0.7
+    deflection = 0.17453292519943295 #0.0010573527055
     
     # generate original airfoil
     airfoil = "naca0012"
@@ -153,3 +156,12 @@ if __name__ == '__main__':
     Data = xf.output_reader(filename, output='Coordinates', header = ['x','y'])
     Cm = calculate_flap_moment(Data['x'], Data['y'], alpha, x_hinge,
                                deflection, unit_deflection = 'rad')
+    
+    data = xf.find_pressure_coefficients('flapped', alpha, NACA = False)
+    C_m = ar.calculate_moment_coefficient(data['x'], data['y'], data['Cp'], alpha)
+    
+    data_CM = xf.find_coefficients('flapped', alpha, NACA = False)
+    print 'aeropy: overall: ', C_m
+    print 'aeropy: flap: ', Cm
+    
+    print 'xfoil: overall: ', data_CM['CM']
