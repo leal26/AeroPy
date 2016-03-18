@@ -273,8 +273,13 @@ def Naca00XX(c, t, x_list, return_dict = 'y'):
         y_upper.append(y)
         y_lower.append(y*(-1)) # is just for pick the y axis
                                        # negative numbers
-    y = {'u': y_upper[:-1],
-         'l':y_lower[-2::-1]}
+
+    if len(x_list) == 1:
+        y = {'u': y_upper[0],
+             'l': y_lower[0]}        
+    else:
+        y = {'u': y_upper[:-1],
+             'l':y_lower[-2::-1]}
     if return_dict == 'y':
         return y
         
@@ -362,7 +367,7 @@ def find_flap(data, hinge, extra_points = None):
                   
     :param extra_points: include extra points to surface, extending it more
                          than it will actually be (usefull for intersecting
-                         lines)"""
+                         lines). Avaialble options: 'lower', 'upper' and None"""
     #Generate empty dictionaries which will store final data.
     flap_data = {'x':[], 'y':[]}
     static_data = {'x':[], 'y':[]}
@@ -520,13 +525,14 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
         #If N is not N, use an adaptive version to it
         chord = min(lower_flap['x']) - min(lower_static['x'])
         #Minimum step for between nodes at the joint
-        N_step = 0.01/chord
+        N_step = 0.002/chord
         if N == None:
             distance = R*deflection
             if distance <= N_step:
                 N = 0 #Space too small, just connect points
             else:
-                N = math.floor(distance/N_step)
+                print distance, N_step
+                N = int(math.floor(distance/N_step))
         # Need to create points connecting upper part in circle (part of plain flap
         # exposed during flight). The points created are only for the new surface
         #, the connecting points with the other surface have already been 
@@ -544,7 +550,7 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
                 theta = ((N-i)/(N+1.)) * deflection
                 upper_smooth['x'].append(hinge['x'] + R*np.sin(theta))
                 upper_smooth['y'].append(hinge['y'] + R*np.cos(theta))
-                print theta, hinge['x'] + R*np.sin(theta), hinge['y'] + R*np.cos(theta), distance, N_step
+
         # Assembling all together
         
         modified_airfoil = {'x':[], 'y':[]}
@@ -608,13 +614,13 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
         #If N is not N, use an adaptive version to it
         chord = min(lower_flap['x']) - min(lower_static['x'])
         #Minimum step for between nodes at the joint
-        N_step = 0.01/chord
+        N_step = 0.002/chord
         if N == None:
-            distance = R*deflection
+            distance = - R*deflection
             if distance <= N_step:
                 N = 0 #Space too small, just connect points
             else:
-                N = math.floor(distance/N_step)
+                N = int(math.floor(distance/N_step))
         # Need to create points connecting lower part in circle (part of plain flap
         # exposed during flight). The points created are only for the new surface
         #, the connecting points with the other surface have already been 
@@ -627,12 +633,13 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
                 lower_static[key] = lower_static[key][:-1]
             lower_smooth['x'].append(hinge['x'] + R*np.sin(deflection/2.))
             lower_smooth['y'].append(hinge['y'] - R*np.cos(deflection/2.))
+        print lower_smooth, N, distance, N_step
         if N != 0:
             for i in range(N):
-                theta = ((i+1)/(N+1.)) * deflection
+                theta = -((i+1)/(N+1.)) * deflection
                 lower_smooth['x'].append(hinge['x'] + R*np.sin(theta))
                 lower_smooth['y'].append(hinge['y'] - R*np.cos(theta))
-                print theta, hinge['x'] + R*np.sin(theta), hinge['y'] + R*np.cos(theta), distance, N_step
+
         # Assembling all together
         
         modified_airfoil = {'x':[], 'y':[]}
@@ -1055,9 +1062,9 @@ if __name__ == '__main__':
     hinge = find_hinge(x_hinge, upper, lower)
     
     upper_static, upper_flap = find_flap(upper, hinge)
-    lower_static, lower_flap = find_flap(lower, hinge, lower = True)
+    lower_static, lower_flap = find_flap(lower, hinge, extra_points = 'lower')
     
-    deflection = 5. # Deflection at which the flap and morphed have the same drag
+    deflection = 5.
     
     upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
     
