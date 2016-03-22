@@ -102,7 +102,7 @@ def calculate_flap_moment(x, y, alpha, x_hinge, deflection,
         lower = {'x': x['lower'], 'y': y['lower']}
     
     hinge = af.find_hinge(x_hinge, upper, lower)
-    
+       
     if deflection > 0:
         upper_static, upper_flap = af.find_flap(upper, hinge)
         lower_static, lower_flap = af.find_flap(lower, hinge,
@@ -116,11 +116,11 @@ def calculate_flap_moment(x, y, alpha, x_hinge, deflection,
                                                extra_points = None)
        lower_static, lower_flap = af.find_flap(lower, hinge,
                                                extra_points = None)
-       
+
     upper_rotated, lower_rotated = af.rotate(upper_flap, lower_flap,
                                              hinge, deflection,
                                              unit_theta = unit_deflection)
-    print 
+     
     flapped_airfoil, i_separator = af.clean(upper_static, upper_rotated, lower_static, 
                             lower_rotated, hinge, deflection, N = None, 
                             return_flap_i = True)
@@ -147,8 +147,8 @@ if __name__ == '__main__':
     import math
 #    print find_3D_coefficients(airfoil='naca0012', alpha=1.)
     alpha = 0.
-    x_hinge = 0.7
-    deflection = -math.pi/4.#0.17453292519943295 #0.0010573527055
+    x_hinge = 0.25/0.6175
+    deflection = 7.53990908612e-06 #0.17453292519943295 #0.0010573527055
     
     # generate original airfoil
     airfoil = "naca0012"

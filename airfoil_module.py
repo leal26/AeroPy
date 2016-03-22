@@ -393,7 +393,8 @@ def find_flap(data, hinge, extra_points = None):
                 if extra_points == 'lower':
                     static_data['x'].append(data['x'][i+1])
                     static_data['y'].append(data['y'][i+1])
-
+                    static_data['x'].append(data['x'][i+2])
+                    static_data['y'].append(data['y'][i+2])
             flap_data['x'].append(xi)
             flap_data['y'].append(yi)
             
@@ -494,7 +495,7 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
             xi = lower_flap['x'][i]
             # From the plots, every point of the flap before the intersection
             # needs to be elimnated.
-            if xi < intersection_x:
+            if xi < intersection_x :
                 lower_flap['x'][i] = None
                 lower_flap['y'][i] = None
                 
@@ -502,7 +503,7 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
             xi = lower_static['x'][i]
             # From the plots, every point of the flap before the intersection
             # needs to be elimnated.
-            if xi > intersection_x:
+            if xi > intersection_x - 1e-5:
                 lower_static['x'][i] = None
                 lower_static['y'][i] = None
                 
