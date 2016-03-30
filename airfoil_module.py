@@ -492,23 +492,32 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
             plt.scatter(lower_static['x'], lower_static['y'], c='b')
             plt.scatter(lower_flap['x'], lower_flap['y'], c='r')
             raise Exception('Lower surfaces are not intersecting') 
-             
+        
+        
         for i in range(len(lower_flap['x'])):
             xi = lower_flap['x'][i]
             # From the plots, every point of the flap before the intersection
             # needs to be elimnated.
-            if xi < intersection_x :
-                lower_flap['x'][i] = None
-                lower_flap['y'][i] = None
-                
+            if lower_flap['x'][0] < xi:
+                if xi < intersection_x :
+                    lower_flap['x'][i] = None
+                    lower_flap['y'][i] = None
+            else:
+                if xi < intersection_x :
+                    lower_flap['x'][i] = None
+                    lower_flap['y'][i] = None
         for i in range(len(lower_static['x'])):
             xi = lower_static['x'][i]
             # From the plots, every point of the flap before the intersection
             # needs to be elimnated.
-            if xi > intersection_x - 1e-5:
-                lower_static['x'][i] = None
-                lower_static['y'][i] = None
-                
+            if lower_static['x'][-1] > xi:
+                if xi > intersection_x - 1e-5:
+                    lower_static['x'][i] = None
+                    lower_static['y'][i] = None
+            else:
+                if xi < intersection_x + 1e-5:
+                    lower_static['x'][i] = None
+                    lower_static['y'][i] = None          
         #Eliminatting the None vectors
         lower_flap['x'] = filter(None, lower_flap['x'])
         lower_flap['y'] = filter(None, lower_flap['y'])
@@ -1067,7 +1076,7 @@ if __name__ == '__main__':
     upper_static, upper_flap = find_flap(upper, hinge)
     lower_static, lower_flap = find_flap(lower, hinge, extra_points = 'lower')
     
-    deflection = 5.
+    deflection = 100.
     
     upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
     
