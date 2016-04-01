@@ -117,7 +117,7 @@ if __name__ == '__main__':
 #    print find_3D_coefficients(airfoil='naca0012', alpha=1.)
     alpha = 0.
     x_hinge = 0.25/0.6175
-    deflection = 7.53990908612e-06 #0.17453292519943295 #0.0010573527055
+    deflection = -math.pi/2. #0.17453292519943295 #0.0010573527055
     
     # generate original airfoil
     airfoil = "naca0012"

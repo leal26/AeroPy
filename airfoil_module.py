@@ -481,7 +481,7 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
     if deflection > 0.:
         #The lower surface has a non-smooth transiton so we only have to
         # clean the intersecting lines
-        intersection= intersect_curves(lower_static['x'], lower_static['y'],
+        intersection = intersect_curves(lower_static['x'], lower_static['y'],
                                        lower_flap['x'], lower_flap['y'],
                                        input_type = 'list')
         try:
@@ -493,31 +493,26 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
             plt.scatter(lower_flap['x'], lower_flap['y'], c='r')
             raise Exception('Lower surfaces are not intersecting') 
         
-        
+        closest_x = min(lower_flap['x'], key=lambda x:abs(x-intersection_x))
+        closest_i = lower_flap['x'].index(closest_x)
         for i in range(len(lower_flap['x'])):
-            xi = lower_flap['x'][i]
             # From the plots, every point of the flap before the intersection
             # needs to be elimnated.
-            if lower_flap['x'][0] < xi:
-                if xi < intersection_x :
+            if i <= closest_i:
+                if ( i == closest_i and closest_x < intersection_x) or i != closest_i:
                     lower_flap['x'][i] = None
                     lower_flap['y'][i] = None
-            else:
-                if xi < intersection_x :
-                    lower_flap['x'][i] = None
-                    lower_flap['y'][i] = None
+
+        closest_x = min(lower_static['x'], key=lambda x:abs(x-intersection_x))
+        closest_i = lower_static['x'].index(closest_x)
         for i in range(len(lower_static['x'])):
-            xi = lower_static['x'][i]
             # From the plots, every point of the flap before the intersection
             # needs to be elimnated.
-            if lower_static['x'][-1] > xi:
-                if xi > intersection_x - 1e-5:
+            if i >= closest_i:
+                if ( i == closest_i and closest_x > intersection_x) or i != closest_i:
                     lower_static['x'][i] = None
                     lower_static['y'][i] = None
-            else:
-                if xi < intersection_x + 1e-5:
-                    lower_static['x'][i] = None
-                    lower_static['y'][i] = None          
+        
         #Eliminatting the None vectors
         lower_flap['x'] = filter(None, lower_flap['x'])
         lower_flap['y'] = filter(None, lower_flap['y'])
@@ -544,6 +539,7 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
                 N = 0 #Space too small, just connect points
             else:
                 N = int(math.floor(distance/N_step))
+
         # Need to create points connecting upper part in circle (part of plain flap
         # exposed during flight). The points created are only for the new surface
         #, the connecting points with the other surface have already been 
@@ -565,6 +561,7 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
         # Assembling all together
         
         modified_airfoil = {'x':[], 'y':[]}
+
         for key in ['x','y']:
             modified_airfoil[key] = upper_flap[key] + upper_smooth[key] + \
                                     upper_static[key] + lower_static[key] + \
@@ -590,22 +587,27 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
             plt.scatter(upper_static['x'], upper_static['y'], c='b')
             plt.scatter(upper_flap['x'], upper_flap['y'], c='r')
             raise Exception('Upper surfaces are not intersecting')
+
+        closest_x = min(upper_flap['x'], key=lambda x:abs(x-intersection_x))
+        closest_i = upper_flap['x'].index(closest_x)
         for i in range(len(upper_flap['x'])):
-            xi = upper_flap['x'][i]
             # From the plots, every point of the flap before the intersection
             # needs to be elimnated.
-            if xi < intersection_x:
-                upper_flap['x'][i] = None
-                upper_flap['y'][i] = None
-                
+            if i >= closest_i:
+                if ( i == closest_i and closest_x < intersection_x) or i != closest_i:
+                    upper_flap['x'][i] = None
+                    upper_flap['y'][i] = None
+
+        closest_x = min(upper_static['x'], key=lambda x:abs(x-intersection_x))
+        closest_i = upper_static['x'].index(closest_x)
         for i in range(len(upper_static['x'])):
-            xi = upper_static['x'][i]
             # From the plots, every point of the flap before the intersection
             # needs to be elimnated.
-            if xi > intersection_x - 1e-5:
-                upper_static['x'][i] = None
-                upper_static['y'][i] = None
-                
+            if i <= closest_i:
+                if ( i == closest_i and closest_x > intersection_x) or i != closest_i:
+                    upper_static['x'][i] = None
+                    upper_static['y'][i] = None
+        
         #Eliminatting the None vectors
         upper_flap['x'] = filter(None, upper_flap['x'])
         upper_flap['y'] = filter(None, upper_flap['y'])
@@ -1076,13 +1078,13 @@ if __name__ == '__main__':
     upper_static, upper_flap = find_flap(upper, hinge)
     lower_static, lower_flap = find_flap(lower, hinge, extra_points = 'lower')
     
-    deflection = 100.
+    deflection = -90.
     
     upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
     
     flapped_airfoil, i_separator = clean(upper_static, upper_rotated, lower_static, 
-                            lower_rotated, hinge, deflection, N = 5, 
-                            return_flap_i = True)
+                            lower_rotated, hinge, deflection, return_flap_i = True,
+                            unit_deflection = 'deg')
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #Third step: get new values of pressure coefficient
