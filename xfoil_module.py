@@ -531,9 +531,9 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
                     + separator + separator + separator + separator,
                     ' ').replace(separator + separator + separator +
                     separator, ' ').replace(separator + separator + separator,
-                    ' ').replace(separator + separator, ' ').replace("\n",
-                    "").replace("(kg)", "").replace("(m)", "").replace("(Pa)",
-                    "").replace("(in)", "").replace("#", "")
+                    ' ').replace(separator + separator, ' ').replace(separator,
+                    ' ').replace("\n","").replace("(kg)", "").replace("(m)",
+                    "").replace("(Pa)","").replace("(in)", "").replace("#", "")
 
                     header = line.split(' ')
                     n_del = header.count('')

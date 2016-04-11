@@ -243,7 +243,7 @@ def CST(x, c, deltasz=None, Au=None, Al=None):
     else:
         return y['l']
 
-def Naca00XX(c, t, x_list, return_dict = 'y'):
+def Naca00XX(c, t, x_list, return_dict = 'y', for_xfoil = True):
     """
     Generates a simetric NACA airfoil.
     Inputs:
@@ -278,8 +278,12 @@ def Naca00XX(c, t, x_list, return_dict = 'y'):
         y = {'u': y_upper[0],
              'l': y_lower[0]}        
     else:
-        y = {'u': y_upper[:-1],
-             'l':y_lower[-2::-1]}
+        if for_xfoil:
+            y = {'u': y_upper[:-1],
+                 'l':y_lower[-2::-1]}
+        else:
+            y = {'u': y_upper,
+                 'l':y_lower}            
     if return_dict == 'y':
         return y
         
