@@ -151,7 +151,8 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
         # Single or multiple runs?
         if type(alfas) == list or type(alfas) == np.ndarray:
             Multiple = True
-        elif type(alfas) == int or type(alfas) == float:
+        elif type(alfas) == int or type(alfas) == float or \
+             type(alfas) == np.float64:
             Multiple = False
     elif (output == "Alfa_L_0" or output == "Coordinates") and alfas == 'none':
         Multiple = False
@@ -508,7 +509,7 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,
         return Coordinates
 
 def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
-                  header=0):
+                  header=0, delete = False):
     """
     Function that opens files of any kind. Able to skip rows and
     read headers if necessary.
@@ -536,6 +537,8 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
           dictionary. For the function to work, a header IS necessary.
           If not specified by the user, the function will assume that
           the header can be found in the file that it is opening.
+          
+        - delete: if True, deletes file read.
 
     Output:
         - Dictionary with all the header values as keys
@@ -618,6 +621,9 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
                     for j in range(0, len(line_components)):
                         Data[header[j]].append(float(line_components[j]))
                 # else DO NOTHING!
+    # If delete file True, remove file from directory
+    if delete:
+        os.remove(filename)
     return Data
 
 def alfa_for_file(alfa):
@@ -691,7 +697,8 @@ def file_name(airfoil, alfas='none', output='Cp'):
             # In case it is only for one angle of attack, the same
             # angle will be repeated. This is done to keep the
             # formating
-            if type(alfas) == int or type(alfas) == float:
+            if type(alfas) == int or type(alfas) == float or \
+               type(alfas) == np.float64:
                 alfas = [alfas]
                 alfa_i = alfa_for_file(alfas[0])
                 alfa_f = alfa_for_file(alfas[-1])
@@ -709,11 +716,11 @@ def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10, NACA=True):
     filename = file_name(airfoil, alpha, output='Polar')
     # If file already exists, there is no need to recalculate it.
     if not os.path.isfile(filename):
-		call(airfoil, alpha, Reynolds=Reynolds, output='Polar', iteration=10,
-           NACA=NACA)
+		call(airfoil, alpha, Reynolds=Reynolds, output='Polar',
+              iteration= iteration, NACA=NACA)
     coefficients = {}
     # Data from file
-    Data = output_reader(filename, output='Polar')
+    Data = output_reader(filename, output='Polar', delete = True)
     for key in Data:
         coefficients[key] = Data[key][0]
     return coefficients
@@ -771,4 +778,4 @@ def M_crit(airfoil, pho, speed_sound, lift, c):
     return Data_crit
 
 if __name__ == '__main__':
-    print find_coefficients('naca0012',1.)
+    print find_coefficients('naca0012',1., Reynolds = 1000000)
