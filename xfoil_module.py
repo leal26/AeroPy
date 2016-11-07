@@ -177,11 +177,20 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
 #                cwd=None, env=None, universal_newlines=False,
 #                startupinfo=None, creationflags=0):
 
+    # The following keys avoid the xfoil pop-up
+    # source: http://stackoverflow.com/questions/1765078/how-to-avoid- 
+    # console-window-with-pyw-file-containing-os-system-call
+    startupinfo = sp.STARTUPINFO()
+    startupinfo.dwFlags |= sp.STARTF_USESHOWWINDOW
+    # Random output variable to avoid writing stuff from xfoil on the
+    # console
+    sout = 0
     # Calling xfoil with Poper
     ps = sp.Popen(['xfoil.exe'],
                   stdin=sp.PIPE,
-                  stdout=None,
-                  stderr=None)
+                  stdout=sout,
+                  stderr=None,
+                  startupinfo = startupinfo)
 
     # Loading geometry
     if NACA == False:
@@ -283,66 +292,6 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
     ps.stdin.close()
     # From popen
     ps.wait()
-
-def create_x(c):
-    """ Create set of points along the chord befitting for Xfoil. The x
-    output is conviniently ordered from TE to LE.
-
-    :param c: float value for the chord.
-    :rtype: x: numpy.array of values of x
-
-    Because Xfoil it is not efficient or sometimes possible to create a
-    uniform distribution of points because the front part of the
-    airfoil requires a big amount of points to create a smooth surface
-    representing the round leading edge. However there is a maximum of
-    points that Xfoil will accept, therefore there is a need to
-    overcome this obstacle. This was done by dividing the airfoil in
-    to 3 parts.
-
-    - tip: correpondent to 0 to .3% of the chord length, it is the
-      most densily populated part of the airfoil to compensate the
-      wide variation of slopes
-
-    - middle: correpondent to .3% to 30% of the chord length (
-      Shortly above a quarter of the chord length). The second most
-      densily populated and the segment with the most amount of
-      points. Represents the round section of the airfoil except
-      for the tip. Such an amount of points is necessary because it
-      is where most of the lift is generated.
-
-    - endbody: correspondent to 30% to 100% of the chord length.
-      The less densily populated section. Such unrefined mesh is
-      possible because of the simplistic geometry of endbody's
-      airfoil, just straight lines.
-
-    >>> print create_x(1.0)
-        array([  1.00000000e+00,   9.82051282e-01,   9.64102564e-01,
-        ...
-        6.66666667e-04,   3.33333333e-04,   0.00000000e+00])
-
-    Created on Thu Feb 27 2014
-    @author: Pedro Leal
-    """
-
-    max_point = c/4.
-    limit = max_point + 0.05*c
-    nose_tip = 0.003*c
-
-    # Amount of points for each part
-    N_tip = 10
-    N_middle = 180
-    N_endbody = 40
-
-    x_endbody = np.linspace(c, limit, N_endbody)
-    x_middle = np.linspace(limit, nose_tip, N_middle)
-    x_tip = np.linspace(nose_tip, 0, N_tip)
-
-    # Organizing the x lists in a unique list without repeating any
-    # numbers
-    x2 = np.append(x_middle, np.delete(x_tip, 0))
-    x = np.append(x_endbody, np.delete(x2, 0))
-    return x
-
 
 def create_input(x, y_u, y_l = None, filename = 'test', different_x_upper_lower = False):
     """Create a plain file that XFOIL can read.
@@ -585,9 +534,9 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
                     + separator + separator + separator + separator,
                     ' ').replace(separator + separator + separator +
                     separator, ' ').replace(separator + separator + separator,
-                    ' ').replace(separator + separator, ' ').replace("\n",
-                    "").replace("(kg)", "").replace("(m)", "").replace("(Pa)",
-                    "").replace("(in)", "").replace("#", "")
+                    ' ').replace(separator + separator, ' ').replace(separator,
+                    ' ').replace("\n","").replace("(kg)", "").replace("(m)",
+                    "").replace("(Pa)","").replace("(in)", "").replace("#", "")
 
                     header = line.split(' ')
                     n_del = header.count('')
@@ -725,13 +674,18 @@ def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10, NACA=True):
         coefficients[key] = Data[key][0]
     return coefficients
 
-def find_pressure_coefficients(airfoil, alpha, Reynolds=0, iteration=10, NACA=True):
+def find_pressure_coefficients(airfoil, alpha, Reynolds=0, iteration=10, 
+                               NACA=True, use_previous = False):
     """Calculate the pressure coefficients of an airfoil"""
     filename = file_name(airfoil, alpha, output='Cp')
     # If file already exists, there is no need to recalculate it.
-    if not os.path.isfile(filename):
-		call(airfoil, alpha, Reynolds=Reynolds, output='Cp', iteration=10,
-           NACA=NACA)
+    if not use_previous:
+        call(airfoil, alpha, Reynolds=Reynolds, output='Cp', iteration=10,
+             NACA=NACA)
+    else:
+        if not os.path.isfile(filename):
+    		call(airfoil, alpha, Reynolds=Reynolds, output='Cp', iteration=10,
+               NACA=NACA)
     coefficients = {}
     # Data from file
     Data = output_reader(filename, output='Cp')

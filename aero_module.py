@@ -188,13 +188,18 @@ def LLT_calculator(alpha_L_0_root, c_D_xfoil, N=10, b=10., taper=1.,
     coefficients['C_D'] = C_D
     return coefficients
 
-def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25, y_ref = 0.):
+def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25,
+                                 y_ref = 0., flap = False):
     """
     Calculate the moment coeffcient. Inputs are x and y coordinates, and
     pressure coefficients (Cp). Inputs can be in a list in xfoil format
     (counterclockwise starting from the trailing edge, in case necessary, 
     check create_input function from xfoil_module) or dictionaries with
     'upper' and 'lower' keys.
+    
+    :param flap: if true, also calculates the moment contribution from
+                 the trailing edge and the panels in front of the flap
+                 (that are not directly in contact with the air)
     """
     def separate_upper_lower(x,y,Cp):
         """Return dictionaries with upper and lower keys with respective
@@ -242,25 +247,19 @@ def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25, y_ref = 
             Cm += (1./2*c**2)*(Cp[key][i] + Cp[key][i+1])* \
                   (((x[key][i] + x[key][i+1])/2. - x_ref) *(x[key][i] - x[key][i+1]) + \
                   ((y[key][i] + y[key][i+1])/2. - y_ref) *(y[key][i] - y[key][i+1]))
-
-    #Code from Xfoil, works well
-#    for i in range(len(x)):
-#        if i == len(x) -1:
-#            DX = (x[0] - x[i])*math.cos(alpha) + (y[0] - y[i])*math.sin(alpha)
-#            DY = (y[0] - y[i])*math.cos(alpha) - (x[0] - x[i])*math.sin(alpha)
-#            AX = (0.5*(x[0]+x[i])-x_ref)*math.cos(alpha) + (0.5*(y[0]+y[i])-y_ref)*math.sin(alpha)
-#            AY = (0.5*(y[0]+y[i])-y_ref)*math.cos(alpha)- (0.5*(x[0]+x[i])-x_ref)*math.sin(alpha)
-#            DG = (Cp[0] - Cp[i])/2.
-#        
-#        else: 
-#            DX = (x[i+1] - x[i])*math.cos(alpha) + (y[i+1] - y[i])*math.sin(alpha)
-#            DY = (y[i+1] - y[i])*math.cos(alpha) - (x[i+1] - x[i])*math.sin(alpha)
-#            DG = (Cp[i+1] - Cp[i])/2.
-#            AX = (0.5*(x[i+1]+x[i])-x_ref)*math.cos(alpha) + (0.5*(y[i+1]+y[i])-y_ref)*math.sin(alpha)
-#            AY = (0.5*(y[i+1]+y[i])-y_ref)*math.cos(alpha) - (0.5*(x[i+1]+x[i])-x_ref)*math.sin(alpha)
-#            AG = (Cp[i] + Cp[i+1])/2.
-#        Cm -= DX*(AG*AX)
-#        Cm -= DY*(AG*AY)
+    
+    if flap == True:
+        # Trailing edge contribution
+        Cm += (1./2*c**2)*(Cp['upper'][0] + Cp['lower'][-1])* \
+              (((x['upper'][0] + x['lower'][-1])/2. - x_ref) *(x['lower'][-1] - x['upper'][0]) + \
+               ((y['upper'][0] + y['lower'][-1])/2. - y_ref) *(y['lower'][-1] - y['upper'][0]))
+        # Contribution of panels not directly in contact with flow above the hinge
+        Cm += (1./2*c**2)*(Cp['upper'][-1])*(((x['upper'][-1] + x_ref)/2. - \
+              x_ref) *(x['upper'][-1] - x_ref) + ((y['upper'][-1] + y_ref)/2. - \
+              y_ref)*(y['upper'][-1] - y_ref))        
+        # Contribution of panels not directly in contact with flow below the hinge
+        Cm += (1./2*c**2)*(Cp['lower'][0])*(((x['lower'][0] + x_ref)/2. - x_ref) *(x_ref - x['lower'][0]) + \
+              ((y['lower'][0] + y_ref)/2. - y_ref) *(y_ref - y['lower'][0]))  
     return Cm
 #==============================================================================
 # Functions Intended for use with FInite ELement Methods
@@ -477,9 +476,9 @@ if __name__ == '__main__':
     alpha_list = np.linspace(0,10,11)
     for alpha in alpha_list:
         alpha = float(alpha)
-        data = xf.find_pressure_coefficients('naca0012', alpha)
+        data = xf.find_pressure_coefficients('flapped', alpha, NACA = False)
         Cm_aeropy.append(calculate_moment_coefficient(data['x'], data['y'], data['Cp'], alpha))
-        data_CM = xf.find_coefficients('naca0012', alpha)
+        data_CM = xf.find_coefficients('flapped', alpha, NACA = False)
         Cm_xfoil.append(data_CM['CM'])
     plt.plot(alpha_list, Cm_xfoil, 'b', label='XFOIL')
     plt.plot(alpha_list, Cm_aeropy, 'g', label='AeroPy')
