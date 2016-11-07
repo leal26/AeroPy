@@ -93,7 +93,7 @@ def calculate_spar_direction(psi_baseline, Au_baseline, Au_goal, deltaz, c_goal)
     sbeta = np.sqrt(1-cbeta**2)
     
     t[0] = 1
-    t[1] = dxi_u(psi_goal, Au_goal[0], Au_goal[1], deltaz)
+    t[1] = dxi_u(psi_goal, Au_goal[0], Au_goal[1], deltaz/c_goal)
     t_norm = np.sqrt(t[0]**2 + t[1]**2)
     t = (1./t_norm)*t
 #    s[0] = t_norm*cbeta - dxi_u(psi_goal, Au_goal[0], Au_goal[1], deltaz)
@@ -110,7 +110,7 @@ def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
     def f(psi_lower_goal):
         y_lower_goal = CST(psi_lower_goal*c_goal, c_goal, [deltaz/2., deltaz/2.], Au_goal, Al_goal)
         y_lower_goal = y_lower_goal['l']
-        return psi_upper_goal*c_goal + (s[0]/s[1])*(y_lower_goal - y_upper_goal)
+        return psi_upper_goal + (s[0]/s[1])*(y_lower_goal - y_upper_goal)/c_goal
         
     # Calculate cruise chord
     c_baseline = calculate_c_baseline(c_goal, Au_baseline, Au_goal, deltaz)
@@ -125,7 +125,8 @@ def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
     s = calculate_spar_direction(psi_baseline, Au_baseline, Au_goal, deltaz, c_goal)
     
     # Calculate lower psi and xi at goal airfoil
-    x_lower_goal = optimize.fixed_point(f, [psi_upper_goal]) #, args=(c_L, Au_C, Au_L, deltaz)
+    psi_lower_goal = optimize.fixed_point(f, [psi_upper_goal]) #, args=(c_L, Au_C, Au_L, deltaz)
+    x_lower_goal = psi_lower_goal*c_goal    
     y_lower_goal = CST(x_lower_goal, c_goal, [deltaz/2., deltaz/2.], Au_goal, Al_goal)
     y_lower_goal = y_lower_goal['l']
 
@@ -135,7 +136,7 @@ if __name__ == '__main__':
     import matplotlib.cm as cm
     import matplotlib.pyplot as plt
 
-    c_L = 1. # in meters
+    c_L = .36 # in meters
     deltaz = 0.01 #in meters
     
     Au_C = [0.4, 0.3]
@@ -249,7 +250,7 @@ if __name__ == '__main__':
     for x_i in x:
         Au_C[0] = x_i
         # Calculate cruise chord
-        c_C = calculate_c_baseline(c_L, Au_C, Au_L, deltaz)
+        c_C = calculate_c_baseline(c_L, Au_C, Au_L, deltaz/c_L)
         # Calculate psi at landing
         psi_goal_i = calculate_psi_goal(psi_i, Au_C, Au_L, deltaz, c_C, c_L)
         # Calculate xi at landing
