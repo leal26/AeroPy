@@ -16,7 +16,7 @@ import shutil # Modules necessary for saving multiple plots
 #                       	Core Functions
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
-         NACA=True, GDES=False, iteration=10, flap = None):
+         NACA=True, GDES=False, iteration=10, flap = None, PANE = False):
     """ Call xfoil through Python.
 
     The input variables are:
@@ -69,6 +69,12 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
           expected input is [x_hinge, y_hinge, deflection(angles)]. 
           y_hinge is determined to be exactly in the middle between the 
           upper and lower surfaces.
+
+    :param PANE: if there are more than 495 surface points, the paneling
+          method will not be used. Need to use the PANE subroutine to
+		  solve this. It will find the best points that represent the
+		  geometry (only 160 of them). 
+
     :rtype: dictionary with outputs relevant to the specific output type
 
     As a side note, it is much more eficient to run a single run with
@@ -201,7 +207,8 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
     # Once you load a set of points in Xfoil you need to create a
     # name, however we do not need to give it a name
     issueCmd('')
-
+    if PANE == True:
+        issueCmd('PANE')	
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #             Adapting points for better plots
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

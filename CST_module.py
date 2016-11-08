@@ -116,17 +116,20 @@ def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
         
     # Calculate cruise chord
     c_baseline = calculate_c_baseline(c_goal, Au_baseline, Au_goal, deltaz)
-    
+
     # Calculate upper psi at goal airfoil
     psi_upper_goal = calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, 
                                         deltaz, c_baseline, c_goal)
     y_upper_goal = CST(psi_upper_goal*c_goal, c_goal, [deltaz/2., deltaz/2.], Au_goal, Al_goal)
     y_upper_goal = y_upper_goal['u']
-    
+
     # Spar direction
     s = calculate_spar_direction(psi_baseline, Au_baseline, Au_goal, deltaz, c_goal)
-    
+
     # Calculate lower psi and xi at goal airfoil
+    #Because the iterative method can lead to warningdivision by zero after converging, we ignore
+    #the warning
+    np.seterr(divide='ignore', invalid='ignore') 
     psi_lower_goal = optimize.fixed_point(f, [psi_upper_goal]) #, args=(c_L, Au_C, Au_L, deltaz)
     x_lower_goal = psi_lower_goal*c_goal    
     y_lower_goal = CST(x_lower_goal, c_goal, [deltaz/2., deltaz/2.], Au_goal, Al_goal)
