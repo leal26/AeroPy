@@ -11,13 +11,15 @@ Suggested anity checks:
       to be sure it is good
 @author: Pedro
 """
-
+import math
 import numpy as np
 from scipy.integrate import quad
 from scipy.optimize import fsolve
 from scipy import optimize
+from scipy.optimize import differential_evolution
 
 from airfoil_module import CST
+from xfoil_module import output_reader
 
 def dxi_u(psi, Au0, Au1, delta_xi):
    """Calculate upper derivate of xi for a given psi"""
@@ -131,6 +133,117 @@ def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
     y_lower_goal = y_lower_goal['l']
 
     return (y_upper_goal- y_lower_goal[0])/s[1]
+
+def fitting_shape_coefficients(filename):
+	"""Fit shape parameters to given data points"""
+	from hausdorff_distance import hausdorff_distance_2D
+
+	data = output_reader(filename, separator = ', ', header = ['x', 'y'])
+
+	#plt.plot(data['x'], data['y'])
+
+	# Rotating airfoil 
+
+	x_TE = (data['x'][0] + data['x'][-1])/2.
+	y_TE = (data['y'][0] + data['y'][-1])/2.
+
+	theta_TE = math.atan(-y_TE/x_TE)
+
+	# position trailing edge at the x-axis
+	processed_data = {'x':[], 'y':[]}
+	for i in range(len(data['x'])):
+		x = data['x'][i]
+		y = data['y'][i]
+		c_theta = math.cos(theta_TE)
+		s_theta = math.sin(theta_TE)
+		x_rotated = c_theta*x - s_theta*y
+		y_rotated = s_theta*x + c_theta*y
+		processed_data['x'].append(x_rotated)
+		processed_data['y'].append(y_rotated)
+	data = processed_data
+
+	# determine what is the leading edge and the rotation angle beta
+	processed_data = {'x':[], 'y':[]}
+	min_x_list = []
+	min_y_list = []
+
+	min_x = min(data['x'])
+	min_index = data['x'].index(min_x)
+	min_y = data['y'][min_index]
+
+	chord = max(data['x']) - min(data['x'])
+	beta = math.atan((y_TE - min_y)/(x_TE - min_x))
+
+	# rotate and translate everything
+	#x_list = []
+	#y_list = []
+	#for i in range(len(data['x'])):
+	#    x = data['x'][i] - x_TE
+	#    y = data['y'][i] - y_TE
+	#    c_beta = math.cos(beta)
+	#    s_beta = math.sin(beta)
+	#    x_rotated = c_beta*x - s_beta*y + x_TE
+	#    y_rotated = s_beta*x + c_beta*y + y_TE
+	#    x_list.append(x_rotated)
+	#    y_list.append(y_rotated)
+	for i in range(len(data['x'])):
+		processed_data['x'].append((data['x'][i] - min_x)/chord)
+		processed_data['y'].append(data['y'][i]/chord)    
+	data = processed_data
+
+	#==============================================================================
+	# Optimizing shape
+	#==============================================================================
+		
+	Au_bounds = [[0, 1.], [0., 1.], [0., 1.], [0., 1.], [0., 1.], [0., 1.]]
+	Al_bounds = [[0, 1], [-1., 1.], [-1., 1.], [-1., 1.], [-1., 1.], [-1., 1.]]
+
+	deltaz = (data['y'][0] - data['y'][-1])/2.
+	print 'deltaz', deltaz
+	def shape_difference_upper(inputs):
+		[Au0, Au1, Au2, Au3, Au4, Au5] = inputs
+
+		y = CST(x, 1, deltasz = deltaz/2., Au=[Au0, Au1, Au2, Au3, Au4, Au5],)
+		
+		b = {'x': x, 'y': y}
+		
+		d = hausdorff_distance_2D(a, b)
+		return d 
+
+	def shape_difference_lower(inputs):
+		[Al0, Al1, Al2, Al3, Al4, Al5] = inputs
+		
+		y = CST(x, 1, deltasz= deltaz/2.,  Al=[Al0, Al1, Al2, Al3, Al4, Al5]) 
+
+		b = {'x': x, 'y': y}
+		return hausdorff_distance_2D(a, b)
+
+	def separate_upper_lower(data):
+		for i in range(len(data['x'])):
+			if data['y'][i] < 0:
+				break
+		upper = {'x': data['x'][0:i],
+				 'y': data['y'][0:i]}
+		lower = {'x': data['x'][i:],
+				 'y': data['y'][i:]}
+		return upper, lower
+
+	upper, lower = separate_upper_lower(data)
+	a = upper
+	x = upper['x']
+	result_upper = differential_evolution(shape_difference_upper, Au_bounds, 
+										  disp=True, popsize = 100)
+	print 'upper done'
+	print list(result_upper.x)
+	x = lower['x']
+	a = lower
+	result_lower = differential_evolution(shape_difference_lower, Al_bounds, 
+										  disp=True, popsize = 100)
+	print 'lower done'
+	print list(result_lower.x)
+	
+	# Return Al, Au
+	return result_lower.x, result_upper.x
 
 if __name__ == '__main__':
     import matplotlib.cm as cm
@@ -308,3 +421,13 @@ if __name__ == '__main__':
     plt.plot([x_goal_i, x_goal_i - l*s[0]],[y_goal_i, y_goal_i - l*s[1]], c = 'r')
     print 'landing spar y', [y_goal_i, y_goal_i - l*s[1]]
     plt.legend()
+
+#==============================================================================
+#   Tests for curve fitting
+#==============================================================================
+    filename = 'sampled_airfoil_data.csv'
+
+    plt.scatter(data['x'], data['y'])
+    x = np.linspace(0, 1, 200)
+    y = CST(x, 1, deltasz= [deltaz/2., deltaz/2.],  Al=list(result_lower.x), Au = list(result_upper.x))
+    plt.plot(x, y['u'], x, y['l'])	
