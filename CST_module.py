@@ -137,116 +137,182 @@ def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
 
     return (y_upper_goal- y_lower_goal[0])/s[1]
 
-def fitting_shape_coefficients(filename):
-	"""Fit shape parameters to given data points"""
-	from hausdorff_distance import hausdorff_distance_2D
+def fitting_shape_coefficients(filename, bounds = 'Default', n = 5,
+                               return_data = True, return_error = False,
+                               optimize_deltaz = False):
+    """Fit shape parameters to given data points
+        Inputs:
+        - filename: name of the file where the original data is
+        - bounds: bounds for the shape parameters. If not defined,
+                    Default values are used.
+        - n: order of the Bernstein polynomial. If bounds is default
+                this input will define the order of the polynomial.
+                Otherwise the length of bounds (minus one) is taken into 
+                consideration"""
 
-	data = output_reader(filename, separator = ', ', header = ['x', 'y'])
+    from hausdorff_distance import hausdorff_distance_2D
 
-	#plt.plot(data['x'], data['y'])
+    def shape_difference(inputs, optimize_deltaz = False):
 
-	# Rotating airfoil 
+        if optimize_deltaz == True or optimize_deltaz == [True]:
+            y_u = CST(upper['x'], 1, deltasz = inputs[-1]/2., Au = list(inputs[:n+1]))
+            y_l = CST(lower['x'], 1, deltasz = inputs[-1]/2.,  Al = list(inputs[n+1:-1]))
+        else:
+            y_u = CST(upper['x'], 1, deltasz = deltaz/2., Au = list(inputs[:n+1]))
+            y_l = CST(lower['x'], 1, deltasz = deltaz/2.,  Al = list(inputs[n+1:]))
+        # Vector to be compared with
+        a_u = {'x':upper['x'], 'y':y_u}
+        a_l = {'x':lower['x'], 'y':y_l}
+        
+        b_u = upper
+        b_l = lower
+        return hausdorff_distance_2D(a_u, b_u) + hausdorff_distance_2D(a_l, b_l)
 
-	x_TE = (data['x'][0] + data['x'][-1])/2.
-	y_TE = (data['y'][0] + data['y'][-1])/2.
+    # def shape_difference_upper(inputs, optimize_deltaz = False):
+        # if optimize_deltaz == True:
+            # y = CST(x, 1, deltasz = inputs[-1]/2., Au = list(inputs[:-1]))
+        # else:
+            # y = CST(x, 1, deltasz = inputs[-1]/2., Au = list(inputs))
+        # # Vector to be compared with
+        # b = {'x': x, 'y': y}
+        # return hausdorff_distance_2D(a, b)
 
-	theta_TE = math.atan(-y_TE/x_TE)
+    # def shape_difference_lower(inputs, optimize_deltaz = False):
+        # if optimize_deltaz == True:
+            # y = CST(x, 1, deltasz = inputs[-1]/2.,  Al = list(inputs[:-1]))
+        # else:
+            # y = CST(x, 1, deltasz = deltaz/2.,  Al = list(inputs))
+        # # Vector to be compared with
+        # b = {'x': x, 'y': y}
+        # return hausdorff_distance_2D(a, b)
 
-	# position trailing edge at the x-axis
-	processed_data = {'x':[], 'y':[]}
-	for i in range(len(data['x'])):
-		x = data['x'][i]
-		y = data['y'][i]
-		c_theta = math.cos(theta_TE)
-		s_theta = math.sin(theta_TE)
-		x_rotated = c_theta*x - s_theta*y
-		y_rotated = s_theta*x + c_theta*y
-		processed_data['x'].append(x_rotated)
-		processed_data['y'].append(y_rotated)
-	data = processed_data
+    def separate_upper_lower(data):
+        for i in range(len(data['x'])):
+            if data['y'][i] < 0:
+                break
+        upper = {'x': data['x'][0:i],
+                 'y': data['y'][0:i]}
+        lower = {'x': data['x'][i:],
+                 'y': data['y'][i:]}
+        return upper, lower
 
-	# determine what is the leading edge and the rotation angle beta
-	processed_data = {'x':[], 'y':[]}
-	min_x_list = []
-	min_y_list = []
+    # Order of Bernstein polynomial
+    if bounds != 'Default':
+        n = len(bounds) - 1
 
-	min_x = min(data['x'])
-	min_index = data['x'].index(min_x)
-	min_y = data['y'][min_index]
+    # Obtaining data
+    data = output_reader(filename, separator = ', ', header = ['x', 'y'])
 
-	chord = max(data['x']) - min(data['x'])
-	beta = math.atan((y_TE - min_y)/(x_TE - min_x))
+    # Rotating airfoil 
+    x_TE = (data['x'][0] + data['x'][-1])/2.
+    y_TE = (data['y'][0] + data['y'][-1])/2.
 
-	# rotate and translate everything
-	#x_list = []
-	#y_list = []
-	#for i in range(len(data['x'])):
-	#    x = data['x'][i] - x_TE
-	#    y = data['y'][i] - y_TE
-	#    c_beta = math.cos(beta)
-	#    s_beta = math.sin(beta)
-	#    x_rotated = c_beta*x - s_beta*y + x_TE
-	#    y_rotated = s_beta*x + c_beta*y + y_TE
-	#    x_list.append(x_rotated)
-	#    y_list.append(y_rotated)
-	for i in range(len(data['x'])):
-		processed_data['x'].append((data['x'][i] - min_x)/chord)
-		processed_data['y'].append(data['y'][i]/chord)    
-	data = processed_data
+    theta_TE = math.atan(-y_TE/x_TE)
 
-	#==============================================================================
-	# Optimizing shape
-	#==============================================================================
-		
-	Au_bounds = [[0, 1.], [0., 1.], [0., 1.], [0., 1.], [0., 1.], [0., 1.]]
-	Al_bounds = [[0, 1], [-1., 1.], [-1., 1.], [-1., 1.], [-1., 1.], [-1., 1.]]
+    # position trailing edge at the x-axis
+    processed_data = {'x':[], 'y':[]}
+    for i in range(len(data['x'])):
+        x = data['x'][i]
+        y = data['y'][i]
+        c_theta = math.cos(theta_TE)
+        s_theta = math.sin(theta_TE)
+        x_rotated = c_theta*x - s_theta*y
+        y_rotated = s_theta*x + c_theta*y
+        processed_data['x'].append(x_rotated)
+        processed_data['y'].append(y_rotated)
+    data = processed_data
 
-	deltaz = (data['y'][0] - data['y'][-1])/2.
-	print 'deltaz', deltaz
-	def shape_difference_upper(inputs):
-		[Au0, Au1, Au2, Au3, Au4, Au5] = inputs
+    # determine what is the leading edge and the rotation angle beta
+    processed_data = {'x':[], 'y':[]}
+    min_x_list = []
+    min_y_list = []
 
-		y = CST(x, 1, deltasz = deltaz/2., Au=[Au0, Au1, Au2, Au3, Au4, Au5],)
-		
-		b = {'x': x, 'y': y}
-		
-		d = hausdorff_distance_2D(a, b)
-		return d 
+    min_x = min(data['x'])
+    min_index = data['x'].index(min_x)
+    min_y = data['y'][min_index]
 
-	def shape_difference_lower(inputs):
-		[Al0, Al1, Al2, Al3, Al4, Al5] = inputs
-		
-		y = CST(x, 1, deltasz= deltaz/2.,  Al=[Al0, Al1, Al2, Al3, Al4, Al5]) 
+    chord = max(data['x']) - min(data['x'])
+    beta = math.atan((y_TE - min_y)/(x_TE - min_x))
 
-		b = {'x': x, 'y': y}
-		return hausdorff_distance_2D(a, b)
+    # rotate and translate everything
+    #x_list = []
+    #y_list = []
+    #for i in range(len(data['x'])):
+    #    x = data['x'][i] - x_TE
+    #    y = data['y'][i] - y_TE
+    #    c_beta = math.cos(beta)
+    #    s_beta = math.sin(beta)
+    #    x_rotated = c_beta*x - s_beta*y + x_TE
+    #    y_rotated = s_beta*x + c_beta*y + y_TE
+    #    x_list.append(x_rotated)
+    #    y_list.append(y_rotated)
+    for i in range(len(data['x'])):
+        processed_data['x'].append((data['x'][i] - min_x)/chord)
+        processed_data['y'].append(data['y'][i]/chord)    
+    data = processed_data
 
-	def separate_upper_lower(data):
-		for i in range(len(data['x'])):
-			if data['y'][i] < 0:
-				break
-		upper = {'x': data['x'][0:i],
-				 'y': data['y'][0:i]}
-		lower = {'x': data['x'][i:],
-				 'y': data['y'][i:]}
-		return upper, lower
+    #==============================================================================
+    # Optimizing shape
+    #==============================================================================
+    # Determining default bounds
+    if bounds == 'Default':
+        upper_bounds = [[0, 1.]]*(n+1)
+        lower_bounds = [[0, 1]] +  [[-1., 1.]]*n
 
-	upper, lower = separate_upper_lower(data)
-	a = upper
-	x = upper['x']
-	result_upper = differential_evolution(shape_difference_upper, Au_bounds, 
-										  disp=True, popsize = 100)
-	print 'upper done'
-	print list(result_upper.x)
-	x = lower['x']
-	a = lower
-	result_lower = differential_evolution(shape_difference_lower, Al_bounds, 
-										  disp=True, popsize = 100)
-	print 'lower done'
-	print list(result_lower.x)
-	
-	# Return Al, Au
-	return result_lower.x, result_upper.x
+    if optimize_deltaz:
+        bounds = upper_bounds + lower_bounds + [[0, 0.1]]
+    else:
+        bounds = upper_bounds + lower_bounds
+        deltaz = (data['y'][0] - data['y'][-1])
+    print bounds
+    upper, lower = separate_upper_lower(data)
+    # a = data
+    # x = data['x']
+    result = differential_evolution(shape_difference, bounds, 
+                                            disp=True, popsize = 10, 
+                                            args = [optimize_deltaz])
+    print 'order %i upper done' % n
+    # x = lower['x']
+    # a = lower
+    # result_lower = differential_evolution(shape_difference_lower, lower_bounds, 
+                                            # disp=True, popsize = 10,
+                                            # args = (optimize_deltaz))
+    # print 'order %i lower done' % n
+    if optimize_deltaz:
+        Au = list(result.x[:n+1])
+        Al = list(result.x[n+1:-1])
+        deltaz = result.x[-1]
+    else:
+        Au = list(result.x[:n+1])
+        Al = list(result.x[n+1:])
+        
+    # Return Al, Au, and others
+    if return_data:
+        return data, deltaz, Al, Au
+    elif return_error:
+        return result.fun, deltaz, Al, Au
+    else:
+        return deltaz, Al, Au
+
+def shape_parameter_study(filename, n = 5):
+    """Analyze the shape difference for different Bernstein order
+       polynomials.
+       - filename: name of dataset to compare with
+       - n: Maximum Bernstein polynomial order """
+    import pickle
+    
+    Data = {'error': [], 'Al': [], 'Au': [], 'order':[], 'deltaz':[]}
+    for i in range(1,n+1):
+        error, deltaz, Al, Au = fitting_shape_coefficients(filename, n = i, return_error = True, optimize_deltaz = True)
+        Data['error'].append(error)
+        Data['Al'].append(Al)
+        Data['Au'].append(Au)
+        Data['deltaz'].append(deltaz)
+        Data['order'].append(i)
+    
+    file = open('shape_study.p', 'wb')
+    pickle.dump(Data, file)
+    return Data
 
 if __name__ == '__main__':
     import matplotlib.cm as cm
@@ -359,7 +425,9 @@ if __name__ == '__main__':
         plt.plot([psi_i*c_C,psi_i*c_C], [y['l'], y['u']], c=color_i)
     plt.legend()
     plt.xlabel('$x^L$', fontsize = 20)
-    plt.ylabel(r'$y^L$', fontsize = 20)    
+    plt.ylabel(r'$y^L$', fontsize = 20)
+    plt.show()
+    
     plt.figure()
 #    
     colors = iter(cm.rainbow(np.linspace(0, 1, len(x))))
@@ -386,7 +454,8 @@ if __name__ == '__main__':
     plt.legend()
     plt.xlabel('$y^L$', fontsize = 20)
     plt.ylabel(r'$x^L$', fontsize = 20)
-    
+    plt.show()
+
 #==============================================================================
 #     #Plot to check if spars are the same if same airfoil
 #==============================================================================
@@ -429,8 +498,23 @@ if __name__ == '__main__':
 #   Tests for curve fitting
 #==============================================================================
     filename = 'sampled_airfoil_data.csv'
-
-    plt.scatter(data['x'], data['y'])
-    x = np.linspace(0, 1, 200)
-    y = CST(x, 1, deltasz= [deltaz/2., deltaz/2.],  Al=list(result_lower.x), Au = list(result_upper.x))
-    plt.plot(x, y['u'], x, y['l'])	
+    # plt.figure()
+    # data, fitted_deltaz, fitted_Al, fitted_Au = fitting_shape_coefficients(filename, n=1,
+                                                        # optimize_deltaz = True)
+    # print fitted_Al, fitted_Au, fitted_deltaz
+    # plt.scatter(data['x'], data['y'])
+    # x = np.linspace(0, 1, 200)
+    # y = CST(x, 1, deltasz= [fitted_deltaz/2., fitted_deltaz/2.],  Al = fitted_Al, Au = fitted_Au)
+    # plt.plot(x, y['u'], x, y['l'])	
+    # plt.show()
+    # BREAK
+#==============================================================================
+#   Shape parameter study
+#==============================================================================
+    Data = shape_parameter_study(filename, n = 5)
+    plt.figure()
+    x = [1,2,3,4,5]
+    plt.plot(x, Data['error'])
+    plt.xlabel('Number of shape functions')
+    plt.ylabel('Number of shape functions')	
+    plt.show()   
