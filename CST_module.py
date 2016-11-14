@@ -138,7 +138,7 @@ def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
     return (y_upper_goal- y_lower_goal[0])/s[1]
 
 def fitting_shape_coefficients(filename, bounds = 'Default', n = 5,
-                               return_data = True, return_error = False,
+                               return_data = False, return_error = False,
                                optimize_deltaz = False):
     """Fit shape parameters to given data points
         Inputs:
@@ -233,19 +233,7 @@ def fitting_shape_coefficients(filename, bounds = 'Default', n = 5,
 
     chord = max(data['x']) - min(data['x'])
     beta = math.atan((y_TE - min_y)/(x_TE - min_x))
-
-    # rotate and translate everything
-    #x_list = []
-    #y_list = []
-    #for i in range(len(data['x'])):
-    #    x = data['x'][i] - x_TE
-    #    y = data['y'][i] - y_TE
-    #    c_beta = math.cos(beta)
-    #    s_beta = math.sin(beta)
-    #    x_rotated = c_beta*x - s_beta*y + x_TE
-    #    y_rotated = s_beta*x + c_beta*y + y_TE
-    #    x_list.append(x_rotated)
-    #    y_list.append(y_rotated)
+    
     for i in range(len(data['x'])):
         processed_data['x'].append((data['x'][i] - min_x)/chord)
         processed_data['y'].append(data['y'][i]/chord)    
@@ -493,28 +481,55 @@ if __name__ == '__main__':
     plt.plot([x_goal_i, x_goal_i - l*s[0]],[y_goal_i, y_goal_i - l*s[1]], c = 'r')
     print 'landing spar y', [y_goal_i, y_goal_i - l*s[1]]
     plt.legend()
-
+    
 #==============================================================================
 #   Tests for curve fitting
 #==============================================================================
     filename = 'sampled_airfoil_data.csv'
     # plt.figure()
-    # data, fitted_deltaz, fitted_Al, fitted_Au = fitting_shape_coefficients(filename, n=1,
-                                                        # optimize_deltaz = True)
-    # print fitted_Al, fitted_Au, fitted_deltaz
-    # plt.scatter(data['x'], data['y'])
+    # # error, fitted_deltaz, fitted_Al, fitted_Au = fitting_shape_coefficients(filename, n=1,
+                                                        # # optimize_deltaz = True, return_error = True)
+    # # print error, fitted_Al, fitted_Au, fitted_deltaz
+    # fitted_Au = [0.28112944407629581, 0.19487054006845383, 0.42397361498813563, 0.13538750382907982, 0.3399920533480057, 0.2118532593111192]
+    # fitted_Al = [0.1897357530709628, -0.25258128225279725, 0.086871096306674597, -0.55958630302132484, 0.0064412971620611478, -0.24295645929089565]
+    # fitted_deltaz = 0.0092804245707460483
+    # data = output_reader(filename, separator = ', ', header = ['x', 'y'])
+    # # Rotating airfoil 
+    # x_TE = (data['x'][0] + data['x'][-1])/2.
+    # y_TE = (data['y'][0] + data['y'][-1])/2.
+
+    # theta_TE = math.atan(-y_TE/x_TE)
+
+    # # position trailing edge at the x-axis
+    # processed_data = {'x':[], 'y':[]}
+    # for i in range(len(data['x'])):
+        # x = data['x'][i]
+        # y = data['y'][i]
+        # c_theta = math.cos(theta_TE)
+        # s_theta = math.sin(theta_TE)
+        # x_rotated = c_theta*x - s_theta*y
+        # y_rotated = s_theta*x + c_theta*y
+        # processed_data['x'].append(x_rotated)
+        # processed_data['y'].append(y_rotated)
+    # data = processed_data
+
+    # # plt.scatter(data['x'], data['y'])
     # x = np.linspace(0, 1, 200)
     # y = CST(x, 1, deltasz= [fitted_deltaz/2., fitted_deltaz/2.],  Al = fitted_Al, Au = fitted_Au)
-    # plt.plot(x, y['u'], x, y['l'])	
+    # plt.plot(x, y['u'], x, y['l'])
+    # plt.scatter(data['x'], data['y'])
     # plt.show()
     # BREAK
 #==============================================================================
 #   Shape parameter study
 #==============================================================================
-    Data = shape_parameter_study(filename, n = 5)
+    n = 8
+    Data = shape_parameter_study(filename, n = n)
     plt.figure()
-    x = [1,2,3,4,5]
+    x = np.linspace(2,2*n,n)
     plt.plot(x, Data['error'])
+    plt.scatter(x, Data['error'])
+    plt.grid()
     plt.xlabel('Number of shape functions')
-    plt.ylabel('Number of shape functions')	
+    plt.ylabel('Haussdorf Distance (adimensional)')	
     plt.show()   
