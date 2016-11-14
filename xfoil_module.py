@@ -419,10 +419,7 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,
         # and then translate. Angle gamma
         if min(All_Rotated_Coordinates['0']['x']) < 0 or min(All_Rotated_Coordinates['1']['x']) < 0:
             count = 0
-            import matplotlib.pyplot as plt
 
-            print 'upper: ', All_Rotated_Coordinates['0']
-            print 'lower: ', All_Rotated_Coordinates['1']
             cxU = All_Rotated_Coordinates['0']['x']
             cyU = All_Rotated_Coordinates['0']['y']
             TExU = max(cxU)
@@ -430,8 +427,6 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,
             cxL = All_Rotated_Coordinates['1']['x']
             cyL = All_Rotated_Coordinates['1']['y']
             TExL = max(cxL)
-            plt.plot(cxU, cyU, 'g')
-            plt.plot(cxL, cyL, 'g', label = 'after TE rotation/translation')
 
             x_TE = (TExU+TExL) / 2.
             print 'trailing edge x', x_TE
@@ -443,39 +438,34 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,
             max_d = 0
             x_LE = 0
             y_LE = 0
-            print 'upper translated: ', cyU, cxU
-            print 'lower translated: ', cyL, cxL
+
             for i in range(len(cxU)):
                 d_i = math.sqrt(cxU[i]**2 + cyU[i]**2)
                 if d_i > max_d:
                     max_d = d_i
                     x_LE = cxU[i]
                     y_LE = cyU[i]
-                    print 'upper: ', d_i, x_LE, y_LE
+
             for i in range(len(cxL)):
                 d_i = math.sqrt(cxL[i]**2 + cyL[i]**2)
                 if d_i > max_d:
                     max_d = d_i
                     x_LE = cxL[i]
                     y_LE = cyL[i]
-                    print 'lower: ', d_i, x_LE, y_LE
-            plt.scatter(x_LE + x_TE, y_LE, s=30, label= 'new leading edge')
+
+
             # Calculate rotation angle
             gamma = math.atan(y_LE/x_LE)
-            # gamma = 0
-            print 'gamma: ', gamma
-            print 'LE x and y: ', x_LE + x_TE, y_LE
+
             # Rotation transformation Matrix
             T = [[math.cos(gamma), math.sin(gamma)],
                 [-math.sin(gamma), math.cos(gamma)]]
             
             # Find x-coordinate of leading edge to subtract afterwards
-            print 'rotation for x', T[0][0], x_LE, T[0][1], y_LE, x_TE, T[0][0]*x_LE, T[0][1]*y_LE
             rotated_x_LE = T[0][0]*x_LE + T[0][1]*y_LE + x_TE
             rotated_y_LE = T[1][0]*x_LE + T[1][1]*y_LE
-            plt.scatter(rotated_x_LE, rotated_y_LE, s=30, c='r', label='rotated LE')
+            
             old_Rotated_Coordinates = All_Rotated_Coordinates
-            print 'LE and TE', rotated_x_LE, x_TE
             for Coordinates in [{'x':cxU,'y':cyU}, {'x':cxL, 'y':cyL}]:
                 Rotated_Coordinates = {'x':[], 'y':[]}
                 for i in range(len(Coordinates['x'])):
@@ -485,7 +475,7 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,
                     rot_y = T[1][0]*cx + T[1][1]*cy
                     Rotated_Coordinates['x'].append(rot_x + x_TE - rotated_x_LE)
                     Rotated_Coordinates['y'].append(rot_y)
-                print Rotated_Coordinates
+
                 All_Rotated_Coordinates['%s' % count] = Rotated_Coordinates
                 count += 1
         return All_Rotated_Coordinates['0'], All_Rotated_Coordinates['1']
