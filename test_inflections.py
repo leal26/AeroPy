@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 from CST_module import *
 from airfoil_module import CST
 
-Au = [0.2, -0.1, 0.2]
-Al = [0.2, -0.1, 0.2]
+Au = [0.2, -0.1, 0.2, -0.1, 0.2]
+Al = [0.2, -0.1, 0.2, -0.1, 0.2]
 deltaz = 0.001
 
 psi_u_inflection, psi_l_inflection, lengths = find_inflection_points(Au, Al)

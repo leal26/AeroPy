@@ -372,7 +372,7 @@ def find_inflection_points(Au, Al):
         if abs(ddxi_u(psi_i, Au))[0] < 1e-6:
             actual_solution = True            
         if not inside_upper and actual_solution and (psi_i > 0 and psi_i < 1):
-            psi_u_solutions.append(psi_i)
+            psi_u_solutions.append(psi_i[0])
         
         # Find solutions for lower and filter
         psi_i = minimize(ddxi_l, x_i, bounds =((0.0001,0.9999),), args=(Al, True))
@@ -391,18 +391,37 @@ def find_inflection_points(Au, Al):
         if abs(ddxi_l(psi_i, Al))[0] < 1e-6:
             actual_solution = True            
         if not inside_lower and actual_solution and (psi_i > 0 and psi_i < 1):
-            psi_l_solutions.append(psi_i)
+            psi_l_solutions.append(psi_i[0])
     # order lists
     psi_u_solutions = np.sort(psi_u_solutions)
     psi_l_solutions = np.sort(psi_l_solutions)
     # ddxi = 0 is a necessary condition but not sufficient to be an inclination point
     # for such, a value right before and a value after need to have opposite signs
-    # for i in range(len(psi_u_solutions)):
-        # if i == 0:
-            # before_psi = psi_u_solutions[i]/2.
-        # elif i == len(psi_u_solutions)-1:
-            # after_psi
-    return psi_u_solutions, psi_l_solutions, (len(psi_u_solutions), len(psi_l_solutions))
+    m = len(psi_u_solutions)
+    true_solutions_u = []
+    psi_all = [0,] + list(psi_u_solutions) + [1,]
+
+    if m != 0:
+        for i in range(1, m+1):
+            before_psi = (psi_all[i-1]+psi_all[i])/2.
+            after_psi = (psi_all[i]+psi_all[i+1])/2.
+            before_sign = np.sign(ddxi_u(before_psi,Au))
+            after_sign = np.sign(ddxi_u(after_psi,Au))
+            if after_sign + before_sign == 0:
+                true_solutions_u.append(psi_all[i])
+
+    m = len(psi_l_solutions)
+    true_solutions_l = []
+    psi_all = [0] + list(psi_l_solutions) + [1]
+    if m != 0:
+        for i in range(1, m+1):
+            before_psi = (psi_all[i-1]+psi_all[i])/2.
+            after_psi = (psi_all[i]+psi_all[i+1])/2.
+            before_sign = np.sign(ddxi_u(before_psi,Au))
+            after_sign = np.sign(ddxi_u(after_psi,Au))
+            if after_sign + before_sign == 0:
+                true_solutions_l.append(psi_all[i])
+    return true_solutions_u, true_solutions_l, (len(true_solutions_u), len(true_solutions_l))
 
 if __name__ == '__main__':
     import matplotlib.cm as cm
