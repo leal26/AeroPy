@@ -13,8 +13,9 @@ Suggested anity checks:
 """
 import math
 import numpy as np
+import warnings
 from scipy.integrate import quad
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, minimize
 from scipy import optimize
 from scipy.optimize import differential_evolution
 
@@ -39,12 +40,37 @@ def dxi_u(psi, Au, delta_xi):
 # Lower surface differential
 def dxi_l(psi, Al, delta_xi):
     """Calculate lower derivate of xi for a given psi"""
-  
+    n = len(Al)-1  
     diff = -delta_xi/2.
     for i in range(n+1):
         diff -= Al[i]*K(i,n)*psi**i*(1-psi)**(n-i)/(2*psi**0.5)*(-(3+2*n)*psi +2*i + 1)
     return diff
-       
+
+# Upper surface second differential
+def ddxi_u(psi, Au, abs_output = False):
+    """Calculate upper second derivate of xi for a given psi"""
+    n = len(Au)-1
+   
+    diff = 0
+    for i in range(n+1):
+        diff -= Au[i]*K(i,n)*(psi**i)*((1-psi)**(n-i-1))/(4*psi**1.5)*((4*n**2 + 8*n +3)*psi**2+(-4*(2*i+1)*n - 4*i -2)*psi + 4*i**2 - 1)
+    if abs_output:
+        return abs(diff)
+    else:
+        return  diff
+
+# Lower surface second differential
+def ddxi_l(psi, Al, abs_output = False):
+    """Calculate lower second derivate of xi for a given psi"""
+    n = len(Al)-1  
+    diff = 0
+    for i in range(n+1):
+        diff += Al[i]*K(i,n)*(psi**i)*((1-psi)**(n-i-1))/(4*psi**1.5)*((4*n**2 + 8*n +3)*psi**2+(-4*(2*i+1)*n-4*i-2)*psi +4*i**2 - 1)
+    if abs_output:
+        return abs(diff)
+    else:
+        return  diff
+    
 def calculate_c_baseline(c_L, Au_C, Au_L, deltaz):
     """Equations in the New_CST.pdf. Calculates the upper chord in order for
        the cruise and landing airfoils ot have the same length."""
@@ -80,8 +106,9 @@ def calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz,
     
     L_baseline, err =  quad(integrand, 0, psi_baseline, args=(Au_baseline, deltaz, 
                                                          c_baseline))
-
-    y = fsolve(equation, psi_baseline, args=(L_baseline, Au_goal, deltaz,
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        y = fsolve(equation, psi_baseline, args=(L_baseline, Au_goal, deltaz,
                                                  c_goal))
     return y[0]
     
@@ -315,6 +342,67 @@ def shape_parameter_study(filename, n = 5):
     file = open('shape_study.p', 'wb')
     pickle.dump(Data, file)
     return Data
+
+def find_inflection_points(Au, Al):
+    """Detect how many inflections points and where are they"""
+    # Find solutions for several initial estimates
+    x = np.linspace(0.000001,0.99999,100)
+    psi_u_solutions = []
+    psi_l_solutions = []
+    
+    # There will be solutions that do not converge, and will give
+    # warnings. So just ignore them.
+    # with warnings.catch_warnings():
+        # warnings.simplefilter("ignore")
+    for x_i in x:
+        # Find solutions for upper and filter
+        psi_i = minimize(ddxi_u, x_i, bounds =((0.0001,0.9999),), args=(Au, True))
+        psi_i = psi_i.x
+
+        # Boolean to check if already in the list of solutions
+        inside_upper = False
+        for psi_j in psi_u_solutions:
+            if psi_u_solutions == []:
+                inside_upper = True
+            elif abs(psi_j - psi_i[0]) < 1e-6:
+                inside_upper = True
+        # Boolean to check if actually a solution
+        actual_solution = False
+
+        if abs(ddxi_u(psi_i, Au))[0] < 1e-6:
+            actual_solution = True            
+        if not inside_upper and actual_solution and (psi_i > 0 and psi_i < 1):
+            psi_u_solutions.append(psi_i)
+        
+        # Find solutions for lower and filter
+        psi_i = minimize(ddxi_l, x_i, bounds =((0.0001,0.9999),), args=(Al, True))
+        psi_i = psi_i.x
+
+        # Boolean to check if already in the list of solutions
+        inside_lower = False
+        for psi_j in psi_l_solutions:
+            if psi_l_solutions == []:
+                inside_lower = True
+            elif abs(psi_j - psi_i[0]) < 1e-6:
+                inside_lower = True
+        # Boolean to check if actually a solution
+        actual_solution = False
+        
+        if abs(ddxi_l(psi_i, Al))[0] < 1e-6:
+            actual_solution = True            
+        if not inside_lower and actual_solution and (psi_i > 0 and psi_i < 1):
+            psi_l_solutions.append(psi_i)
+    # order lists
+    psi_u_solutions = np.sort(psi_u_solutions)
+    psi_l_solutions = np.sort(psi_l_solutions)
+    # ddxi = 0 is a necessary condition but not sufficient to be an inclination point
+    # for such, a value right before and a value after need to have opposite signs
+    # for i in range(len(psi_u_solutions)):
+        # if i == 0:
+            # before_psi = psi_u_solutions[i]/2.
+        # elif i == len(psi_u_solutions)-1:
+            # after_psi
+    return psi_u_solutions, psi_l_solutions, (len(psi_u_solutions), len(psi_l_solutions))
 
 if __name__ == '__main__':
     import matplotlib.cm as cm
