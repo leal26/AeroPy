@@ -421,7 +421,7 @@ def find_inflection_points(Au, Al):
             after_sign = np.sign(ddxi_u(after_psi,Au))
             if after_sign + before_sign == 0:
                 true_solutions_l.append(psi_all[i])
-    return true_solutions_u, true_solutions_l, (len(true_solutions_u), len(true_solutions_l))
+    return psi_u_solutions, psi_l_solutions
 
 if __name__ == '__main__':
     import matplotlib.cm as cm

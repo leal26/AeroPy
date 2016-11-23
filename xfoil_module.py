@@ -16,7 +16,8 @@ import shutil # Modules necessary for saving multiple plots
 #                       	Core Functions
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
-         NACA=True, GDES=False, iteration=10, flap = None, PANE = False):
+         NACA=True, GDES=False, iteration=10, flap = None, PANE = False,
+         NORM=True):
     """ Call xfoil through Python.
 
     The input variables are:
@@ -75,7 +76,12 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
 		  solve this. It will find the best points that represent the
 		  geometry (only 160 of them). 
 
-    :rtype: dictionary with outputs relevant to the specific output type
+    :param NORM: For good results using the panel method, Xfoil
+          requires normalized coordinates, so this option should
+          always be True.
+
+    :rtype: dictionary with outputs relevant to the specific output type.
+            Usually x,y coordinates will be normalized.
 
     As a side note, it is much more eficient to run a single run with
     multiple angles of attack rather than multiple runs, each with a
@@ -132,6 +138,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
                     os.remove(filename)
                 except OSError:
                     pass
+                # Before writing file, denormalize it
                 issueCmd('CPWR %s' % filename)
 
             if output == 'Dump':
@@ -199,6 +206,8 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
                   startupinfo = startupinfo)
 
     # Loading geometry
+    if NORM == True:
+        issueCmd('NORM')
     if NACA == False:
         issueCmd('load %s' % airfoil)
     else:
@@ -207,6 +216,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
     # Once you load a set of points in Xfoil you need to create a
     # name, however we do not need to give it a name
     issueCmd('')
+
     if PANE == True:
         issueCmd('PANE')	
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -746,22 +756,27 @@ def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10, NACA=True):
     return coefficients
 
 def find_pressure_coefficients(airfoil, alpha, Reynolds=0, iteration=10, 
-                               NACA=True, use_previous = False):
+                               NACA=True, use_previous = False, chord=1.,
+                               PANE=False):
     """Calculate the pressure coefficients of an airfoil"""
     filename = file_name(airfoil, alpha, output='Cp')
     # If file already exists, there is no need to recalculate it.
     if not use_previous:
         call(airfoil, alpha, Reynolds=Reynolds, output='Cp', iteration=10,
-             NACA=NACA)
+             NACA=NACA, PANE=PANE)
     else:
         if not os.path.isfile(filename):
     		call(airfoil, alpha, Reynolds=Reynolds, output='Cp', iteration=10,
-               NACA=NACA)
+               NACA=NACA, PANE=PANE)
     coefficients = {}
     # Data from file
     Data = output_reader(filename, output='Cp')
     for key in Data:
         coefficients[key] = Data[key]
+    if chord != 1.:
+        for i in range(Data[key]):
+            coefficients['x'] = coefficients['x']*chord
+            coefficients['y'] = coefficients['y']*chord
     return coefficients
 
 def find_alpha_L_0(airfoil, Reynolds=0, iteration=10, NACA=True):
