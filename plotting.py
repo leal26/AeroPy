@@ -60,7 +60,9 @@ plt.figure()
 plt.plot(psi, xi['u'], psi, xi['l'])
 plt.scatter(raw_data['x'], raw_data['y'])
 n = 8
+plt.xlim(0,1)
 x = np.linspace(2,2*n,n)
+plt.gca().set_aspect('equal', adjustable='box')
 plt.show()
 
 plt.figure()

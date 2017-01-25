@@ -423,6 +423,26 @@ def find_inflection_points(Au, Al):
                 true_solutions_l.append(psi_all[i])
     return psi_u_solutions, psi_l_solutions
 
+def calculate_camber(psi, Au, Al, delta_xi):
+    xi = CST(psi, 1., [delta_xi/2., delta_xi/2.], Au, Al)
+    return (xi['u']+xi['l'])/2.
+
+def calculate_max_camber(Au, Al, delta_xi):
+    """Calculate maximum camber and where it is. Returns (\psi, max_camber)"""
+    def dcamber(psi, Au, Al, delta_xi):
+        return 0.5*(dxi_u(psi, Au, delta_xi) + dxi_l(psi, Al, delta_xi))
+
+    solution = fsolve(dcamber, 0.5, args=(Au, Al, delta_xi))
+    
+    # Outputs floats with psi and xi coordinates
+    return solution[0], calculate_camber(solution, Au, Al, delta_xi)[0]
+
+def calculate_average_camber(Au, Al, delta_xi):
+    psi = np.linspace(0,1,1000)
+    xi = CST(psi, 1., [delta_xi/2., delta_xi/2.], Au, Al)
+    camber = (xi['u']+xi['l'])/2.
+    return np.average(np.absolute(camber))
+    
 if __name__ == '__main__':
     import matplotlib.cm as cm
     import matplotlib.pyplot as plt
