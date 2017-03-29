@@ -11,7 +11,8 @@ import os # To check for already existing files and delete them
 import numpy as np
 import math
 import shutil # Modules necessary for saving multiple plots
-
+import datetime
+import time
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                       	Core Functions
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -65,16 +66,16 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
 
     :param iteration: changes how many times XFOIL will try to make the
           results converge. Speciallt important for viscous flows
-          
-    :param flap: determines if there is a flap. In case there is the 
-          expected input is [x_hinge, y_hinge, deflection(angles)]. 
-          y_hinge is determined to be exactly in the middle between the 
+
+    :param flap: determines if there is a flap. In case there is the
+          expected input is [x_hinge, y_hinge, deflection(angles)].
+          y_hinge is determined to be exactly in the middle between the
           upper and lower surfaces.
 
     :param PANE: if there are more than 495 surface points, the paneling
           method will not be used. Need to use the PANE subroutine to
 		  solve this. It will find the best points that represent the
-		  geometry (only 160 of them). 
+		  geometry (only 160 of them).
 
     :param NORM: For good results using the panel method, Xfoil
           requires normalized coordinates, so this option should
@@ -191,7 +192,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
 #                startupinfo=None, creationflags=0):
 
     # The following keys avoid the xfoil pop-up
-    # source: http://stackoverflow.com/questions/1765078/how-to-avoid- 
+    # source: http://stackoverflow.com/questions/1765078/how-to-avoid-
     # console-window-with-pyw-file-containing-os-system-call
     startupinfo = sp.STARTUPINFO()
     startupinfo.dwFlags |= sp.STARTF_USESHOWWINDOW
@@ -218,7 +219,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
     issueCmd('')
 
     if PANE == True:
-        issueCmd('PANE')	
+        issueCmd('PANE')
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #             Adapting points for better plots
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -232,7 +233,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
         issueCmd('PANEL') # regenerate paneling
     #==============================================================
     #                              Flaps
-    #===============================================================       
+    #===============================================================
     if flap != None:
         issueCmd('GDES')  # enter GDES menu
         issueCmd('FLAP')  # enter FLAP menu
@@ -240,7 +241,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
         issueCmd('%f' % flap[1])      # insert y location
         issueCmd('%f' % flap[2])      # ainsesrt deflection in degrees
         issueCmd('eXec')      # set buffer airfoil as current airfoil
-        issueCmd('') # exit GDES menu  
+        issueCmd('') # exit GDES menu
     # If output equals Coordinates, no analysis will be realized, only the
     # coordinates of the shape will be outputed
     if output == 'Coordinates':
@@ -332,7 +333,7 @@ def create_input(x, y_u, y_l = None, filename = 'test', different_x_upper_lower 
 
     @author: Pedro Leal
     """
-    
+
     if different_x_upper_lower:
         y = y_u
     else:
@@ -342,7 +343,7 @@ def create_input(x, y_u, y_l = None, filename = 'test', different_x_upper_lower 
         x_upper = x
         x_under = np.delete(x_upper, -1)[::-1]
         x = np.append(x_upper, x_under)
-    
+
         y_l = np.delete(y_l, -1)[::-1]
         y = np.append(y_u, y_l)
     # Creating files for xfoil processing
@@ -470,11 +471,11 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,
             # Rotation transformation Matrix
             T = [[math.cos(gamma), math.sin(gamma)],
                 [-math.sin(gamma), math.cos(gamma)]]
-            
+
             # Find x-coordinate of leading edge to subtract afterwards
             rotated_x_LE = T[0][0]*x_LE + T[0][1]*y_LE + x_TE
             rotated_y_LE = T[1][0]*x_LE + T[1][1]*y_LE
-            
+
             old_Rotated_Coordinates = All_Rotated_Coordinates
             for Coordinates in [{'x':cxU,'y':cyU}, {'x':cxL, 'y':cyL}]:
                 Rotated_Coordinates = {'x':[], 'y':[]}
@@ -539,7 +540,8 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,
         return Coordinates
 
 def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
-                  header=0, delete = False):
+                  header=0, delete = False, structure = False,
+                  type_structure = None):
     """
     Function that opens files of any kind. Able to skip rows and
     read headers if necessary.
@@ -549,7 +551,8 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
 
         - separator: Main kind of separator in file. The code will
           replace any variants of this separator for processing. Extra
-          components such as end-line, kg m are all eliminated.
+          components such as end-line, kg m are all eliminated. Separator
+		  can also be a list of separators to use
 
         - output: defines what the kind of file we are opening to
           ensure we can skip the right amount of lines. By default it
@@ -567,8 +570,23 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
           dictionary. For the function to work, a header IS necessary.
           If not specified by the user, the function will assume that
           the header can be found in the file that it is opening.
-          
+
         - delete: if True, deletes file read.
+
+        - structure: the file that he is being read has a given structure. For
+          a file with the following structure:
+                0
+                0 0
+                0.0996174 0.00873875
+                1
+                0.0996174 0.00873875
+                0.199258 0.0172063
+          For the case where the header:
+                >> header = ['element', 'x1', 'y1', 'x2', 'y2']
+          A possible structure is:
+                >> structure = [['element'], ['x1', 'y1'], ['x2', 'y2']]
+
+        - type_structure: ['string', 'time', 'float', 'time', 'float']
 
     Output:
         - Dictionary with all the header values as keys
@@ -576,6 +594,30 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
     Created on Thu Mar 14 2014
     @author: Pedro Leal
     """
+    if header != 0:
+        if type_structure == None:
+            type_structure = len(header)*['float']
+
+    def format_output(variable, type_structure):
+        if type_structure == None:
+            return float(variable)
+        if type_structure == 'seconds':
+            try:
+                seconds = time.strptime(variable.split('.')[0],'%H:%M:%S')
+                miliseconds = float(variable.split('.')[1])*0.1**len(variable.split('.')[1])
+                total = miliseconds + datetime.timedelta(hours=seconds.tm_hour, minutes=seconds.tm_min,
+                						  seconds=seconds.tm_sec).total_seconds()	
+
+            except:
+                seconds = time.strptime(variable.split('.')[0],'%M:%S')
+                miliseconds = float(variable.split('.')[1])*0.1**len(variable.split('.')[1])
+                total = miliseconds + datetime.timedelta(hours=seconds.tm_hour, minutes=seconds.tm_min,
+										  seconds=seconds.tm_sec).total_seconds()		
+            return total
+        elif type_structure == 'string':
+            return variable
+        elif type_structure == 'float':
+            return float(variable)
 
     # In case we are using an XFOIL file, we define the number of rows
     # skipped
@@ -597,6 +639,12 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
         header_done = False
     count_skip = 0
 
+    # Add the possibility of more than one separator
+    if type(separator) != list:
+    	separator_list = [separator]
+    else:
+    	separator_list = separator
+    structure_count = 0
     with open (filename, "r") as myfile:
         # Jump first lines which are useless
         for line in myfile:
@@ -610,14 +658,15 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
                 if header == 0:
                     # Open line and replace anything we do not want (
                     # variants of the separator and units)
-                    line = line.replace(separator + separator + separator +
-                    separator + separator + separator, ' ').replace(separator
-                    + separator + separator + separator + separator,
-                    ' ').replace(separator + separator + separator +
-                    separator, ' ').replace(separator + separator + separator,
-                    ' ').replace(separator + separator, ' ').replace(separator,
-                    ' ').replace("\n","").replace("(kg)", "").replace("(m)",
-                    "").replace("(Pa)","").replace("(in)", "").replace("#", "")
+                    for separator in separator_list:
+                    	line = line.replace(separator + separator + separator +
+                    	separator + separator + separator, ' ').replace(separator
+                    	+ separator + separator + separator + separator,
+                    	' ').replace(separator + separator + separator +
+                    	separator, ' ').replace(separator + separator + separator,
+                    	' ').replace(separator + separator, ' ').replace(separator,
+                    	' ').replace("\n","").replace("(kg)", "").replace("(m)",
+                    	"").replace("(Pa)","").replace("(in)", "").replace("#", "")
 
                     header = line.split(' ')
                     n_del = header.count('')
@@ -634,22 +683,58 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
                     for head in header:
                         Data[head] = []
                     header_done = True
+                if type_structure == None:
+                    type_structure = len(header)*['float']
             else:
-                line = line.replace(separator + separator + separator,
-                ' ').replace(separator + separator, ' ').replace(separator,
-                ' ').replace("\n", "").replace('---------', '').replace(
-                '--------', '').replace('-------', '').replace('------',
-                '').replace('-',' -')
+                if structure == False:
+                    for separator in separator_list:
+                    	line = line.replace(separator + separator + separator,
+                    	' ').replace(separator + separator, ' ').replace(separator,
+                    	' ').replace("\n", "").replace('---------', '').replace(
+                    	'--------', '').replace('-------', '').replace('------',
+                    	'').replace('-',' -')
 
-                line_components = line.split(' ')
+                    line_components = line.split(' ')
 
-                n_del = line_components.count('')
-                for n in range(0, n_del):
-                    line_components.remove('')
+                    n_del = line_components.count('')
+                    for n in range(0, n_del):
+                        line_components.remove('')
 
-                if line_components != []:
-                    for j in range(0, len(line_components)):
-                        Data[header[j]].append(float(line_components[j]))
+                    if line_components != []:
+                        for j in range(0, len(line_components)):
+
+                            try:
+                                Data[header[j]].append(format_output(line_components[j],
+                                                                     type_structure[j]))
+                            except:
+                                print 'Error when recording for: '
+                                print 'Line components:', line_components
+                                print 'ttpe structure:', type_structure
+                                print 'index:', j
+                                raise ValueError('Something went wrong')
+                # Use structure code
+                else:
+                    current_structure = structure[structure_count]
+
+                    line = line.replace(separator + separator + separator,
+                    ' ').replace(separator + separator, ' ').replace(separator,
+                    ' ').replace("\n", "").replace('---------', '').replace(
+                    '--------', '').replace('-------', '').replace('------',
+                    '').replace('-',' -')
+
+                    line_components = line.split(' ')
+
+                    n_del = line_components.count('')
+                    for n in range(0, n_del):
+                        line_components.remove('')
+
+                    if line_components != []:
+                        for j in range(0, len(line_components)):
+                            Data[current_structure[j]].append(format_output(line_components[j],
+                                                                            type_structure[j]))
+                        structure_count += 1
+                        if structure_count == len(structure):
+                            structure_count = 0
                 # else DO NOTHING!
     # If delete file True, remove file from directory
     if delete:
@@ -755,22 +840,23 @@ def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10, NACA=True):
         coefficients[key] = Data[key][0]
     return coefficients
 
-def find_pressure_coefficients(airfoil, alpha, Reynolds=0, iteration=10, 
+def find_pressure_coefficients(airfoil, alpha, Reynolds=0, iteration=10,
                                NACA=True, use_previous = False, chord=1.,
                                PANE=False):
     """Calculate the pressure coefficients of an airfoil"""
     filename = file_name(airfoil, alpha, output='Cp')
     # If file already exists, there is no need to recalculate it.
     if not use_previous:
-        call(airfoil, alpha, Reynolds=Reynolds, output='Cp', iteration=10,
+        call(airfoil, alpha, Reynolds=Reynolds, output='Cp', iteration=iteration,
              NACA=NACA, PANE=PANE)
     else:
         if not os.path.isfile(filename):
-    		call(airfoil, alpha, Reynolds=Reynolds, output='Cp', iteration=10,
+    		call(airfoil, alpha, Reynolds=Reynolds, output='Cp', iteration=iteration,
                NACA=NACA, PANE=PANE)
     coefficients = {}
     # Data from file
     Data = output_reader(filename, output='Cp')
+
     for key in Data:
         coefficients[key] = Data[key]
     if chord != 1.:

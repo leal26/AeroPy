@@ -193,10 +193,10 @@ def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25,
     """
     Calculate the moment coeffcient. Inputs are x and y coordinates, and
     pressure coefficients (Cp). Inputs can be in a list in xfoil format
-    (counterclockwise starting from the trailing edge, in case necessary, 
+    (counterclockwise starting from the trailing edge, in case necessary,
     check create_input function from xfoil_module) or dictionaries with
     'upper' and 'lower' keys.
-    
+
     :param flap: if true, also calculates the moment contribution from
                  the trailing edge and the panels in front of the flap
                  (that are not directly in contact with the air)
@@ -212,7 +212,7 @@ def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25,
                                    'lower': variable_list[i_separator+1:]}
             return variable_dictionary
         i_separator = x.index(min(x))
-        
+
         x = separate(x, i_separator)
         y = separate(y, i_separator)
         Cp = separate(Cp, i_separator)
@@ -222,7 +222,7 @@ def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25,
         x, y, Cp = separate_upper_lower(x, y, Cp)
     elif type(x) != dict and type(y) != dict and type(Cp) != dict:
         raise Exception("Not all inputs are the same required format (list/dict)")
-    
+
     #rotating coordinates
     alpha = math.radians(alpha)
     bar_x = {'upper':[], 'lower':[]}
@@ -239,7 +239,7 @@ def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25,
     y = bar_y
     x_ref = bar_x_ref
     y_ref = bar_y_ref
-    
+
 
     Cm = 0.
     for key in ['upper', 'lower']:
@@ -247,7 +247,7 @@ def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25,
             Cm += (1./2*c**2)*(Cp[key][i] + Cp[key][i+1])* \
                   (((x[key][i] + x[key][i+1])/2. - x_ref) *(x[key][i] - x[key][i+1]) + \
                   ((y[key][i] + y[key][i+1])/2. - y_ref) *(y[key][i] - y[key][i+1]))
-    
+
     if flap == True:
         # Trailing edge contribution
         Cm += (1./2*c**2)*(Cp['upper'][0] + Cp['lower'][-1])* \
@@ -256,10 +256,10 @@ def calculate_moment_coefficient(x, y, Cp, alpha, c = 1., x_ref = 0.25,
         # Contribution of panels not directly in contact with flow above the hinge
         Cm += (1./2*c**2)*(Cp['upper'][-1])*(((x['upper'][-1] + x_ref)/2. - \
               x_ref) *(x['upper'][-1] - x_ref) + ((y['upper'][-1] + y_ref)/2. - \
-              y_ref)*(y['upper'][-1] - y_ref))        
+              y_ref)*(y['upper'][-1] - y_ref))
         # Contribution of panels not directly in contact with flow below the hinge
         Cm += (1./2*c**2)*(Cp['lower'][0])*(((x['lower'][0] + x_ref)/2. - x_ref) *(x_ref - x['lower'][0]) + \
-              ((y['lower'][0] + y_ref)/2. - y_ref) *(y_ref - y['lower'][0]))  
+              ((y['lower'][0] + y_ref)/2. - y_ref) *(y_ref - y['lower'][0]))
     return Cm
 #==============================================================================
 # Functions Intended for use with FInite ELement Methods
@@ -311,22 +311,39 @@ def force_shell(Data, chord, half_span, height, Velocity, thickness=0,
 #                        elliptical_distribution[j]*Data['Pressure'][i]),)
     return PressureDistribution
 
-def pressure_shell(Data, chord, thickness, half_span, air_density, Velocity,
-                   N, txt=False, llt_distribution=False,
-                   distribution='Elliptical'):
+def pressure_shell(Data, half_span, chord = 'MAX', air_density = 0, Velocity = 0,
+                   N = 10, thickness = 0, txt=False, llt_distribution=False,
+                   distribution='Uniform', amplifier = 1):
+    """Converts pressure coefficient data, usually 2D, into a 3D presurre field
+       that Abaqus understands. Can be used for shells (considers thicknesses),
+       but also for any surface. Can do Lifting Line Theory (LLT), Elliptical,
+       and Uniform distributions.
 
-    Data['Pressure'] = map(lambda Cp: Cp*0.5*air_density* Velocity**2 *chord,
-                            Data['Cp'])
+       If chord='MAX', the maximum value for vector 'x' is used as chord. If
+       data in non-dimensional, use a numerical value.
+
+       If txt==True, an output textfile is generated."""
+
+    # If data is in the form of pressure coefficients, convert to pressure
+    if 'Cp' in Data.keys():
+        Data['Pressure'] = map(lambda Cp: Cp*0.5*air_density* Velocity**2 *chord,
+                                Data['Cp'])
+    if chord == 'MAX':
+        chord = max(Data['x'])
+
     Data['x'] = map(lambda x: (chord - 2.*thickness)*x + thickness, Data['x'])
     Data['y'] = map(lambda x: (chord - 2.*thickness)*x, Data['y'])
     DataFile = open('Pressure_shell.txt', 'w')
     DataFile.close()
     if distribution == 'Elliptical':
         Data['z'] = np.linspace(0, half_span, N)
-        distribution = np.sqrt(1. - (Data['z']/half_span)**2)
+        distribution = amplifier*np.sqrt(1. - (Data['z']/half_span)**2)
     elif distribution == 'LLT':
-        Data['z'] = np.linspace(0, half_span, len(distribution))
-        distribution = llt_distribution
+        Data['z'] = np.linspace(0, half_span, N)
+        distribution = amplifier*llt_distribution
+    elif distribution == 'Uniform':
+        Data['z'] = np.linspace(0, half_span, N)
+        distribution = amplifier*np.ones((N,1))
     if txt == True:
         for j in range(N):
             for i in range(len(Data['x'])):
@@ -458,21 +475,21 @@ def Reynolds(height, V, c):
     return rho*V*L/nu
 
 if __name__ == '__main__':
-    
+
     alpha  = 0.
     import xfoil_module as xf
     data = xf.find_pressure_coefficients('naca0012', alpha)
     C_m = calculate_moment_coefficient(data['x'], data['y'], data['Cp'], alpha)
     data_CM = xf.find_coefficients('naca0012', alpha)
     print 'calculated:', C_m
-    
+
     print 'objective:', data_CM['CM']
-    
+
     import matplotlib.pyplot as plt
-    
+
     Cm_xfoil = []
     Cm_aeropy = []
-    
+
     alpha_list = np.linspace(0,10,11)
     for alpha in alpha_list:
         alpha = float(alpha)
