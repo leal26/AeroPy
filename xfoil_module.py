@@ -818,7 +818,9 @@ def file_name(airfoil, alfas='none', output='Cp'):
                 alfa_i = alfa_for_file(alfas[0])
                 alfa_f = alfa_for_file(alfas[-1])
                 # Name of file with polar information
-
+            else:
+                alfa_i = alfas[0]
+                alfa_f = alfas[-1]
             filename = '%s_%s_%s_%s' % (output, airfoil, alfa_i, alfa_f)
     return filename
 
@@ -835,7 +837,7 @@ def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10, NACA=True):
               iteration= iteration, NACA=NACA)
     coefficients = {}
     # Data from file
-    Data = output_reader(filename, output='Polar', delete = True)
+    Data = output_reader(filename, output='Polar', delete = False)
     for key in Data:
         coefficients[key] = Data[key][0]
     return coefficients
