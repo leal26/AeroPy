@@ -711,6 +711,7 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
                                 print 'Line components:', line_components
                                 print 'ttpe structure:', type_structure
                                 print 'index:', j
+                                print 'header:', header
                                 raise ValueError('Something went wrong')
                 # Use structure code
                 else:

@@ -14,10 +14,18 @@ Suggested anity checks:
 import math
 import numpy as np
 import warnings
-from scipy.integrate import quad
-from scipy.optimize import fsolve, minimize
-from scipy import optimize
-from scipy.optimize import differential_evolution
+
+try:
+    from abaqus import *
+    in_Abaqus = True
+except:
+    in_Abaqus = False
+
+if in_Abaqus != True:
+	from scipy.integrate import quad
+	from scipy.optimize import fsolve, minimize
+	from scipy import optimize
+	from scipy.optimize import differential_evolution
 
 from airfoil_module import CST
 from xfoil_module import output_reader
@@ -447,7 +455,7 @@ if __name__ == '__main__':
     import matplotlib.cm as cm
     import matplotlib.pyplot as plt
 
-    c_L = 0.36 # in meters
+    c_L = 1. # in meters
     deltaz = 0.002 #in meters
     
     Au_C = [0.4, 0.2]
@@ -463,7 +471,7 @@ if __name__ == '__main__':
     print calculate_psi_goal(psi_i, Au_C, Au_L, deltaz, c_C, c_L)
     
     # Plot for several testing calculat_c_baseline
-    x = np.linspace(0., 1., 11)
+    x = np.linspace(0., 1., 6)
     
     print calculate_spar_distance(psi_i, Au_C, Au_L, Al_L, deltaz, c_L)
     c = []
@@ -472,8 +480,8 @@ if __name__ == '__main__':
         c_i = calculate_c_baseline(c_L, Au_C, Au_L, deltaz)
         c.append(c_i)
     plt.plot(x, c)
-    plt.xlabel('$A_{u_0}^C$', fontsize = 20)
-    plt.ylabel('$c^C$', fontsize = 20)
+    plt.xlabel('$A_{u_0}^C$', fontsize = 14)
+    plt.ylabel('$c^C$', fontsize = 14)
     plt.grid()
     plt.show()
     
@@ -488,14 +496,16 @@ if __name__ == '__main__':
         plt.plot(x_plot, c_i*y['u'], label = '$A_{u_0}$ = %.1f' % x[i])
         y_psi = CST(psi_i, 1, [deltaz/2., deltaz/2.], Au_C, Al_C)
         i += 1
-    plt.xlabel(r'$\psi^C$', fontsize = 20)
-    plt.ylabel(r'$\xi^C$', fontsize = 20)
+    plt.xlabel(r'$\psi^C$', fontsize = 14)
+    plt.ylabel(r'$\xi^C$', fontsize = 14)
     plt.legend()
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.grid()
     plt.show()
     
     # Plot for several testing calculat_psi_goal
     plt.figure()
-    x = np.linspace(0., 1.,11)
+    x = np.linspace(0., 1.,6)
     psi_goal_list = []
     for x_i in x:
         Au_C[0] = x_i
@@ -503,8 +513,8 @@ if __name__ == '__main__':
         psi_goal_i = calculate_psi_goal(psi_i, Au_C, Au_L, deltaz, c_C, c_L)
         psi_goal_list.append(psi_goal_i)
     plt.plot(x, psi_goal_list)
-    plt.xlabel('$A_{u_0}^C$', fontsize = 20)
-    plt.ylabel('$\psi_i^L$', fontsize = 20)
+    plt.xlabel('$A_{u_0}^C$', fontsize = 14)
+    plt.ylabel('$\psi_i^L$', fontsize = 14)
     plt.grid()
     plt.show()
     # Ploting psi_goal at the landing airfoil for different Au0 for cruise
@@ -520,14 +530,14 @@ if __name__ == '__main__':
     for i in range(len(psi_goal_list)):
         plt.scatter(psi_goal_list[i], y['u'][i], color=next(colors), label = '$A_{u_0}^C$ = %.1f' % x[i])
     plt.vlines(psi_i, 0, max_y, 'r')
-    plt.xlabel('$\psi^L$', fontsize = 20)
-    plt.ylabel(r'$\xi^L$', fontsize = 20)
+    plt.xlabel('$\psi^L$', fontsize = 14)
+    plt.ylabel(r'$\xi^L$', fontsize = 14)
     plt.legend()
     plt.show()
 
     # Plot cos(beta) several Au0
     plt.figure()
-    x = np.linspace(0., 1.,11)
+    x = np.linspace(0., 1.,6)
     cbeta_list = []
     for x_i in x:
         Au_C[0] = x_i
@@ -559,8 +569,10 @@ if __name__ == '__main__':
         y = CST(psi_i*c_C, c_C, [deltaz/2., deltaz/2.], Au_C, Al_C)
         plt.plot([psi_i*c_C,psi_i*c_C], [y['l'], y['u']], c=color_i)
     plt.legend()
-    plt.xlabel('$x^L$', fontsize = 20)
-    plt.ylabel(r'$y^L$', fontsize = 20)
+    plt.xlabel('$\psi^L$', fontsize = 14)
+    plt.ylabel(r'$\xi^L$', fontsize = 14)
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.grid()
     plt.show()
     
     plt.figure()
@@ -583,11 +595,14 @@ if __name__ == '__main__':
         #calculate spar length
         l = calculate_spar_distance(psi_i, Au_C, Au_L, Al_L, deltaz, c_L)
         print s, s[0]**2 + s[1]**2
-        plt.scatter([psi_goal_i*c_L], [y_goal_i])
-        plt.plot([psi_goal_i*c_L,psi_goal_i*c_L - l*s[0]],[y_goal_i, y_goal_i - l*s[1]], c = next(colors), label = '$A_{u_0}$ = %.2f' % x_i)
-    plt.legend()
-    plt.xlabel('$y^L$', fontsize = 20)
-    plt.ylabel(r'$x^L$', fontsize = 20)
+        color = next(colors)
+        plt.scatter([psi_goal_i*c_L], [y_goal_i], c=color)
+        plt.plot([psi_goal_i*c_L,psi_goal_i*c_L - l*s[0]],[y_goal_i, y_goal_i - l*s[1]], c = color, label = '$A_{u_0}$ = %.2f' % x_i)
+    plt.legend(loc=1)
+    plt.xlabel('$\psi^L$', fontsize = 14)
+    plt.ylabel(r'$\xi^L$', fontsize = 14)
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.grid()
     plt.show()
 
 #==============================================================================
@@ -667,7 +682,7 @@ if __name__ == '__main__':
     # plt.plot(x, y['u'], x, y['l'])
     # plt.scatter(data['x'], data['y'])
     # plt.show()
-    # BREAK
+    BREAK
 #==============================================================================
 #   Shape parameter study
 #==============================================================================
