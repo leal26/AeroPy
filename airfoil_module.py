@@ -318,17 +318,22 @@ def Naca00XX(c, t, x_list, TE_t = False, return_dict = 'y', for_xfoil = True):
                  'l':y_lower[-2::-1]}
         else:
             y = {'u': y_upper,
-                 'l':y_lower}            
+                 'l':y_lower}
+
     if return_dict == 'y':
         return y
         
     elif return_dict == 'xy':
-		if type(x_list) == list:
-			x = {'u':x_list[:-1],
-				 'l':x_list[-2::-1]}
-			return x, y
-		elif type(x_list) == dict:
-			return x_list, y			
+        if type(x_list) == list:
+            if for_xfoil:
+                x = {'u':x_list[:-1],
+                    'l':x_list[-2::-1]}
+            else:
+                x = {'u':x_list,
+                     'l':x_list}                
+            return x, y
+        elif type(x_list) == dict:
+            return x_list, y			
 #==============================================================================
 # The following function are related to the use of plain flaps
 #==============================================================================
