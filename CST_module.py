@@ -36,13 +36,19 @@ def K(r,n):
     return K
 
 # Upper surface differential
-def dxi_u(psi, Au, delta_xi):
+def dxi_u(psi, Au, delta_xi, N1=0.5, N2=1):
     """Calculate upper derivate of xi for a given psi"""
     n = len(Au)-1
    
-    diff = delta_xi/2.
+    if N1==0.5 and N2==1:
+        diff = delta_xi/2.
+    else:
+        diff = delta_xi
     for i in range(n+1):
-        diff += Au[i]*K(i,n)*(psi**i)*((1-psi)**(n-i))/(2*psi**0.5)*(-(3+2*n)*psi +2*i + 1)
+        # print N1-1., N2-1.
+        # print psi**(N1-1.), (1-psi)**(N2-1.)
+        # print Au[i]*K(i,n)*(psi**i)*((1-psi)**(n-i))*(i+N1-psi*(n+N1+N2))
+        diff += (psi**(N1-1))*((1-psi)**(N2-1))*Au[i]*K(i,n)*(psi**i)*((1-psi)**(n-i))*(i+N1-psi*(n+N1+N2))
     return  diff
 
 # Lower surface differential
@@ -186,6 +192,16 @@ def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
 
     return (y_upper_goal- y_lower_goal[0])/s[1]
 
+def calculate_arc_length(psi_initial, psi_final, A_j, deltaz, c_j):
+    """Calculate arc length from psi_initial to psi_final for
+       shape coefficient A_j, trailing edge thickness deltaz, and
+       chord c_j. Output is the dimensional length"""
+    def integrand(psi_baseline, A_j, deltaz, c_j):
+        return c_j*np.sqrt(1 + dxi_u(psi_baseline, A_j, deltaz/c_j)**2)
+    
+    L, err =  quad(integrand, psi_initial, psi_final, args=(A_j, deltaz, c_j))
+    return L
+	
 def fitting_shape_coefficients(filename, bounds = 'Default', n = 5,
                                return_data = False, return_error = False,
                                optimize_deltaz = False):

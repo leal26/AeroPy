@@ -692,7 +692,7 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
                     	' ').replace(separator + separator, ' ').replace(separator,
                     	' ').replace("\n", "").replace('---------', '').replace(
                     	'--------', '').replace('-------', '').replace('------',
-                    	'').replace('-',' -')
+                    	'')
 
                     line_components = line.split(' ')
 

@@ -88,7 +88,7 @@ def create_x(c, n = 230, distribution = 'linear'):
 #===========================================================================
 # The following functions are related to creating the airfoil outer mold
 #===========================================================================
-def CST(x, c, deltasz=None, Au=None, Al=None):
+def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1.):
     """
     Based on the paper "Fundamental" Parametric Geometry Representations for
     Aircraft Component Shapes" from Brenda M. Kulfan and John E. Bussoletti. 
@@ -165,8 +165,6 @@ def CST(x, c, deltasz=None, Au=None, Al=None):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
     # The Coefficients for an airfoil with a rounded leading edge and a sharp
     # trailing edge are N1=0.5 and N2=1.0.
-    N1=0.5;
-    N2=1.0;
     C=C(N1,N2,psi);
     
     #==========================================================================
