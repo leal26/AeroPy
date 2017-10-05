@@ -184,7 +184,31 @@ def calculate_shape_coefficients_tracing(A0, tip_displacement, other_points, N1,
     A = [A0] + list(A.transpose()[0])
     print A
     return A
-    
+
+def calculate_strains( Al_P, c_P, Al_C, c_C, deltaz, psi_spars):
+    # Calculate initial lengths
+    psi_list = [0.] + psi_spars + [c_P]
+    print psi_list
+    initial_lengths = []
+    for i in range(len(psi_list)-1):
+        initial_lengths.append(calculate_arc_length(psi_list[i], psi_list[i+1], Al_P, deltaz, c_P))
+    # Calculate final lengths
+    final_lengths = []
+    psi_list = [0.] + psi_flats + [c_C] # In P configuration
+    print psi_list
+    for i in range(len(psi_list)-1):
+        print psi_list[i]*c_P/c_C, psi_list[i+1]*c_P/c_C
+        final_lengths.append(calculate_arc_length(psi_list[i]*c_P/c_C, psi_list[i+1]*c_P/c_C, Al_C, deltaz, c_C))
+    # Calculate strains
+    strains = []
+    for i in range(len(final_lengths)):
+        strains.append((final_lengths[i]-initial_lengths[i])/initial_lengths[i])
+
+    # for i in range(len(strains)):
+        # print 'Initial length: ' + str(initial_lengths[i]) + ', final length: ' + str(final_lengths[i]) + ', strains: ' + str(strains[i])
+                
+    return strains
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     #testing = 'structurally_consistent'
@@ -358,26 +382,8 @@ if __name__ == '__main__':
         if morphing_direction == 'forwards':
             print c_C, c_P
             # Calculate initial lengths
-            psi_list = [0.] + psi_spars + [c_P]
-            print psi_list
-            initial_lengths = []
-            for i in range(len(psi_list)-1):
-                initial_lengths.append(calculate_arc_length(psi_list[i], psi_list[i+1], Al_P, deltaz, c_P))
-            # Calculate final lengths
-            final_lengths = []
-            psi_list = [0.] + psi_flats + [c_C] # In P configuration
-            print psi_list
-            for i in range(len(psi_list)-1):
-                print psi_list[i]*c_P/c_C, psi_list[i+1]*c_P/c_C
-                final_lengths.append(calculate_arc_length(psi_list[i]*c_P/c_C, psi_list[i+1]*c_P/c_C, Al_C, deltaz, c_C))
-            # Calculate strains
-            strains = []
-            for i in range(len(final_lengths)):
-                strains.append((final_lengths[i]-initial_lengths[i])/initial_lengths[i])
+            strains = calculate_strains( Al_P, c_P, Al_C, c_C, deltaz, psi_spars)
             
-            for i in range(len(strains)):
-                print 'Initial length: ' + str(initial_lengths[i]) + ', final length: ' + str(final_lengths[i]) + ', strains: ' + str(strains[i])
-                
             intersections_x_children.append(c_C)
             intersections_y_children.append(0)
             intersections_x_parent.append(c_P)
