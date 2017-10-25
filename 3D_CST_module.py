@@ -2,7 +2,8 @@ from scipy.interpolate import interp1d
 import numpy as np
 import math
 
-def taper_function(eta, shape = 'linear', points = {'eta':[0,1], 'c':[1,.7]}):
+from airfoil_module import CST
+def taper_function(eta, shape = 'linear', points = {'eta':[0,1], 'chord':[1,.7]}):
     """Calculate chord along span of the wing.
 
     - If linear, taper function is a conjuction of lines connecting points
@@ -10,7 +11,7 @@ def taper_function(eta, shape = 'linear', points = {'eta':[0,1], 'c':[1,.7]}):
         'zero', 'slinear', 'quadratic', 'cubic' where 'zero', 'slinear',
          'quadratic' and 'cubic' refer to a spline interpolation of zeroth,
           first, second or third order"""
-    function = interp1d(points['eta'], points['c'])
+    function = interp1d(points['eta'], points['chord'])
     return function(eta)
 
 def twist_function(eta, shape = 'linear', points = {'eta':[0,1], 'delta_twist':[0,.1]}):
@@ -24,8 +25,9 @@ def twist_function(eta, shape = 'linear', points = {'eta':[0,1], 'delta_twist':[
     function = interp1d(points['eta'], points['delta_twist'])
     return function(eta)
 
-def CST_3D(Bu, Bl, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.]},
-           mesh = (100,100)):
+def CST_3D(Bu, Bl, span, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.], 'chord':[1., 0]},
+           mesh = (100,100), chord = {'eta':[0,1], 'A':[1.], 'N1':1, 'N2':1, 'initial_chord':1.}, 
+           sweep = {'eta':[0,1], 'A':[1.], 'N1':1, 'N2':1, 'initial_chord':1., 'x_LE_initial':0}):
     """
     - Bu: upper shape coefficients
     - Bl: lower shape coefficients
@@ -67,31 +69,76 @@ def CST_3D(Bu, Bl, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.]},
     zeta_l = np.zeros(mesh)
     for i in range(mesh[0]):
         for j in range(mesh[1]):
-            zeta_u[i][j] = C(N, psi[i], eta[j])*S(Bu, psi[i], eta[j])
-            zeta_l[i][j] = -C(N, psi[i], eta[j])*S(Bl, psi[i], eta[j])
-    x = psi
+            zeta_u[j][i] = C(N, psi[i], eta[j])*S(Bu, psi[i], eta[j])
+            zeta_l[j][i] = -C(N, psi[i], eta[j])*S(Bl, psi[i], eta[j])
+    print eta
+    print chord['initial_chord']
+    print chord['A']
+    print chord['N1'], chord['N2']
+    chord_distribution = CST(eta, chord['eta'][1], chord['initial_chord'], Au=chord['A'], N1=chord['N1'], N2=chord['N2'])
+    sweep_distribution = CST(eta, sweep['eta'][1], sweep['x_LE_initial'], Au=sweep['A'], N1=sweep['N1'], N2=sweep['N2'])
+    chord_distribution = chord_distribution[::-1]
+    sweep_distribution = sweep_distribution
+    # taper_function(eta, shape = 'linear', N)
+    x = np.zeros(len(psi))
+    for i in range(len(x)):
+        x[i] = psi[i]*chord_distribution[i]
+    print chord_distribution
+    print x
+    print psi
     y = eta
-    z_u = zeta_u
-    z_l = zeta_l
-    return [x,y,z_u,z_l]
+
+    X = np.zeros(mesh)
+    Y = np.zeros(mesh)
+    Z_u = np.zeros(mesh)
+    Z_l = np.zeros(mesh)
+    for i in range(mesh[0]):
+        for j in range(mesh[1]):
+            X[j][i] = psi[i]*chord_distribution[j] + .5*sweep_distribution[j]
+            Y[j][i] = span*eta[j]
+            Z_u[j][i] = zeta_u[j][i]*chord_distribution[j]
+            Z_l[j][i] = zeta_l[j][i]*chord_distribution[j]
+    return [X,Y,Z_u,Z_l]
 
 if __name__ == '__main__':
     from mpl_toolkits.mplot3d import Axes3D
     import matplotlib.pyplot as plt
     from matplotlib import cm
 
-    B = [[1,1], [1.,1]]
-
-    [x,y,Z_u, Z_l] = CST_3D(B, B, mesh =(50,50),
-                            N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.]})
-    X,Y = np.meshgrid(x,y)
+    # B = [[1,1], [1.,1]]
+    B = [[1], [1]]
+    x = np.linspace(0,1)
+    initial_chord = .5
+    span = 4.
+    chord_distribution = CST(x, initial_chord, span, Au=[1.], Al=None, N1=1., N2=1.)
+    
+    [X,Y,Z_u, Z_l] = CST_3D(B, B, mesh =(50,50), span=span,
+                            N={'eta':[0,1], 'N1':[.5, .5], 'N2':[.5, .5]},
+                            chord = {'eta':[0,1], 'A':[1.], 'N1':1., 'N2':1, 'initial_chord':1.},
+                            sweep = {'eta':[0,1], 'A':[1.], 'N1':1, 'N2':1., 'initial_chord':1., 'x_LE_initial':-2})
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    surf_u = ax.plot_surface(X, Y, Z_u, cmap=cm.coolwarm,
+    surf_u = ax.plot_surface(X, Z_u, Y, cmap=plt.get_cmap('jet'),
                        linewidth=0, antialiased=False)
-    surf_l = ax.plot_surface(X, Y, Z_l, cmap=cm.coolwarm_r,
+    surf_l = ax.plot_surface(X, Z_l, Y, cmap=plt.get_cmap('jet'),
                        linewidth=0, antialiased=False)
+    # cset = ax.contour(X, Z_u, Y, zdir='z', offset=0, cmap=cm.coolwarm)
+    # cset = ax.contour(X, Z_l, Y, zdir='z', offset=0,  cmap=cm.coolwarm)
+    # cset = ax.contour(X, Z_u, Y, zdir='x', offset=-.1, cmap=cm.coolwarm)
+    # cset = ax.contour(X, Z_l, Y, zdir='x', offset=-.1, cmap=cm.coolwarm)
+    # cset = ax.contour(X, Z_u, Y, zdir='y', offset =0.5,  cmap=cm.coolwarm)
+    # cset = ax.contour(X, Z_l, Y, zdir='y', offset =0.5,  cmap=cm.coolwarm)
+    
     # Customize the z axis.
-    ax.set_zlim(-0.5, .5)
+    ax.set_zlim(0, 4)
+
+    max_range = np.array([X.max()-X.min(),  Z_u.max()-Z_l.min(), Y.max()-Y.min()]).max() / 2.0
+
+    mid_x = (X.max()+X.min()) * 0.5
+    mid_y = (Y.max()+Y.min()) * 0.5
+    mid_z = (Z_u.max()+Z_l.min()) * 0.5
+    ax.set_xlim(mid_x - max_range, mid_x + max_range)
+    ax.set_ylim(mid_z - max_range, mid_z + max_range)
+    ax.set_zlim(mid_y - max_range, mid_y + max_range)
     plt.show()

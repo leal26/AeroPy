@@ -22,14 +22,14 @@ morphing_direction = 'forwards'
 #==============================================================================
 # Calculate dependent shape function parameters
 #==============================================================================
-def calculate_dependent_shape_coefficients(AC_u1, AC_u2, AC_u3, AC_u4, AC_u5,
+def calculate_dependent_shape_coefficients(Au_C_1_to_n,
                                            psi_spars, Au_P, Al_P, deltaz, c_P,
                                            morphing = 'backwards'):
     """Calculate  dependent shape coefficients for children configuration for a 4 order
     Bernstein polynomial and return the children upper, lower shape 
     coefficients, children chord and spar thicknesses. _P denotes parent parameters"""
     def calculate_AC_u0(AC_u0):
-        Au_C = [AC_u0, AC_u1, AC_u2, AC_u3, AC_u4, AC_u5]
+        Au_C = [AC_u0] + Au_C_1_to_n
         c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
         return np.sqrt(c_P/c_C)*Au_P[0]
     
@@ -38,7 +38,7 @@ def calculate_dependent_shape_coefficients(AC_u1, AC_u2, AC_u3, AC_u4, AC_u5,
         K=math.factorial(n)/(math.factorial(r)*math.factorial(n-r))
         return K
     # Bernstein Polynomial order
-    n = 5
+    n = len(Au_C_1_to_n)
 
     # Find upper shape coefficient though iterative method since Au_0 is unknown
     # via fixed point iteration
@@ -52,12 +52,12 @@ def calculate_dependent_shape_coefficients(AC_u1, AC_u2, AC_u3, AC_u4, AC_u5,
         error = abs(AC_u0 - before)
 
     # Because the output is an array, need the extra [0]      
-    Au_C = [AC_u0, AC_u1, AC_u2, AC_u3, AC_u4, AC_u5]
+    Au_C = [AC_u0] + Au_C_1_to_n
     
     # Now that AC_u0 is known we can calculate the actual chord and AC_l0
     c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz/c_P)
     AC_l0 = np.sqrt(c_P/c_C)*Al_P[0]
-    print '0 lower shape coefficient: ',AC_l0
+    # print '0 lower shape coefficient: ',AC_l0
     # Calculate thicknessed and tensor B for the constraint linear system problem
     spar_thicknesses = []
     A0 = AC_u0 + AC_l0
@@ -69,7 +69,7 @@ def calculate_dependent_shape_coefficients(AC_u1, AC_u2, AC_u3, AC_u4, AC_u5,
             #Calculate the spar thickness in meters from parent, afterwards, need to
             #adimensionalize for the goal airfoil by dividing by c_goal
             t_j = calculate_spar_distance(psi_spars[j], Au_C, Au_P, Al_P, deltaz, c_P)
-
+            
             spar_thicknesses.append(t_j)
             b_list[j] = (t_j/c_C - psi_j*deltaz/c_C)/((psi_j**0.5)*(1-psi_j)) - A0*(1-psi_j)**n
 
@@ -105,7 +105,7 @@ def calculate_dependent_shape_coefficients(AC_u1, AC_u2, AC_u3, AC_u4, AC_u5,
         xi_upper_children = CST(psi_upper_children, 1., deltasz= [deltaz/2./c_C, deltaz/2./c_C],  Al= Au_C, Au =Au_C)
         xi_upper_children = xi_upper_children['u']
 
-        print xi_upper_children
+        # print xi_upper_children
         
         #Debugging section
         x = np.linspace(0,1)
@@ -138,8 +138,8 @@ def calculate_dependent_shape_coefficients(AC_u1, AC_u2, AC_u3, AC_u4, AC_u5,
                 #coherent for equations
                 r = i +1
                 F[j][i] = K(r,n)*(psi_lower_children[j]**r)*(1-psi_lower_children[j])**(n-r)
-        print F
-        print f
+        # print F
+        # print f
         A_lower = np.dot(inv(F), f)
 
         Al_C = [AC_l0]
@@ -147,7 +147,7 @@ def calculate_dependent_shape_coefficients(AC_u1, AC_u2, AC_u3, AC_u4, AC_u5,
             Al_C.append(A_lower[i][0]) #extra [0] is necessary because of array
     return Au_C, Al_C, c_C, spar_thicknesses
 
-def calculate_shape_coefficients_tracing(A0, tip_displacement, other_points, N1, N2):   
+def calculate_shape_coefficients_tracing(A0, x, y, N1, N2, chord = 1., EndThickness = 0):   
     """
     inputs:
         - tip_displacement: {'x': value, 'y': value}
@@ -159,55 +159,62 @@ def calculate_shape_coefficients_tracing(A0, tip_displacement, other_points, N1,
         K=math.factorial(n)/(math.factorial(r)*math.factorial(n-r))
         return K
  
-    n = len(other_points['x'])
-    chord = tip_displacement['y']
+    n = len(x)
     
-    Psi = np.array(other_points['y'])/chord
-    Xi = np.array(other_points['x'])/chord
-    
-    EndThickness = tip_displacement['x']/chord
+    print x
+    Psi = np.array(x)/chord
+    Xi = np.array(y)/chord
 	
+    EndThickness = EndThickness/chord
     T = np.zeros((n,n))
     t = np.zeros((n,1))
     for j in range(1,n+1):
         jj = j - 1
         for i in range(1,n+1):
-            print i,j
             ii = i -1
             T[jj][ii] = K(i,n)* Psi[jj]**i * (1-Psi[jj])**(n-i)
+        print Xi[jj], EndThickness, Psi[jj], A0,Psi[jj]**N1*(1-Psi[jj])**N2
         t[jj] = (Xi[jj] - Psi[jj]*EndThickness)/(Psi[jj]**N1*(1-Psi[jj])**N2) - A0*(1-Psi[jj])**n
-    print T
-    print t
-    print (Xi[ii] - Psi[ii]*EndThickness)/(Psi[ii]*(1-Psi[ii])) - A0
     # Calculate the inverse
     A = np.dot(inv(T), t)
     A = [A0] + list(A.transpose()[0])
-    print A
     return A
 
-def calculate_strains( Al_P, c_P, Al_C, c_C, deltaz, psi_spars):
+def calculate_strains( Au_P, Al_P, c_P, Au_C, Al_C, c_C, deltaz, psi_spars, spar_thicknesses):
+    # Calculate psi_flats (non-dimensional location of the itersection of
+    # the spars with the lower surface
+    psi_flats = []
+    for j in range(len(psi_spars)):
+        psi_parent_j = psi_spars[j]
+        # Calculate psi at landing
+        # psi_baseline, Au_baseline, Au_goal, deltaz, c_baseline, c_goal
+        psi_children_j = calculate_psi_goal(psi_parent_j, Au_P, Au_C, deltaz, c_P, c_C)
+        x_children_j = psi_children_j*c_C
+        s = calculate_spar_direction(psi_spars[j], Au_P, Au_C, deltaz, c_C)
+        psi_flats.append(x_children_j - spar_thicknesses[j]*s[0])
+                
     # Calculate initial lengths
-    psi_list = [0.] + psi_spars + [c_P]
-    print psi_list
     initial_lengths = []
+    psi_list = [0.] + psi_spars + [c_P]
     for i in range(len(psi_list)-1):
         initial_lengths.append(calculate_arc_length(psi_list[i], psi_list[i+1], Al_P, deltaz, c_P))
+        
     # Calculate final lengths
     final_lengths = []
     psi_list = [0.] + psi_flats + [c_C] # In P configuration
-    print psi_list
     for i in range(len(psi_list)-1):
-        print psi_list[i]*c_P/c_C, psi_list[i+1]*c_P/c_C
         final_lengths.append(calculate_arc_length(psi_list[i]*c_P/c_C, psi_list[i+1]*c_P/c_C, Al_C, deltaz, c_C))
+    
     # Calculate strains
     strains = []
+
     for i in range(len(final_lengths)):
         strains.append((final_lengths[i]-initial_lengths[i])/initial_lengths[i])
-
+    av_strain = (sum(final_lengths)-sum(initial_lengths))/sum(initial_lengths)
     # for i in range(len(strains)):
         # print 'Initial length: ' + str(initial_lengths[i]) + ', final length: ' + str(final_lengths[i]) + ', strains: ' + str(strains[i])
                 
-    return strains
+    return strains, av_strain
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
@@ -217,11 +224,15 @@ if __name__ == '__main__':
     if testing == 'tracing':
         N1 = 1.
         N2 = 1.
-        tip_displacement = {'x': .1, 'y':1.}
-        other_points = {'x': [0.01, -0.03, .05, 0.12], 'y':[0.1, 0.3, .5, 0.8]}
-        A0 = -tip_displacement['x']
-        print A0
-        A = calculate_shape_coefficients_tracing(A0, tip_displacement, other_points, N1, N2)
+        tip_displacement = {'x': 1., 'y':.5}
+        other_points = {'x': [0.7], 'y':[0.25]}
+        A0 = -tip_displacement['x']/tip_displacement['y']
+        
+        # Check if y values are smaller than tip y
+        for y_i in other_points['y']:
+            if y_i>=tip_displacement['y']:
+                print 'Y value out of bounds!'
+        A = calculate_shape_coefficients_tracing(A0, other_points['y'], other_points['x'], N1, N2, chord = tip_displacement['y'], EndThickness = tip_displacement['x'])
         
         #plotting
         y = np.linspace(0, tip_displacement['y'], 100000)
@@ -363,7 +374,7 @@ if __name__ == '__main__':
                 y_goal_i = temp['u']
 
                 #calculate spar direction
-                s = calculate_spar_direction(psi_i, Au_C, Au_P, deltaz, c_P)
+                s = calculate_spar_direction(psi_i, Au_C, Au_P, deltaz, c_P, spar_thicknesses)
 
                 plt.plot([x_goal_i, x_goal_i - spar_thicknesses[i]*s[0]],[y_goal_i, y_goal_i - spar_thicknesses[i]*s[1]], 'r--')
 
@@ -382,7 +393,7 @@ if __name__ == '__main__':
         if morphing_direction == 'forwards':
             print c_C, c_P
             # Calculate initial lengths
-            strains = calculate_strains( Al_P, c_P, Al_C, c_C, deltaz, psi_spars)
+            strains, av_strains = calculate_strains(Au_P, Al_P, c_P, Au_C, Al_C, c_C, deltaz, psi_spars)
             
             intersections_x_children.append(c_C)
             intersections_y_children.append(0)
