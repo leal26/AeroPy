@@ -19,26 +19,126 @@ from CST_module import *
 inverted = False
 # Defines if basckwards or forwards morphing
 morphing_direction = 'forwards'
-	
+
+def calculate_c_baseline(c_L, Au_C, Au_L, deltaz,l_LE=0, eps_LE = 0, psi_P_u1 = 0):
+    """Equations in the New_CST.pdf. Calculates the upper chord in order for
+       the cruise and landing airfoils ot have the same length."""
+
+    def integrand(psi, Au, delta_xi ):
+        return np.sqrt(1 + dxi_u(psi, Au, delta_xi)**2)
+    
+    def f(c_C):
+        """Function dependent of c_C and that outputs c_C."""
+        y_C, err = quad(integrand, 0, 1, args=(Au_C, deltaz/c_C))
+        y_L, err = quad(integrand, psi_P_u1, 1, args=(Au_L, deltaz/c_L))
+        y_LE, err = quad(integrand, 0, psi_P_u1, args=(Au_L, deltaz/c_L))
+        return c_L*((1-eps_LE)*(l_LE+y_LE)+y_L)/y_C
+    c_C = optimize.fixed_point(f, [c_L])
+    #In case the calculated chord is really close to the original, but the
+    #algorithm was not able to make them equal
+    if abs(c_L - c_C) < 1e-7:
+        return c_L
+    #The output is an array so it needs the extra [0]
+    return c_C[0]
+
+def calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz,
+                       c_baseline, c_goal, l_LE, eps_LE, psi_1):
+    """Find the value for psi that has the same location w on the upper 
+    surface of the goal as psi_baseline on the upper surface of the 
+    baseline"""
+    
+    def integrand(psi_baseline, Au, deltaz, c ):
+        return c*np.sqrt(1 + dxi_u(psi_baseline, Au, deltaz/c)**2)
+    
+    def equation(psi_goal, Au_goal, deltaz, c):
+        if psi_goal != psi_1:
+            L_baseline, err = quad(integrand, psi_1, psi_baseline, args=(Au_baseline, deltaz, 
+                                                             c_baseline))
+        else:
+            L_baseline = 0
+        L_LE, err = quad(integrand, 0, psi_1, args=(Au_baseline, deltaz, 
+                                                         c_baseline))
+        y, err = quad(integrand, 0, psi_goal, args=(Au_goal, deltaz, c))
+        return y - (1-eps_LE)*(L_LE+c_baseline*l_LE) - L_baseline
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        y = fsolve(equation, psi_baseline, args=(Au_goal, deltaz,
+                                                 c_goal))
+    return y[0]
+
+def calculate_A0_moving_LE(psi_baseline, psi_goal_0, Au_baseline, Au_goal, deltaz,
+                       c_baseline, l_LE, eps_LE):
+    """Find the value for A_P0^c that has the same arc length for the first bay
+       as for the parent."""
+    
+    def integrand(psi_baseline, Al, deltaz, c ):
+        return c*np.sqrt(1 + dxi_u(psi_baseline, Al, deltaz/c)**2)
+    
+    def equation(A0, L_baseline, Au_goal, deltaz):
+        Au_goal[0] = A0
+        c = calculate_c_baseline(c_P, Au_goal, Au_baseline, deltaz/c_P, l_LE, eps_LE, psi_spars[0])
+        y, err = quad(integrand, 0, psi_goal_0, args=(Au_goal, deltaz, c))
+        print 'y', y, y - (1-eps_LE)*L_baseline, A0, c
+        return y - (1-eps_LE)*(L_baseline - c*l_LE)
+    L_baseline, err = quad(integrand, 0, psi_baseline[0], args=(Au_baseline, deltaz, 
+                                                         c_baseline))
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        y = fsolve(equation, Au_goal[0], args=(L_baseline, Au_goal, deltaz))
+    return y[0]
+
+def calculate_spar_direction(psi_baseline, Au_baseline, Au_goal, deltaz, c_goal, l_LE, eps_LE, psi_spars):
+    """Calculate the direction of the spar component based on a location
+    at the upper surface for the cruise airfoil."""
+    # Calculate cruise chord
+    c_baseline = calculate_c_baseline(c_goal, Au_baseline, Au_goal, deltaz, l_LE, eps_LE, psi_spars[0])
+    # Calculate psi at goal arifoil
+    psi_goal = calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz, 
+                                  c_baseline, c_goal, l_LE, eps_LE, psi_spars[0])
+    # non-normalized direction
+    s = np.zeros(2)
+    t = np.zeros(2)
+#    t_norm = np.sqrt(1 + (dxi_u(psi_goal, Au_goal[0], Au_goal[1], deltaz))**2)
+    
+    cbeta = calculate_cbeta(psi_baseline, Au_baseline, 
+                            deltaz/c_baseline)
+    sbeta = np.sqrt(1-cbeta**2)
+    
+    t[0] = 1
+    t[1] = dxi_u(psi_goal, Au_goal, deltaz/c_goal)
+    t_norm = np.sqrt(t[0]**2 + t[1]**2)
+    t = (1./t_norm)*t
+#    s[0] = t_norm*cbeta - dxi_u(psi_goal, Au_goal[0], Au_goal[1], deltaz)
+#    s[1] =  1
+    
+    s[1] = t[1]*cbeta + t[0]*sbeta
+    s[0] = (cbeta - s[1]*t[1])/t[0]
+    return s 
+    
 #==============================================================================
 # Calculate dependent shape function parameters
 #==============================================================================
 def calculate_dependent_shape_coefficients(Au_C_1_to_n,
                                            psi_spars, Au_P, Al_P, deltaz, c_P,
-                                           morphing = 'backwards'):
+                                           morphing = 'backwards', l_LE=0, eps_LE=0):
     """Calculate  dependent shape coefficients for children configuration for a 4 order
     Bernstein polynomial and return the children upper, lower shape 
     coefficients, children chord and spar thicknesses. _P denotes parent parameters"""
-    def calculate_AC_u0(AC_u0):
+    def calculate_AC_u0(AC_u0, constant_LE = True):
         Au_C = [AC_u0] + Au_C_1_to_n
-        c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
-        return np.sqrt(c_P/c_C)*Au_P[0]
-    
+        if constant_LE:
+            return np.sqrt(c_P/c_C)*Au_P[0]
+        else:
+            return calculate_A0_moving_LE(psi_spars, psi_lower_children[0], Au_P, Au_C, deltaz,
+                       c_P, l_LE, eps_LE)
     # Bersntein Polynomial
     def K(r,n):
         K=math.factorial(n)/(math.factorial(r)*math.factorial(n-r))
         return K
     # Bernstein Polynomial order
+    # In case of leading edge radius constraint
     n = len(Au_C_1_to_n)
 
     # Find upper shape coefficient though iterative method since Au_0 is unknown
@@ -46,106 +146,99 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
     #AC_u0 = optimize.fixed_point(calculate_AC_u0, Au_P[0])
     #print AC_u0
     error = 9999
-    AC_u0 = Au_P[0]
-    while error > 1e-9:
-        before = AC_u0
-        AC_u0 = calculate_AC_u0(AC_u0)
-        error = abs(AC_u0 - before)
 
-    # Because the output is an array, need the extra [0]      
-    Au_C = [AC_u0] + Au_C_1_to_n
-    
-    # Now that AC_u0 is known we can calculate the actual chord and AC_l0
-    c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz/c_P)
-    AC_l0 = np.sqrt(c_P/c_C)*Al_P[0]
-    # print '0 lower shape coefficient: ',AC_l0
-    # Calculate thicknessed and tensor B for the constraint linear system problem
-    spar_thicknesses = []
-    A0 = AC_u0 + AC_l0
-    
-    if morphing == 'backwards':
-        b_list = np.zeros((n,1))
-        for j in range(len(psi_spars)):
-            psi_j = psi_spars[j]
-            #Calculate the spar thickness in meters from parent, afterwards, need to
-            #adimensionalize for the goal airfoil by dividing by c_goal
-            t_j = calculate_spar_distance(psi_spars[j], Au_C, Au_P, Al_P, deltaz, c_P)
+    psi_lower_children = psi_spars
+    Au_C =  [Au_P[0]] + Au_C_1_to_n # [Au_P[0]] +
+
+    former_chord = c_P
+    while error > 1e-5:
+        former_Au_C = []
+        for i in range(len(Au_C)):
+            former_Au_C.append(Au_C[i])
+        
+        # Because the output is an array, need the extra [0]      
+        error_A0 = 999
+        # Now that AC_u0 is known we can calculate the actual chord and AC_l0
+        # c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz/c_P, l_LE, eps_LE, psi_spars[0])
+        Au_C[0] = calculate_AC_u0(Au_C[0], constant_LE = False)
+        Al_C0 = Au_C[0]
+        c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz/c_P, l_LE, eps_LE, psi_spars[0])
+        #Al_C0 = Au_C[0]
+        # print '0 lower shape coefficient: ',AC_l0
+        # Calculate thicknessed and tensor B for the constraint linear system problem
+        spar_thicknesses = []
+        
+        if morphing == 'forwards':
+            f = np.zeros((n,1))
+            # psi/xi coordinates for lower surface of the children configuration
+            psi_lower_children = []
+            xi_lower_children = []
+            xi_upper_children = []
+
+            # psi_baseline, Au_baseline, Au_goal, deltaz, c_baseline, c_goal
+            psi_upper_children = []
+            for j in range(len(psi_spars)):
+                print j
+                psi_upper_children.append(calculate_psi_goal(psi_spars[j], Au_P, Au_C, deltaz,
+                                       c_P, c_C,l_LE, eps_LE, psi_spars[0]))
+                
+            # Calculate xi for upper children. Do not care about lower so just gave it random shape coefficients
+            xi_upper_children = CST(psi_upper_children, 1., deltasz= [deltaz/2./c_C, deltaz/2./c_C],  Al= Au_C, Au =Au_C)
+            xi_upper_children = xi_upper_children['u']
+
+            # print xi_upper_children
             
-            spar_thicknesses.append(t_j)
-            b_list[j] = (t_j/c_C - psi_j*deltaz/c_C)/((psi_j**0.5)*(1-psi_j)) - A0*(1-psi_j)**n
+            #Debugging section
+            # x = np.linspace(0,1)
+            # y = CST(x, 1., deltasz= [deltaz/2./c_C, deltaz/2./c_C],  Al= Au_C, Au =Au_C)
+            # plt.plot(x,y['u'])
+            # plt.scatter(psi_upper_children, xi_upper_children)
+            # plt.grid()
+            # plt.show()
+            # BREAK
+            print Au_P, Au_C, len(psi_spars), n
+            for j in range(len(psi_spars)):
+                xi_parent = CST(psi_spars, 1., deltasz= [deltaz/2./c_P, deltaz/2./c_P],  Al= Al_P, Au =Au_P)
+                delta_j_P = xi_parent['u'][j]-xi_parent['l'][j]
+                t_j = c_P*(delta_j_P)
+                # Claculate orientation for children
+                s_j = calculate_spar_direction(psi_spars[j], Au_P, Au_C, deltaz, c_C, l_LE, eps_LE, psi_spars)
+                psi_l_j = psi_upper_children[j]-delta_j_P/c_C*s_j[0]
+                xi_l_j = xi_upper_children[j]-delta_j_P/c_C*s_j[1]
 
-        B = np.zeros((n,n))
-        #j is the row dimension and i the column dimension in this case
-        for j in range(n):
-            for i in range(n):
-                #Because in Python counting starts at 0, need to add 1 to be
-                #coherent for equations
-                r = i +1
-                B[j][i] = K(r,n)*(psi_spars[j]**r)*(1-psi_spars[j])**(n-r)
-        
-        A_bar = np.dot(inv(B), b_list)
+                spar_thicknesses.append(t_j)
+                psi_lower_children.append(psi_l_j)
+                xi_lower_children.append(xi_l_j)
 
-        Al_C = [AC_l0]
-        for i in range(len(A_bar)):
-            Al_C.append(A_bar[i][0] - Au_C[i+1]) #extra [0] is necessary because of array
+                f[j] = (2*xi_l_j + psi_l_j*deltaz/c_C)/(2*(psi_l_j**0.5)*(psi_l_j-1)) - Al_C0*(1-psi_l_j)**n
 
-    elif morphing == 'forwards':
-        f = np.zeros((n,1))
-        # psi/xi coordinates for lower surface of the children configuration
-        psi_lower_children = []
-        xi_lower_children = []
-        xi_upper_children = []
-
-        c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
-        # psi_baseline, Au_baseline, Au_goal, deltaz, c_baseline, c_goal
-        psi_upper_children = []
-        for j in range(len(psi_spars)):
-            psi_upper_children.append(calculate_psi_goal(psi_spars[j], Au_P, Au_C, deltaz,
-                                   c_P, c_C))
-        # Calculate xi for upper children. Do not care about lower so just gave it random shape coefficients
-        xi_upper_children = CST(psi_upper_children, 1., deltasz= [deltaz/2./c_C, deltaz/2./c_C],  Al= Au_C, Au =Au_C)
-        xi_upper_children = xi_upper_children['u']
-
-        # print xi_upper_children
-        
-        #Debugging section
-        x = np.linspace(0,1)
-        y = CST(x, 1., deltasz= [deltaz/2./c_C, deltaz/2./c_C],  Al= Au_C, Au =Au_C)
-        # plt.plot(x,y['u'])
-        # plt.scatter(psi_upper_children, xi_upper_children)
-        # plt.grid()
-        # plt.show()
-        # BREAK
-        for j in range(len(psi_spars)):
-            xi_parent = CST(psi_spars, 1., deltasz= [deltaz/2./c_P, deltaz/2./c_P],  Al= Al_P, Au =Au_P)
-            delta_j_P = xi_parent['u'][j]-xi_parent['l'][j]
-            t_j = c_P*(delta_j_P)
-            # Claculate orientation for children
-            s_j = calculate_spar_direction(psi_spars[j], Au_P, Au_C, deltaz, c_C)
-            psi_l_j = psi_upper_children[j]-delta_j_P/c_C*s_j[0]
-            xi_l_j = xi_upper_children[j]-delta_j_P/c_C*s_j[1]
-
-            spar_thicknesses.append(t_j)
-            psi_lower_children.append(psi_l_j)
-            xi_lower_children.append(xi_l_j)
-
-            f[j] = (2*xi_l_j + psi_l_j*deltaz/c_C)/(2*(psi_l_j**0.5)*(psi_l_j-1))  - AC_l0*(1-psi_l_j)**n
-
-        F = np.zeros((n,n))
-        #j is the row dimension and i the column dimension in this case
-        for j in range(n):
-            for i in range(n):
-                #Because in Python counting starts at 0, need to add 1 to be
-                #coherent for equations
-                r = i +1
-                F[j][i] = K(r,n)*(psi_lower_children[j]**r)*(1-psi_lower_children[j])**(n-r)
-        # print F
-        # print f
-        A_lower = np.dot(inv(F), f)
-
-        Al_C = [AC_l0]
-        for i in range(len(A_lower)):
-            Al_C.append(A_lower[i][0]) #extra [0] is necessary because of array
+            F = np.zeros((n,n))
+            #j is the row dimension and i the column dimension in this case
+            for j in range(n):
+                for i in range(n):
+                    #Because in Python counting starts at 0, need to add 1 to be
+                    #coherent for equations
+                    r = i + 1
+                    F[j][i] = K(r,n)*(psi_lower_children[j]**r)*(1-psi_lower_children[j])**(n-r)
+            print F
+            print f
+            A_lower = np.dot(inv(F), f)
+            print 'result', A_lower
+            Al_C = [Al_C0]
+            for i in range(len(A_lower)):
+                Al_C.append(A_lower[i][0]) #extra [0] is necessary because of array
+        error_denominator = 0
+        print 'before', former_Au_C, Au_C
+        for i in range(len(Au_C)):
+            error_denominator += Au_C[i]**2
+        error = 0
+        for i in range(len(Al_C)):
+            error += (former_Au_C[i] - Au_C[i])**2/error_denominator
+        error = math.sqrt(error)
+        # error = abs(c_C-former_chord)/c_C
+        # AC_u0 = calculate_AC_u0(AC_u0, constant_LE=False)
+        print error, Al_C, Au_C
+        # former_chord = c_C
     return Au_C, Al_C, c_C, spar_thicknesses
 
 def calculate_shape_coefficients_tracing(A0, x, y, N1, N2, chord = 1., EndThickness = 0):   
@@ -189,9 +282,9 @@ def calculate_strains( Au_P, Al_P, c_P, Au_C, Al_C, c_C, deltaz, psi_spars, spar
         psi_parent_j = psi_spars[j]
         # Calculate psi at landing
         # psi_baseline, Au_baseline, Au_goal, deltaz, c_baseline, c_goal
-        psi_children_j = calculate_psi_goal(psi_parent_j, Au_P, Au_C, deltaz, c_P, c_C)
+        psi_children_j = calculate_psi_goal(psi_parent_j, Au_P, Au_C, deltaz, c_P, c_C, l_LE, eps_LE, psi_spars[0])
         x_children_j = psi_children_j*c_C
-        s = calculate_spar_direction(psi_spars[j], Au_P, Au_C, deltaz, c_C)
+        s = calculate_spar_direction(psi_spars[j], Au_P, Au_C, deltaz, c_C, l_LE, eps_LE, psi_spars)
         psi_flats.append(x_children_j - spar_thicknesses[j]*s[0])
                 
     # Calculate initial lengths
@@ -216,7 +309,7 @@ def calculate_strains( Au_P, Al_P, c_P, Au_C, Al_C, c_C, deltaz, psi_spars, spar
         # print 'Initial length: ' + str(initial_lengths[i]) + ', final length: ' + str(final_lengths[i]) + ', strains: ' + str(strains[i])
                 
     return strains, av_strain
-
+    
 def plot_airfoil(AC, psi_spars, c_L, deltaz, Au_L, Al_L, image = 'plot',
                  iteration=0, return_coordinates=True, dir = 'current'):
     import matplotlib.pyplot as plt
@@ -293,8 +386,8 @@ def plot_airfoil(AC, psi_spars, c_L, deltaz, Au_L, Al_L, image = 'plot',
         
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    #testing = 'structurally_consistent'
-    testing = 'tracing'
+    testing = 'structurally_consistent'
+    # testing = 'tracing'
     
     if testing == 'tracing':
         N1 = 1.
@@ -354,11 +447,11 @@ if __name__ == '__main__':
         # AC_u4 = 0.17919              #Adimensional
         # AC_u5 = 0.19840             #Adimensional
         # Small
-        AC_u1 = 0.1487            #Adimensional
-        AC_u2 = 0.10843          #Adimensional
-        AC_u3 = 0.15084                #Adimensional
-        AC_u4 = 0.10919              #Adimensional
-        AC_u5 = 0.12840             #Adimensional
+        # AC_u1 = 0.1487            #Adimensional
+        # AC_u2 = 0.10843          #Adimensional
+        # AC_u3 = 0.15084                #Adimensional
+        # AC_u4 = 0.10919              #Adimensional
+        # AC_u5 = 0.12840             #Adimensional
         
         # AC_u1 = 0.34468227138908186                #Adimensional
         # AC_u2 = 0.18125405377549103                 #Adimensional
@@ -366,6 +459,7 @@ if __name__ == '__main__':
         # AC_u4 = 0.2440815012119143                 #Adimensional
         # AC_u5 = 0.25724974995738387                 #Adimensional
         #Spar position for cruise (adiminesional because the chord will still be calculated)
+        # psi_spar0 = 0.1
         psi_spar1 = 0.2           #Adimensional
         psi_spar2 = 0.3           #Adimensional
         psi_spar3 = 0.5                                         #Adimensional
@@ -373,13 +467,15 @@ if __name__ == '__main__':
         psi_spar5 = 0.9                                         #Adimensional
         psi_spars = [psi_spar1, psi_spar2, psi_spar3, psi_spar4, psi_spar5]
 
+        l_LE = 0.
+        eps_LE = 0.05
         #==============================================================================
         # Calculate dependent coefficients
         #==============================================================================
         Au_C, Al_C, c_C, spar_thicknesses = calculate_dependent_shape_coefficients(
-                                                            AC_u1, AC_u2, AC_u3, AC_u4, AC_u5,
+                                                            Au_P[1:],
                                                             psi_spars, Au_P, Al_P,
-                                                            deltaz, c_P, morphing=morphing_direction)
+                                                            deltaz, c_P, morphing=morphing_direction, l_LE=l_LE, eps_LE=eps_LE)
         
         #==============================================================================
         #  Plot results
@@ -409,14 +505,14 @@ if __name__ == '__main__':
                 psi_parent_j = psi_spars[j]
                 # Calculate psi at landing
                 # psi_baseline, Au_baseline, Au_goal, deltaz, c_baseline, c_goal
-                psi_children_j = calculate_psi_goal(psi_parent_j, Au_P, Au_C, deltaz, c_P, c_C)
+                psi_children_j = calculate_psi_goal(psi_parent_j, Au_P, Au_C, deltaz, c_P, c_C,l_LE, eps_LE, psi_spars[0])
                 x_children_j = psi_children_j*c_C
                 
                 # Calculate xi at landing
                 temp = CST(x_children_j, c_C, [deltaz/2., deltaz/2.], Al= Al_C, Au =Au_C)
                 y_children_j = temp['u']
             
-                s = calculate_spar_direction(psi_spars[j], Au_P, Au_C, deltaz, c_C)
+                s = calculate_spar_direction(psi_spars[j], Au_P, Au_C, deltaz, c_C, l_LE, eps_LE, psi_spars)
                 
                 # Print spars for children
                 if not inverted:
@@ -464,20 +560,4 @@ if __name__ == '__main__':
         plt.gca().set_aspect('equal', adjustable='box')
         plt.legend(loc=1)
         plt.show()
-        
-        if morphing_direction == 'forwards':
-            print c_C, c_P
-            # Calculate initial lengths
-            strains, av_strains = calculate_strains(Au_P, Al_P, c_P, Au_C, Al_C, c_C, deltaz, psi_spars)
-            
-            intersections_x_children.append(c_C)
-            intersections_y_children.append(0)
-            intersections_x_parent.append(c_P)
-            intersections_y_parent.append(0)		
-            # Wire lengths
-            for i in range(len(intersections_x_children)-1):
-                length_parent = math.sqrt((intersections_x_parent[i]-intersections_x_parent[i+1])**2+
-                                          (intersections_y_parent[i]-intersections_y_parent[i+1])**2)
-                length_children = math.sqrt((intersections_x_children[i]-intersections_x_children[i+1])**2+
-                                            (intersections_y_children[i]-intersections_y_children[i+1])**2)
-                print (length_children-length_parent)/length_parent
+    print calculate_strains( Au_P, Al_P, c_P, Au_C, Al_C, c_C, deltaz, psi_spars, spar_thicknesses)

@@ -27,7 +27,7 @@ def twist_function(eta, shape = 'linear', points = {'eta':[0,1], 'delta_twist':[
 
 def CST_3D(Bu, Bl, span, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.], 'chord':[1., 0]},
            mesh = (100,100), chord = {'eta':[0,1], 'A':[1.], 'N1':1, 'N2':1, 'initial_chord':1.}, 
-           sweep = {'eta':[0,1], 'A':[1.], 'N1':1, 'N2':1, 'initial_chord':1., 'x_LE_initial':0}):
+           sweep = {'eta':[0,1], 'A':[1.], 'N1':1, 'N2':1, 'x_LE_initial':0, 'x_LE_final':0}):
     """
     - Bu: upper shape coefficients
     - Bl: lower shape coefficients
@@ -76,7 +76,7 @@ def CST_3D(Bu, Bl, span, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.], 'chord':[
     print chord['A']
     print chord['N1'], chord['N2']
     chord_distribution = CST(eta, chord['eta'][1], chord['initial_chord'], Au=chord['A'], N1=chord['N1'], N2=chord['N2'])
-    sweep_distribution = CST(eta, sweep['eta'][1], sweep['x_LE_initial'], Au=sweep['A'], N1=sweep['N1'], N2=sweep['N2'])
+    sweep_distribution = CST(eta, sweep['eta'][1], deltasz = sweep['x_LE_final']-.5*chord['initial_chord'], Au=sweep['A'], N1=sweep['N1'], N2=sweep['N2'])
     chord_distribution = chord_distribution[::-1]
     sweep_distribution = sweep_distribution
     # taper_function(eta, shape = 'linear', N)
@@ -84,6 +84,7 @@ def CST_3D(Bu, Bl, span, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.], 'chord':[
     for i in range(len(x)):
         x[i] = psi[i]*chord_distribution[i]
     print chord_distribution
+    print sweep_distribution
     print x
     print psi
     y = eta
@@ -94,7 +95,8 @@ def CST_3D(Bu, Bl, span, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.], 'chord':[
     Z_l = np.zeros(mesh)
     for i in range(mesh[0]):
         for j in range(mesh[1]):
-            X[j][i] = psi[i]*chord_distribution[j] + .5*sweep_distribution[j]
+            X[j][i] = psi[i]*chord_distribution[j] - sweep_distribution[j] -.5*chord['initial_chord']
+        
             Y[j][i] = span*eta[j]
             Z_u[j][i] = zeta_u[j][i]*chord_distribution[j]
             Z_l[j][i] = zeta_l[j][i]*chord_distribution[j]
@@ -105,17 +107,30 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from matplotlib import cm
 
-    # B = [[1,1], [1.,1]]
-    B = [[1], [1]]
-    x = np.linspace(0,1)
-    initial_chord = .5
+    
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Inputs
+    # One of the diameters
+    initial_chord = 1.
+    # Nosecone height
     span = 4.
-    chord_distribution = CST(x, initial_chord, span, Au=[1.], Al=None, N1=1., N2=1.)
+    # Shape coefficient for cross section (if A=1, circular, otherwise it is an ellipse)
+    A = 1.
+    # location of the nosecone tip
+    nosecone_x = 0.2
+    # Class coefficient for chord distribution (Nb=.5, elliptical, Nb=1, Haack series)
+    Nb = 1.
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
+    #B = [[1,1], [1.,1]]
+    B = [[A], [A]]
+    Na = 1.
+    x = np.linspace(0,1)
     
     [X,Y,Z_u, Z_l] = CST_3D(B, B, mesh =(50,50), span=span,
                             N={'eta':[0,1], 'N1':[.5, .5], 'N2':[.5, .5]},
-                            chord = {'eta':[0,1], 'A':[1.], 'N1':1., 'N2':1, 'initial_chord':1.},
-                            sweep = {'eta':[0,1], 'A':[1.], 'N1':1, 'N2':1., 'initial_chord':1., 'x_LE_initial':-2})
+                            chord = {'eta':[0,1], 'A':[1.], 'N1':Na, 'N2':Nb, 'initial_chord':initial_chord},
+                            sweep = {'eta':[0,1], 'A':[.5], 'N1':Nb, 'N2':Na, 'x_LE_final':nosecone_x})
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')

@@ -166,7 +166,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
         if type(alfas) == list or type(alfas) == np.ndarray:
             Multiple = True
         elif type(alfas) == int or type(alfas) == float or \
-             type(alfas) == np.float64:
+             type(alfas) == np.float64 or type(alfas) == np.float32:
             Multiple = False
     elif (output == "Alfa_L_0" or output == "Coordinates") and alfas == 'none':
         Multiple = False
@@ -701,7 +701,7 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
                         line_components.remove('')
 
                     if line_components != []:
-                        for j in range(0, len(line_components)):
+                        for j in range(0, len(header)):
 
                             try:
                                 Data[header[j]].append(format_output(line_components[j],
@@ -814,7 +814,7 @@ def file_name(airfoil, alfas='none', output='Cp'):
             # angle will be repeated. This is done to keep the
             # formating
             if type(alfas) == int or type(alfas) == float or \
-               type(alfas) == np.float64:
+               type(alfas) == np.float64 or type(alfas) == np.float32:
                 alfas = [alfas]
                 alfa_i = alfa_for_file(alfas[0])
                 alfa_f = alfa_for_file(alfas[-1])
