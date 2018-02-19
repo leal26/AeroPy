@@ -88,7 +88,7 @@ def create_x(c, n = 230, distribution = 'linear'):
 #===========================================================================
 # The following functions are related to creating the airfoil outer mold
 #===========================================================================
-def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1.):
+def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1., deltasLE=None):
     """
     Based on the paper "Fundamental" Parametric Geometry Representations for
     Aircraft Component Shapes" from Brenda M. Kulfan and John E. Bussoletti. 
@@ -124,7 +124,9 @@ def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1.):
           None,the surface is not analyzed. len(Au) equals  
         
         - Al: list/float of Al coefficients, which are design parameters. If 
-          None,the surface is not analyzed. len(Al) equals  
+          None,the surface is not analyzed. len(Al) equals
+          
+        - deltasLE: leading edge thickness in case it is necessary
          
     The outputs are:
         - y:
@@ -171,6 +173,7 @@ def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1.):
     #                   Defining the working surfaces
     #==========================================================================
     deltaz={}
+    deltaLE={}
     eta={}
     y={}
     Shape={}
@@ -178,7 +181,9 @@ def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1.):
     if Al and Au:
         deltaz['u']=deltasz[0]
         deltaz['l']=deltasz[1]
-        
+        if deltasLE != None:
+            deltaLE['u']=deltasLE[0]
+            deltaLE['l']=deltasLE[1]
         if len(Au)!=len(Al):
             raise Exception("Au and Al need to have the same dimensions")
         elif len(deltasz)!=2:
@@ -190,19 +195,29 @@ def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1.):
                 raise Exception("If only one surface is being analyzed, one value for deltasz is needed")
             else:
                 deltaz['u']=float(deltasz)
+                if deltasLE != None:
+                    deltaLE['u'] = float(deltasLE[0])
         else:
             deltaz['u']=deltasz
-       
+            if deltasLE != None:
+                deltaLE['u'] = deltasLE      
     elif Al and not Au:
         if type(deltasz)==list:
             if (deltaz['l'])!=1:
                 raise Exception("If only one surface is being analyzed, one value for deltasz is needed")
             else:
                 deltaz['l']=float(deltasz)
+                if deltasLE != None:
+                    deltaLE['l'] = float(deltasLE)
         else:
             deltaz['l']=deltasz
+            if deltasLE != None:
+                deltaLE['l'] = deltasLE
     else:
         raise Exception("Au or Al need to have at least one value")
+    # In case leading edge thickness is not used, just make it zero and not use it
+    if deltasLE == None:
+        deltaLE = {'u':0, 'l':0}
     A={'u':Au,'l':Al}
     for surface in ['u','l']:
         if A[surface]:
@@ -229,9 +244,9 @@ def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1.):
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~        
             # Airfoil Shape (eta=z/c)
             if surface=='l':
-                eta[surface]= C*Shape[surface]-psi*deltaz[surface]/c;
+                eta[surface]= C*Shape[surface]-psi*deltaz[surface]/c - (1.-psi)*deltaLE[surface]/c;
             else:
-                eta[surface]= C*Shape[surface]+psi*deltaz[surface]/c;  
+                eta[surface]= C*Shape[surface]+psi*deltaz[surface]/c + (1.-psi)*deltaLE[surface]/c;  
             # Giving back the dimensions
             y[surface]=c*eta[surface]
     if Al and Au:     
