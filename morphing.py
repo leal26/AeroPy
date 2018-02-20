@@ -56,7 +56,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
     Au_C = [AC_u0] + Au_C_1_to_n
     
     # Now that AC_u0 is known we can calculate the actual chord and AC_l0
-    c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz/c_P)
+    c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
     AC_l0 = np.sqrt(c_P/c_C)*Al_P[0]
     # print '0 lower shape coefficient: ',AC_l0
     # Calculate thicknessed and tensor B for the constraint linear system problem
