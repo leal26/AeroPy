@@ -63,17 +63,38 @@ def CST_3D(Bu, Bl, span, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.], 'chord':[
         output = ((psi)**N1(eta))*((1.-psi)**N2(eta))/C_max/2
         return output
 
+    def Rotation(ux, uy, uz, theta):
+        # Check if vector are normalized
+        norm = math.sqrt(ux**2+uy**2+uz*2)
+        if norm != 1:
+            ux = ux/norm
+            uy = uy/norm
+            uz = uz/norm
+        R11 = math.cos(theta) + ux**2*(1-math.cos(theta))
+        R12 = ux*uy*(1-math.cos(theta)) - uz*math.sin(theta)
+        R13 = ux*uz*(1-math.cos(theta)) + uy*math.sin(theta)
+        R21 = ux*uy*(1-math.cos(theta)) + uz*math.sin(theta)
+        R22 = math.cos(theta) + uy**2*(1-math.cos(theta))
+        R23 = uy*uz*(1-math.cos(theta)) - ux*math.sin(theta)
+        R31 = ux*uz*(1-math.cos(theta)) - uy*math.sin(theta)
+        R32 = uy*uz*(1-math.cos(theta)) + ux*math.sin(theta)
+        R33 = math.cos(theta) + uz**2*(1-math.cos(theta))
+        R = np.array([[R11, R12, R13],
+                      [R21, R22, R23],
+                      [R31, R32, R33]])
+        return R
     # Define non-dimensional domains
+
     psi = np.linspace(0,1,mesh[1])
     eta = np.linspace(0,1,mesh[1])
     zeta_u = np.zeros(mesh)
     zeta_l = np.zeros(mesh)
     
     # Interpolate class function coefficients
+
     N1 = interp1d(N['eta'], N['N1'])
     N2 = interp1d(N['eta'], N['N2'])
     
-    print 'N1',N1(eta)
 
     for i in range(mesh[0]):
         for j in range(mesh[1]):
@@ -85,36 +106,53 @@ def CST_3D(Bu, Bl, span, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.], 'chord':[
     chord_distribution = chord_distribution[::-1]
     sweep_distribution = sweep_distribution
     twist_distribution = CST(eta, twist['eta'][1], twist['initial'], Au=twist['A'], N1=twist['N1'], N2=twist['N2'], deltasLE=twist['final'])
+
     # taper_function(eta, shape = 'linear', N)
     x = np.zeros(len(psi))
     for i in range(len(x)):
         x[i] = psi[i]*chord_distribution[i]
     print 'chord'
-    print chord
     print chord_distribution
     print 'sweep'
     print sweep_distribution
+    print 'twist'
+    print twist_distribution
     y = eta
 
     X = np.zeros(mesh)
     Y = np.zeros(mesh)
+    X_u = np.zeros(mesh)
+    X_l = np.zeros(mesh)
+    Y_u = np.zeros(mesh)
+    Y_l = np.zeros(mesh)
     Z_u = np.zeros(mesh)
     Z_l = np.zeros(mesh)
     for i in range(mesh[0]):
         for j in range(mesh[1]):
-            X[j][i] = psi[i]*chord_distribution[j] - sweep_distribution[j] -.5*chord['initial']
+            X[j][i] = psi[i]*chord_distribution[j] + sweep_distribution[j]
             Y[j][i] = span*eta[j]
             Z_u[j][i] = zeta_u[j][i] *chord_distribution[j]
             Z_l[j][i] = zeta_l[j][i] *chord_distribution[j]
             if twist != None:
-                X_u[j][i] = X[j][i]*math.cos(twist_distribution[j])-Z_u[j][i]*math.sin(twist_distribution[j])
-                X_l[j][i] = X[j][i]*math.cos(twist_distribution[j])-Z_l[j][i]*math.sin(twist_distribution[j])
-                Z_u[j][i] = X[j][i]*math.sin(twist_distribution[j])+Z_u[j][i]*math.cos(twist_distribution[j])
-                Z_l[j][i] = X[j][i]*math.sin(twist_distribution[j])+Z_l[j][i]*math.cos(twist_distribution[j])
+                xr = twist['psi_root']
+                zr = twist['zeta_root']
+                R = Rotation(twist['axis'][0], twist['axis'][1], twist['axis'][2],
+                         twist_distribution[j])                
+                t_u = np.array([X[j][i]-xr,Y[j][i],Z_u[j][i]-zr])
+                t_l = np.array([X[j][i]-xr,Y[j][i],Z_l[j][i]-zr])
+                T_u = R.dot(t_u)
+                T_l = R.dot(t_l)
+                
+                X_u[j][i] = xr + T_u[0]
+                X_l[j][i] = xr + T_l[0]
+                Y_u[j][i] = T_u[1]
+                Y_l[j][i] = T_l[1]
+                Z_u[j][i] = zr + T_u[2]
+                Z_l[j][i] = zr + T_l[2]
     if twist == None:
         return [X,Y,Z_u,Z_l]
     else:
-        return [X_u,Z_l,Y,Z_u,Z_l]
+        return [X_u,X_l,Y_u,Y_l,Z_u,Z_l]
 
 if __name__ == '__main__':
     from mpl_toolkits.mplot3d import Axes3D
@@ -133,28 +171,31 @@ if __name__ == '__main__':
     A = .5
     # location of the nosecone tip
     initial_nosecone_x = 0
-    final_nosecone_x = -2.
+    final_nosecone_x = 2.
     # Class coefficient for chord distribution (Nb=.5, elliptical, Nb=1, Haack series)
     Nb = 0.0
+ 
+    axis = [final_nosecone_x - initial_nosecone_x, span,0]
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
     B = [[A], [A]]
     #B = [[A], [A]]
     Na = 0.0
-    
-    [X,Y,Z_u, Z_l] = CST_3D(B, B, mesh =(40,40), span=span,
-                            N={'eta':[0,0.5,.8,1], 'N1':[.5, .5, 1., 1.], 'N2':[1., 1., 1., 1.]},
-                            chord = {'eta':[0,1], 'A':[0.], 'N1':Na, 'N2':Nb, 
-                                     'initial':initial_chord,'final':final_chord},
-                            sweep = {'eta':[0,1], 'A':[0.], 'N1':Nb, 'N2':Na, 
-                                     'initial':initial_nosecone_x, 'final':final_nosecone_x},
-                            twist = {'eta':[0,1], 'A':[1.], 'N1':1, 'N2':1, 'initial':0, 'final':1})
+    mesh =(20,20)
+    N={'eta':[0,0.5,.8,1], 'N1':[.5, .5, 1., 1.], 'N2':[1., 1., 1., 1.]}
+    chord = {'eta':[0,1], 'A':[0.], 'N1':Na, 'N2':Nb, 
+             'initial':initial_chord,'final':final_chord}
+    sweep = {'eta':[0,1], 'A':[0.], 'N1':Nb, 'N2':Na, 
+             'initial':initial_nosecone_x, 'final':final_nosecone_x}
+    twist = {'eta':[0,1], 'A':[0.], 'N1':1, 'N2':1,'initial':0.5, 'final':0, 'psi_root':0.2,'zeta_root':0, 'axis':axis}    
+    [X_u,X_l,Y_u,Y_l,Z_u, Z_l] = CST_3D(B, B,  span, N, mesh, chord, sweep, twist)
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    surf_u = ax.plot_surface(X, Z_u, Y, cmap=plt.get_cmap('jet'),
+    surf_u = ax.plot_surface(X_u, Z_u, Y_u, cmap=plt.get_cmap('jet'),
                        linewidth=0, antialiased=False)
-    surf_l = ax.plot_surface(X, Z_l, Y, cmap=plt.get_cmap('jet'),
+    surf_l = ax.plot_surface(X_l, Z_l, Y_l, cmap=plt.get_cmap('jet'),
                        linewidth=0, antialiased=False)
     # cset = ax.contour(X, Z_u, Y, zdir='z', offset=0, cmap=cm.coolwarm)
     # cset = ax.contour(X, Z_l, Y, zdir='z', offset=0,  cmap=cm.coolwarm)
@@ -166,10 +207,11 @@ if __name__ == '__main__':
     # Customize the z axis.
     ax.set_zlim(0, 4)
 
-    max_range = np.array([X.max()-X.min(),  Z_u.max()-Z_l.min(), Y.max()-Y.min()]).max() / 2.0
+    max_range = np.array([X_u.max()-X_u.min(), X_l.max()-X_l.min(), Z_u.max()-Z_l.min(),
+                          Y_u.max()-Y_u.min(), Y_l.max()-Y_l.min()]).max() / 2.0
 
-    mid_x = (X.max()+X.min()) * 0.5
-    mid_y = (Y.max()+Y.min()) * 0.5
+    mid_x = (X_u.max()+X_l.min()) * 0.5
+    mid_y = (Y_u.max()+Y_l.min()) * 0.5
     mid_z = (Z_u.max()+Z_l.min()) * 0.5
     ax.set_xlim(mid_x - max_range, mid_x + max_range)
     ax.set_ylim(mid_z - max_range, mid_z + max_range)
@@ -181,8 +223,9 @@ if __name__ == '__main__':
     fig = plt.figure()
     ax = fig.gca(projection='3d')
 
-    ax.plot_trisurf(X.flatten(),  Y.flatten(), Z_u.flatten(), linewidth=0.2, antialiased=True,)
-    ax.plot_trisurf(X.flatten(),  Y.flatten(), Z_l.flatten(), linewidth=0.2, antialiased=True,)
+    ax.plot_trisurf(X_u.flatten(),  Y_u.flatten(), Z_u.flatten(), linewidth=0.2, antialiased=True,)
+    ax.plot_trisurf(X_l.flatten(),  Y_l.flatten(), Z_l.flatten(), linewidth=0.2, antialiased=True,)
+    ax.plot([sweep['initial'] + twist['psi_root']*chord['initial'],sweep['initial'] + twist['psi_root']*chord['initial'] + axis[0]],[0,axis[1]])
     ax.set_xlim(mid_x - max_range, mid_x + max_range)
     ax.set_ylim(mid_y - max_range, mid_y + max_range)
     ax.set_zlim(mid_z - max_range, mid_z + max_range)
