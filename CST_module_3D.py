@@ -3,28 +3,19 @@ import numpy as np
 import math
 
 from airfoil_module import CST, create_x
-def taper_function(eta, shape = 'linear', points = {'eta':[0,1], 'chord':[1,.7]}):
-    """Calculate chord along span of the wing.
 
-    - If linear, taper function is a conjuction of lines connecting points
+def interpolation_function(eta, shape = 'linear', 
+                           points = {'eta':[0,1], 'to_interpolate':[1,.7]}):
+    """Calculate 'to_interpolate' along span of the wing.
+
+    - If linear, interpolation function is a conjuction of lines connecting points
     - Possible shapes are the same as interp1d: ('linear', 'nearest',
         'zero', 'slinear', 'quadratic', 'cubic' where 'zero', 'slinear',
          'quadratic' and 'cubic' refer to a spline interpolation of zeroth,
           first, second or third order"""
-    function = interp1d(points['eta'], points['chord'])
+    function = interp1d(points['eta'], points['to_interpolate'])
     return function(eta)
-
-def twist_function(eta, shape = 'linear', points = {'eta':[0,1], 'delta_twist':[0,.1]}):
-    """Calculate chord along span of the wing.
-
-    - If linear, taper function is a conjuction of lines connecting points
-    - Possible shapes are the same as interp1d: ('linear', 'nearest',
-        'zero', 'slinear', 'quadratic', 'cubic' where 'zero', 'slinear',
-         'quadratic' and 'cubic' refer to a spline interpolation of zeroth,
-          first, second or third order"""
-    function = interp1d(points['eta'], points['delta_twist'])
-    return function(eta)
-
+    
 def CST_3D(Bu, Bl, span, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.], 'chord':[1., 0]},
            mesh = (100,100), chord = {'eta':[0,1], 'A':[1.], 'N1':1, 'N2':1, 'initial':1., 'final':0.1}, 
            sweep = {'eta':[0,1], 'A':[1.], 'N1':1, 'N2':1, 'initial':0, 'final':0},

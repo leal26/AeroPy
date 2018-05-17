@@ -18,7 +18,7 @@ from CST_module import *
 # Just as quick trick, to make upper morph I just mirror the image in regards to x
 inverted = False
 # Defines if basckwards or forwards morphing
-morphing_direction = 'forwards'
+morphing_direction = 'backwards'
 	
 #==============================================================================
 # Calculate dependent shape function parameters
@@ -58,6 +58,10 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
     # Now that AC_u0 is known we can calculate the actual chord and AC_l0
     c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
     AC_l0 = np.sqrt(c_P/c_C)*Al_P[0]
+    print Au_C
+    print Au_P
+    print Al_P
+    print c_C, AC_l0, AC_u0
     # print '0 lower shape coefficient: ',AC_l0
     # Calculate thicknessed and tensor B for the constraint linear system problem
     spar_thicknesses = []
@@ -97,6 +101,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
         xi_upper_children = []
 
         c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
+        print c_C, AC_u0, AC_l0
         # psi_baseline, Au_baseline, Au_goal, deltaz, c_baseline, c_goal
         psi_upper_children = []
         for j in range(len(psi_spars)):
@@ -130,7 +135,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
             xi_lower_children.append(xi_l_j)
 
             f[j] = (2*xi_l_j + psi_l_j*deltaz/c_C)/(2*(psi_l_j**0.5)*(psi_l_j-1))  - AC_l0*(1-psi_l_j)**n
-
+        print psi_lower_children
         F = np.zeros((n,n))
         #j is the row dimension and i the column dimension in this case
         for j in range(n):
@@ -139,8 +144,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
                 #coherent for equations
                 r = i +1
                 F[j][i] = K(r,n)*(psi_lower_children[j]**r)*(1-psi_lower_children[j])**(n-r)
-        # print F
-        # print f
+                print K(r,n)*(psi_lower_children[j]**r)*(1-psi_lower_children[j])**(n-r)
         A_lower = np.dot(inv(F), f)
 
         Al_C = [AC_l0]
@@ -293,7 +297,7 @@ def plot_airfoil(AC, psi_spars, c_L, deltaz, Au_L, Al_L, image = 'plot',
         
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    #testing = 'structurally_consistent'
+    # testing = 'structurally_consistent'
     testing = 'tracing'
     
     if testing == 'tracing':
@@ -328,13 +332,18 @@ if __name__ == '__main__':
         deltaz = 0.*c_P    #m
         
         # Avian wing, order 5
-        # Au_P = [0.23993240191629417, 0.34468227138908186, 0.18125405377549103, 
-                # 0.35371349126072665, 0.2440815012119143, 0.25724974995738387]
-        # Al_P = [0.18889012559339036, -0.24686758992053115, 0.077569769493868401,
-                # -0.547827192265256, -0.0047342206759065641, -0.23994805474814629]
+        Au_P = [0.23993240191629417, 0.34468227138908186, 0.18125405377549103, 
+                0.35371349126072665, 0.2440815012119143, 0.25724974995738387]
+        Al_P = [0.18889012559339036, -0.24686758992053115, 0.077569769493868401,
+                -0.547827192265256, -0.0047342206759065641, -0.23994805474814629]
         # NACA0012
-        Au_P =  [0.10887, 0.1187, 0.07843, 0.12084, 0.07919, 0.09840]
-        Al_P =  [0.11117, 0.1000, 0.1239, 0.06334, 0.11539, 0.10400]  
+        # Au_P =  [0.10887, 0.1187, 0.07843, 0.12084, 0.07919, 0.09840]
+        # Al_P =  [0.11117, 0.1000, 0.1239, 0.06334, 0.11539, 0.10400] 
+        # Passive shape coefficients for parent
+        # Au_P = [.5,.4,.3]
+        # Active shape coefficients for parent
+        # Al_P = [.5,.1,.1]
+       
         n = len(Au_P) - 1
         
         if inverted:
@@ -354,11 +363,14 @@ if __name__ == '__main__':
         # AC_u4 = 0.17919              #Adimensional
         # AC_u5 = 0.19840             #Adimensional
         # Small
-        AC_u1 = 0.1487            #Adimensional
-        AC_u2 = 0.10843          #Adimensional
-        AC_u3 = 0.15084                #Adimensional
-        AC_u4 = 0.10919              #Adimensional
-        AC_u5 = 0.12840             #Adimensional
+        # AC_u1 = 0.1487            #Adimensional
+        # AC_u2 = 0.10843          #Adimensional
+        # AC_u3 = 0.15084                #Adimensional
+        # AC_u4 = 0.10919              #Adimensional
+        # AC_u5 = 0.12840             #Adimensional
+        
+        # Passive shape coefficients for child
+        AC_u = [.25, .25, .25, .25, .25]
         
         # AC_u1 = 0.34468227138908186                #Adimensional
         # AC_u2 = 0.18125405377549103                 #Adimensional
@@ -366,21 +378,17 @@ if __name__ == '__main__':
         # AC_u4 = 0.2440815012119143                 #Adimensional
         # AC_u5 = 0.25724974995738387                 #Adimensional
         #Spar position for cruise (adiminesional because the chord will still be calculated)
-        psi_spar1 = 0.2           #Adimensional
-        psi_spar2 = 0.3           #Adimensional
-        psi_spar3 = 0.5                                         #Adimensional
-        psi_spar4 = 0.7                                         #Adimensional
-        psi_spar5 = 0.9                                         #Adimensional
-        psi_spars = [psi_spar1, psi_spar2, psi_spar3, psi_spar4, psi_spar5]
+        psi_spars = [.2, .3, .5, .7, .9]
 
         #==============================================================================
         # Calculate dependent coefficients
         #==============================================================================
         Au_C, Al_C, c_C, spar_thicknesses = calculate_dependent_shape_coefficients(
-                                                            AC_u1, AC_u2, AC_u3, AC_u4, AC_u5,
+                                                            AC_u,
                                                             psi_spars, Au_P, Al_P,
                                                             deltaz, c_P, morphing=morphing_direction)
-        
+        print 'solution'
+        print Al_C
         #==============================================================================
         #  Plot results
         #==============================================================================
@@ -449,7 +457,7 @@ if __name__ == '__main__':
                 y_goal_i = temp['u']
 
                 #calculate spar direction
-                s = calculate_spar_direction(psi_i, Au_C, Au_P, deltaz, c_P, spar_thicknesses)
+                s = calculate_spar_direction(psi_i, Au_C, Au_P, deltaz, c_P)
 
                 plt.plot([x_goal_i, x_goal_i - spar_thicknesses[i]*s[0]],[y_goal_i, y_goal_i - spar_thicknesses[i]*s[1]], 'r--')
 

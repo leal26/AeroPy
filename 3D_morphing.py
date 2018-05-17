@@ -25,16 +25,17 @@ morphing_direction = 'forwards'
 # Calculate dependent shape function parameters
 #==============================================================================
 def calculate_dependent_shape_coefficients(BP_p, BA_p, BP_c, chord_p, sweep_p, 
-                  twist_p, delta_TE_p, chord_c, sweep_c, twist_c, 
-                  eta_sampling, psi_spars, morphing='camber'):
+                  twist_p, delta_TE_p, sweep_c, twist_c, eta_sampling, psi_spars, 
+                  morphing='camber'):
     """Calculate  dependent shape coefficients for children configuration for a 4 order
     Bernstein polynomial and return the children upper, lower shape 
     coefficients, children chord and spar thicknesses. _P denotes parent parameters"""
-    def calculate_BA_c0(BA_c0, c_P, deltaz, j):
+    def calculate_BP_c0(BP_c0, c_P, deltaz, j):
         Au_C = extract_A(BP_c,j)
         Au_P = extract_A(BP_p,j)
         c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
-        return np.sqrt(c_P/c_C)*Au_P[0], c_C
+        BP_c[0][j] = np.sqrt(c_P/c_C)*Au_P[0]
+        return BP_c[0][j], c_C
     
     def extract_A(B,j):
         # Extracting shape coefficient data for column j
@@ -52,7 +53,7 @@ def calculate_dependent_shape_coefficients(BP_p, BA_p, BP_c, chord_p, sweep_p,
     m = len(BP_p[0]) - 1
     p = len(psi_spars)
     q = len(eta_sampling)
-    print p,q,n,m    
+    # print p,q,n,m    
     # Define chord, sweep, and twist functions for parent
     chord_p = CST(eta_sampling, chord_p['eta'][1], chord_p['initial'], Au=chord_p['A'], 
                   N1=chord_p['N1'], N2=chord_p['N2'], deltasLE=chord_p['final'])
@@ -78,17 +79,17 @@ def calculate_dependent_shape_coefficients(BP_p, BA_p, BP_c, chord_p, sweep_p,
     # via fixed point iteration
     for k in range(q):
         error = 9999
-        BA_c0 = BP_p[0][k]
+        BP_c0 = BP_p[0][k]
         while error > 1e-9:
-            before = BA_c0
+            before = BP_c0
             c_P = chord_p[k]
             deltaz = delta_TE_p[k]
-            [BA_c0,c_c] = calculate_BA_c0(BA_c0, c_P, deltaz, k)
-            error = abs(BA_c0 - before)
-        BA_c[0][k] = BA_c0
+            [BP_c0,c_c] = calculate_BP_c0(BP_c0, c_P, deltaz, k)
+            error = abs(BP_c0 - before)
+        BP_c[0][k] = BP_c0
+        BA_c[0][k] = np.sqrt(c_P/c_c)*BA_p[0][k]
         chord_c.append(c_c)
-
-
+        print c_c, BP_c0, np.sqrt(c_P/c_c)*BA_p[0][k]
     # Calculate thicknessed and tensor C for the constraint linear system problem
     psi_A_c = []
     
@@ -140,14 +141,28 @@ def calculate_dependent_shape_coefficients(BP_p, BA_p, BP_c, chord_p, sweep_p,
                 f_y = 0
                 for j in range(m+1):
                     f_y += BA_c[0][j]*(1-psi_l_k)**n*(K(j,m)*eta_sampling[l]**j*(1-eta_sampling[l])**(m-j))
+                    # print j, eta_sampling[l]**j*(1-eta_sampling[l])**(m-j), BA_c[0][j]
                 f[l][k] = (2*xi_l_k + psi_l_k*deltaz/c_C)/(2*(psi_l_k**0.5)*(psi_l_k-1))  - f_y
+                
+                # print 'f_y',f_y, eta_sampling[l],m,j
             # Store new children psi values
             psi_A_c.append(psi_lower_children)
-        print f
 
-    
-        F = np.zeros((p,q,m+1,n))
-        print F
+        # Initialize F (avoiding using numpy)
+        F = np.zeros([q,p,m+1,n])
+        # F = []
+        # for l in range(q):
+            # tempk = []
+            # for k in range(p):
+                # tempj = []
+                # for j in range(m+1):
+                    # tempi = []
+                    # for i in range(n):
+                        # tempi.append(0.0)
+                    # tempj.append(tempi)
+                # tempk.append(tempj)
+            # F.append(tempk)
+
         #j is the row dimension and i the column dimension in this case
         for l in range(q):
             for k in range(p):
@@ -157,22 +172,31 @@ def calculate_dependent_shape_coefficients(BP_p, BA_p, BP_c, chord_p, sweep_p,
                         #coherent for equations
                         ii = i + 1
                         Sx = K(ii,n)*(psi_A_c[l][k]**ii)*(1-psi_A_c[l][k])**(n-ii)
-                        Sy = K(j,m)*(psi_A_c[l][k]**j)*(1-psi_A_c[l][k])**(m-j)
+                        Sy = K(j,m)*(eta_sampling[l]**j)*(1-eta_sampling[l])**(m-j)
                         F[l][k][j][i] = Sx*Sy
 
-        print len(F), len(F[0]), len(F[0][0]), len(F[0][0][0])
+        # print len(F), len(F[0]), len(F[0][0]), len(F[0][0][0])
 
+        # Unfolding tensor
+        F_matrix = np.zeros((n**2,n**2))
+        f_vector = np.zeros((n**2,1))
+        for l in range(q):
+            for k in range(p):
+                for j in range(m+1):
+                    for i in range(n):
+                        ii = n*(l) + k 
+                        jj = n*(j) + i
 
-        A_lower = np.dot(inv(F), f)
-        print A_lower
-        print len(A_lower), len(A_lower[0])
-        print A_lower[0]
-        print len(BA_c), len(BA_c[0])
-        for i in range(n):
-            for j in range(m+1):
-                ii = i + 1
-                BA_c[ii][j] = A_lower[i][j]
+                        F_matrix[ii][jj] = F[l][k][j][i]
+                        f_vector[ii] = f[l][k]
 
+        solution = np.linalg.solve(F_matrix,f_vector)
+
+        for j in range(m+1):
+            for i in range(n):
+                jj = n*(j) + i 
+                BA_c[i+1][j] = solution[jj][0]
+        print BA_c
     return BA_c, chord_c
         
 if __name__ == '__main__':
@@ -187,13 +211,13 @@ if __name__ == '__main__':
     initial_chord = 1.
     final_chord = 1.
     # Nosecone height
-    span = 1.
+    span = 2.
     # Passive shape coefficients for parent
     P_p = [.5,.4,.3]
     # Active shape coefficients for parent
     A_p = [.5,.1,.1]
     # Passive shape coefficients for child
-    P_c = [.6,.5,.2]
+    P_c = [1.,.7]
     # location of the nosecone tip
     initial_nosecone_x = 0
     final_nosecone_x = 0.
@@ -204,21 +228,22 @@ if __name__ == '__main__':
     # Location of spars
     psi_spars = [0.3,0.7]
     # Sampling of spanwise dimension
-    eta_sampling = []
-    for i in range(len(psi_spars)):
-        eta_sampling.append(i/(len(psi_spars)-1))
+    eta_sampling = [.0,1.]
+    # for i in range(len(psi_spars)):
+        # eta_sampling.append(i/(len(psi_spars)-1))
+ 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    BP_p = [[A_p[0],  A_p[0]],
-            [A_p[1],  A_p[1]],
-            [A_p[2],  A_p[2]]]
-    BA_p = [[P_p[0],  P_p[0]],
+    BP_p = [[P_p[0],  P_p[0]],
             [P_p[1],  P_p[1]],
             [P_p[2],  P_p[2]]]
-    BP_c = [[P_c[0],  P_c[0]],
-            [P_c[1],  P_c[1]],
-            [P_c[2],  P_c[2]]]
+    BA_p = [[A_p[0],  A_p[0]],
+            [A_p[1],  A_p[1]],
+            [A_p[2],  A_p[2]]]
+    BP_c = [[P_p[0],  P_p[0]], #Initial guess for leading edge is the parent
+            [P_c[0],  P_c[0]],
+            [P_c[1],  P_c[1]]]
     Na = 0.0
-    mesh =(20,20)
+    mesh =(40,40)
     N={'eta':[0,1], 'N1':[.5,.5], 'N2':[1., 1.]}
     chord = {'eta':[0,1], 'A':[0.], 'N1':Na, 'N2':Nb, 
              'initial':initial_chord,'final':final_chord}
@@ -228,21 +253,24 @@ if __name__ == '__main__':
              'psi_root':0.,'zeta_root':0, 'axis':axis}
     delta_TE = {'eta':[0,1], 'A':[0.], 'N1':Nb, 'N2':Na, 
              'initial':0, 'final':0}
-          
+        
     BA_c, chord_c = calculate_dependent_shape_coefficients(
                      BP_p, BA_p, BP_c, chord, sweep, twist, delta_TE, sweep, twist, eta_sampling,
-                     psi_spars, psi_spars,  morphing='camber')
-    [X_u,X_l,Y_u,Y_l,Z_u, Z_l] = CST_3D(B, B,  span, N, mesh, chord, sweep, twist)
+                     psi_spars, morphing='camber')
+    chord_C = {'eta':[0,1], 'A':[0.], 'N1':Na, 'N2':Nb, 
+             'initial':chord_c[0],'final':chord_c[1]}     
 
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    surf_u = ax.plot_surface(X_u, Z_u, Y_u, cmap=plt.get_cmap('jet'),
-                       linewidth=0, antialiased=False)
-    surf_l = ax.plot_surface(X_l, Z_l, Y_l, cmap=plt.get_cmap('jet'),
-                       linewidth=0, antialiased=False)
+    [X_u,X_l,Y_u,Y_l,Z_u, Z_l] = CST_3D(BP_c, BA_c,  span, N, mesh, chord_C, sweep, twist)
+
+    # fig = plt.figure()
+    # ax = fig.gca(projection='3d')
+    # surf_u = ax.plot_surface(X_u, Z_u, Y_u, cmap=plt.get_cmap('jet'),
+                       # linewidth=0, antialiased=False)
+    # surf_l = ax.plot_surface(X_l, Z_l, Y_l, cmap=plt.get_cmap('jet'),
+                       # linewidth=0, antialiased=False)
     
     # Customize the z axis.
-    ax.set_zlim(0, 4)
+    # ax.set_zlim(0, 4)
 
     max_range = np.array([X_u.max()-X_u.min(), X_l.max()-X_l.min(), Z_u.max()-Z_l.min(),
                           Y_u.max()-Y_u.min(), Y_l.max()-Y_l.min()]).max() / 2.0
@@ -250,13 +278,30 @@ if __name__ == '__main__':
     mid_x = (X_u.max()+X_l.min()) * 0.5
     mid_y = (Y_u.max()+Y_l.min()) * 0.5
     mid_z = (Z_u.max()+Z_l.min()) * 0.5
-    ax.set_xlim(mid_x - max_range, mid_x + max_range)
-    ax.set_ylim(mid_z - max_range, mid_z + max_range)
-    ax.set_zlim(mid_y - max_range, mid_y + max_range)
-    plt.xlabel('x')
-    plt.ylabel('z')
-    plt.show()
+    # ax.set_xlim(mid_x - max_range, mid_x + max_range)
+    # ax.set_ylim(mid_z - max_range, mid_z + max_range)
+    # ax.set_zlim(mid_y - max_range, mid_y + max_range)
+    # plt.xlabel('x')
+    # plt.ylabel('z')
+    # plt.show()
 
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+
+    ax.plot_trisurf(X_u.flatten(),  Y_u.flatten(), Z_u.flatten(), linewidth=0.2, antialiased=True,color='r', alpha=1.)
+    ax.plot_trisurf(X_l.flatten(),  Y_l.flatten(), Z_l.flatten(), linewidth=0.2, antialiased=True,color='r', alpha=1.)
+    
+    # Doing for the original configuration
+    [X_u,X_l,Y_u,Y_l,Z_u, Z_l] = CST_3D(BP_p, BA_p,  span, N, mesh, chord_C, sweep, twist)
+    ax.plot_trisurf(X_u.flatten(),  Y_u.flatten(), Z_u.flatten(), linewidth=0.2, antialiased=True,color='b', alpha=1.)
+    ax.plot_trisurf(X_l.flatten(),  Y_l.flatten(), Z_l.flatten(), linewidth=0.2, antialiased=True,color='b', alpha=1.)
+    # ax.plot([sweep['initial'] + twist['psi_root']*chord['initial'],sweep['initial'] + twist['psi_root']*chord['initial'] + axis[0]],[0,axis[1]])
+    ax.set_xlim(mid_x - max_range, mid_x + max_range)
+    ax.set_ylim(mid_y - max_range, mid_y + max_range)
+    ax.set_zlim(mid_z - max_range, mid_z + max_range)
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.show()
     BREAK
     #==============================================================================
     # Calculate dependent coefficients
