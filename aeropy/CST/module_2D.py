@@ -22,13 +22,13 @@ except:
     in_Abaqus = False
 
 if in_Abaqus != True:
-	from scipy.integrate import quad
-	from scipy.optimize import fsolve, minimize
-	from scipy import optimize
-	from scipy.optimize import differential_evolution
+    from scipy.integrate import quad
+    from scipy.optimize import fsolve, minimize
+    from scipy import optimize
+    from scipy.optimize import differential_evolution
 
-from airfoil_module import CST
-from xfoil_module import output_reader
+from aeropy.airfoil_module import CST
+from aeropy.xfoil_module import output_reader
 
 # Bersntein Polynomial
 def K(r,n):
@@ -201,7 +201,7 @@ def calculate_arc_length(psi_initial, psi_final, A_j, deltaz, c_j):
     
     L, err =  quad(integrand, psi_initial, psi_final, args=(A_j, deltaz, c_j))
     return L
-	
+    
 def fitting_shape_coefficients(filename, bounds = 'Default', n = 5,
                                return_data = False, return_error = False,
                                optimize_deltaz = False):
@@ -710,5 +710,5 @@ if __name__ == '__main__':
     plt.scatter(x, Data['error'])
     plt.grid()
     plt.xlabel('Number of shape functions')
-    plt.ylabel('Haussdorf Distance (adimensional)')	
+    plt.ylabel('Haussdorf Distance (adimensional)')    
     plt.show()   

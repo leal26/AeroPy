@@ -3,8 +3,8 @@ import pickle
 import math
 import matplotlib.pyplot as plt
 
-from airfoil_module import CST
-from xfoil_module import output_reader
+from aeropy.airfoil_module import CST
+from aeropy.xfoil_module import output_reader
 
 data = pickle.load(open('shape_study.p','rb'))
 

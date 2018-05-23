@@ -4,9 +4,9 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from morphing import calculate_shape_coefficients_tracing, calculate_dependent_shape_coefficients
-from airfoil_module import CST
-from CST_module import *
+from aeropy.morphing.camber_2D import calculate_shape_coefficients_tracing, calculate_dependent_shape_coefficients
+from aeropy.geometry.airfoil import CST
+from aeropy.CST.module_2D import *
 
 morphing_direction = 'forwards'
 inverted = False
@@ -56,37 +56,37 @@ plt.plot(x, y['u'],'r--',label='Parent', lw=2)
 plt.plot(x, y['l'],'r--',label = None, lw=2)
 
 if morphing_direction == 'forwards':
-	psi_flats = []
-	intersections_x_children = [0]
-	intersections_y_children = [0]
-	intersections_x_parent = [0]
-	intersections_y_parent = [0]
-	for j in range(len(psi_spars)):
-		psi_parent_j = psi_spars[j]
-		# Calculate psi at landing
-		# psi_baseline, Au_baseline, Au_goal, deltaz, c_baseline, c_goal
-		psi_children_j = calculate_psi_goal(psi_parent_j, Au_P, Au_C, deltaz, c_P, c_C)
-		x_children_j = psi_children_j*c_C
+    psi_flats = []
+    intersections_x_children = [0]
+    intersections_y_children = [0]
+    intersections_x_parent = [0]
+    intersections_y_parent = [0]
+    for j in range(len(psi_spars)):
+        psi_parent_j = psi_spars[j]
+        # Calculate psi at landing
+        # psi_baseline, Au_baseline, Au_goal, deltaz, c_baseline, c_goal
+        psi_children_j = calculate_psi_goal(psi_parent_j, Au_P, Au_C, deltaz, c_P, c_C)
+        x_children_j = psi_children_j*c_C
 
-		# Calculate xi at landing
-		temp = CST(x_children_j, c_C, [deltaz/2., deltaz/2.], Al= Al_C, Au =Au_C)
-		y_children_j = temp['u']
+        # Calculate xi at landing
+        temp = CST(x_children_j, c_C, [deltaz/2., deltaz/2.], Al= Al_C, Au =Au_C)
+        y_children_j = temp['u']
 
-		s = calculate_spar_direction(psi_spars[j], Au_P, Au_C, deltaz, c_C)
+        s = calculate_spar_direction(psi_spars[j], Au_P, Au_C, deltaz, c_C)
 
-		# Print spars for children
-		plt.plot([x_children_j, x_children_j - spar_thicknesses[j]*s[0]],[y_children_j, y_children_j - spar_thicknesses[j]*s[1]], c = 'b', lw=2, label=None)
-		psi_flats.append(x_children_j - spar_thicknesses[j]*s[0])
-		y = CST(np.array([psi_parent_j*c_P]), c_P, deltasz=[deltaz/2., deltaz/2.], Al= Al_P, Au =Au_P)
+        # Print spars for children
+        plt.plot([x_children_j, x_children_j - spar_thicknesses[j]*s[0]],[y_children_j, y_children_j - spar_thicknesses[j]*s[1]], c = 'b', lw=2, label=None)
+        psi_flats.append(x_children_j - spar_thicknesses[j]*s[0])
+        y = CST(np.array([psi_parent_j*c_P]), c_P, deltasz=[deltaz/2., deltaz/2.], Al= Al_P, Au =Au_P)
 
-		intersections_x_children.append(x_children_j - spar_thicknesses[j]*s[0])
-		intersections_y_children.append(y_children_j - spar_thicknesses[j]*s[1])
+        intersections_x_children.append(x_children_j - spar_thicknesses[j]*s[0])
+        intersections_y_children.append(y_children_j - spar_thicknesses[j]*s[1])
 
-		# Print spars for parents
-		plt.plot([psi_parent_j*c_P, psi_parent_j*c_P], [y['u'], y['u']-spar_thicknesses[j]], 'r--', lw=2, label = None)
+        # Print spars for parents
+        plt.plot([psi_parent_j*c_P, psi_parent_j*c_P], [y['u'], y['u']-spar_thicknesses[j]], 'r--', lw=2, label = None)
 
-		intersections_x_parent.append(psi_parent_j*c_P)
-		intersections_y_parent.append(y['u']-spar_thicknesses[j])
+        intersections_x_parent.append(psi_parent_j*c_P)
+        intersections_y_parent.append(y['u']-spar_thicknesses[j])
 
 plt.scatter([0]+ValX, [0]+ValY)
 plt.xlabel('$\psi^p$', fontsize = 14)

@@ -12,14 +12,14 @@ import math
 import numpy as np
 from numpy.linalg import inv
 
-from airfoil_module import CST
-from CST_module import *
+from aeropy.airfoil_module import CST
+from aeropy.CST.module_2D import *
 
 # Just as quick trick, to make upper morph I just mirror the image in regards to x
 inverted = False
 # Defines if basckwards or forwards morphing
 morphing_direction = 'backwards'
-	
+    
 #==============================================================================
 # Calculate dependent shape function parameters
 #==============================================================================
@@ -169,7 +169,7 @@ def calculate_shape_coefficients_tracing(A0, x, y, N1, N2, chord = 1., EndThickn
     print x
     Psi = np.array(x)/chord
     Xi = np.array(y)/chord
-	
+    
     EndThickness = EndThickness/chord
     T = np.zeros((n,n))
     t = np.zeros((n,1))
@@ -355,7 +355,7 @@ if __name__ == '__main__':
         # AC_u2 = 0.25          #Adimensional
         # AC_u3 = 0.25                #Adimensional
         # AC_u4 = 0.25             #Adimensional
-        # AC_u5 = 0.25   	
+        # AC_u5 = 0.25       
         # Medium
         # AC_u1 = 0.2187            #Adimensional
         # AC_u2 = 0.17843          #Adimensional
@@ -481,7 +481,7 @@ if __name__ == '__main__':
             intersections_x_children.append(c_C)
             intersections_y_children.append(0)
             intersections_x_parent.append(c_P)
-            intersections_y_parent.append(0)		
+            intersections_y_parent.append(0)        
             # Wire lengths
             for i in range(len(intersections_x_children)-1):
                 length_parent = math.sqrt((intersections_x_parent[i]-intersections_x_parent[i+1])**2+

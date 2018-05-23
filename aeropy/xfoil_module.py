@@ -14,7 +14,7 @@ import shutil # Modules necessary for saving multiple plots
 import datetime
 import time
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#                       	Core Functions
+#                           Core Functions
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
          NACA=True, GDES=False, iteration=10, flap = None, PANE = False,
@@ -74,8 +74,8 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
 
     :param PANE: if there are more than 495 surface points, the paneling
           method will not be used. Need to use the PANE subroutine to
-		  solve this. It will find the best points that represent the
-		  geometry (only 160 of them).
+          solve this. It will find the best points that represent the
+          geometry (only 160 of them).
 
     :param NORM: For good results using the panel method, Xfoil
           requires normalized coordinates, so this option should
@@ -174,7 +174,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
         raise Exception("To find alpha_L_0, alfas must not be defined")
     elif output != "Alfa_L_0" and alfas == 'none':
         raise Exception("To find anything except alpha_L_0, you need to "
-		    "define the values for alfa")
+            "define the values for alfa")
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #                           Start Xfoil
@@ -552,7 +552,7 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
         - separator: Main kind of separator in file. The code will
           replace any variants of this separator for processing. Extra
           components such as end-line, kg m are all eliminated. Separator
-		  can also be a list of separators to use
+          can also be a list of separators to use
 
         - output: defines what the kind of file we are opening to
           ensure we can skip the right amount of lines. By default it
@@ -606,13 +606,13 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
                 seconds = time.strptime(variable.split('.')[0],'%H:%M:%S')
                 miliseconds = float(variable.split('.')[1])*0.1**len(variable.split('.')[1])
                 total = miliseconds + datetime.timedelta(hours=seconds.tm_hour, minutes=seconds.tm_min,
-                						  seconds=seconds.tm_sec).total_seconds()	
+                                          seconds=seconds.tm_sec).total_seconds()    
 
             except:
                 seconds = time.strptime(variable.split('.')[0],'%M:%S')
                 miliseconds = float(variable.split('.')[1])*0.1**len(variable.split('.')[1])
                 total = miliseconds + datetime.timedelta(hours=seconds.tm_hour, minutes=seconds.tm_min,
-										  seconds=seconds.tm_sec).total_seconds()		
+                                          seconds=seconds.tm_sec).total_seconds()        
             return total
         elif type_structure == 'string':
             return variable
@@ -641,9 +641,9 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
 
     # Add the possibility of more than one separator
     if type(separator) != list:
-    	separator_list = [separator]
+        separator_list = [separator]
     else:
-    	separator_list = separator
+        separator_list = separator
     structure_count = 0
     with open (filename, "r") as myfile:
         # Jump first lines which are useless
@@ -659,14 +659,14 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
                     # Open line and replace anything we do not want (
                     # variants of the separator and units)
                     for separator in separator_list:
-                    	line = line.replace(separator + separator + separator +
-                    	separator + separator + separator, ' ').replace(separator
-                    	+ separator + separator + separator + separator,
-                    	' ').replace(separator + separator + separator +
-                    	separator, ' ').replace(separator + separator + separator,
-                    	' ').replace(separator + separator, ' ').replace(separator,
-                    	' ').replace("\n","").replace("(kg)", "").replace("(m)",
-                    	"").replace("(Pa)","").replace("(in)", "").replace("#", "")
+                        line = line.replace(separator + separator + separator +
+                        separator + separator + separator, ' ').replace(separator
+                        + separator + separator + separator + separator,
+                        ' ').replace(separator + separator + separator +
+                        separator, ' ').replace(separator + separator + separator,
+                        ' ').replace(separator + separator, ' ').replace(separator,
+                        ' ').replace("\n","").replace("(kg)", "").replace("(m)",
+                        "").replace("(Pa)","").replace("(in)", "").replace("#", "")
 
                     header = line.split(' ')
                     n_del = header.count('')
@@ -688,11 +688,11 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
             else:
                 if structure == False:
                     for separator in separator_list:
-                    	line = line.replace(separator + separator + separator,
-                    	' ').replace(separator + separator, ' ').replace(separator,
-                    	' ').replace("\n", "").replace('---------', '').replace(
-                    	'--------', '').replace('-------', '').replace('------',
-                    	'')
+                        line = line.replace(separator + separator + separator,
+                        ' ').replace(separator + separator, ' ').replace(separator,
+                        ' ').replace("\n", "").replace('---------', '').replace(
+                        '--------', '').replace('-------', '').replace('------',
+                        '')
 
                     line_components = line.split(' ')
 
@@ -798,7 +798,7 @@ def file_name(airfoil, alfas='none', output='Cp'):
     @author: Pedro Leal
     """
 
-	# At first verify if alfas was defined
+    # At first verify if alfas was defined
     if alfas == 'none':
         filename = '%s_%s' % (output, airfoil)
     elif alfas != 'none':
@@ -826,7 +826,7 @@ def file_name(airfoil, alfas='none', output='Cp'):
     return filename
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#                       	Utility functions
+#                           Utility functions
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10, NACA=True, delete=False, PANE=False):
@@ -834,7 +834,7 @@ def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10, NACA=True, delet
     filename = file_name(airfoil, alpha, output='Polar')
     # If file already exists, there is no need to recalculate it.
     if not os.path.isfile(filename):
-		call(airfoil, alpha, Reynolds=Reynolds, output='Polar',
+        call(airfoil, alpha, Reynolds=Reynolds, output='Polar',
               iteration= iteration, NACA=NACA, PANE=PANE)
     coefficients = {}
     # Data from file
@@ -859,7 +859,7 @@ def find_pressure_coefficients(airfoil, alpha, Reynolds=0, iteration=10,
              NACA=NACA, PANE=PANE)
     else:
         if not os.path.isfile(filename):
-    		call(airfoil, alpha, Reynolds=Reynolds, output='Cp', iteration=iteration,
+            call(airfoil, alpha, Reynolds=Reynolds, output='Cp', iteration=iteration,
                NACA=NACA, PANE=PANE)
     coefficients = {}
     # Data from file

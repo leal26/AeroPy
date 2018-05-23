@@ -9,5 +9,5 @@ setup(name='aeropy',
       author='leal26',
       author_email='leal26@tamu.edu',
       license='MIT',
-      packages=['aeropy'],
+      packages=['aeropy','aeropy.CST','aeropy.morphing','aeropy.geometry'],
       zip_safe=False)

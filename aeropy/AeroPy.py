@@ -4,9 +4,9 @@ Created on Sun Aug 16 20:59:22 2015
 
 @author: Pedro
 """
-import aero_module as ar
-import xfoil_module as xf
-import airfoil_module as af
+import aeropy.aero_module as ar
+import aeropy.xfoil_module as xf
+import aeropy.geometry.airfoil as af
 
 def find_3D_coefficients(airfoil, alpha, Reynolds=0, iteration=10, NACA=True,
                          N=10, span=10., taper=1., chord_root=1, alpha_root=1.,

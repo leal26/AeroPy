@@ -2,7 +2,7 @@ from scipy.interpolate import interp1d
 import numpy as np
 import math
 
-from airfoil_module import CST, create_x
+from aeropy.geometry.airfoil import CST, create_x
 
 def interpolation_function(eta, shape = 'linear', 
                            points = {'eta':[0,1], 'to_interpolate':[1,.7]}):

@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import xfoil_module as xf
-from CST_module import *
-from aero_module import Reynolds
-from airfoil_module import CST, create_x
+import aeropy.xfoil_module as xf
+from aeropy.CST.module_2D import *
+from aeropy.aero_module import Reynolds
+from aeropy.geometry.airfoil import CST, create_x
 
 # Au = [0.23993240191629417, 0.34468227138908186, 0.18125405377549103, 
         # 0.35371349126072665, 0.2440815012119143, 0.25724974995738387]

@@ -2,7 +2,8 @@ from scipy.interpolate import interp1d
 import numpy as np
 import math
 
-from airfoil_module import CST
+from aeropy.airfoil_module import CST
+
 def taper_function(eta, shape = 'linear', points = {'eta':[0,1], 'chord':[1,.7]}):
     """Calculate chord along span of the wing.
 

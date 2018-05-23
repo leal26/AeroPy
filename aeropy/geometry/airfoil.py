@@ -263,7 +263,7 @@ def Naca00XX(c, t, x_list, TE_t = False, return_dict = 'y', for_xfoil = True):
     :param c: chord
     :param t: max thickness normalized by the chord (t/c)
     :param x_list: points between 0 and c (chord lenght). If dictionary with keys
-					u and l, calculates x based on that.
+                    u and l, calculates x based on that.
     :param TE_t: trailing edge thickness. If False it is the standard
                  thickness for a NACA airfoil. Otherwise it is the given value.
     :param return_dict: return dictionary y('y') or x and y ('xy')
@@ -278,50 +278,50 @@ def Naca00XX(c, t, x_list, TE_t = False, return_dict = 'y', for_xfoil = True):
     y_upper = []
     y_lower = []
     if type(x_list) == list:
-		for x in x_list:
-			xc= x/c # Is just for increase speed and facilitate future changes.
-			a1 = 5*t*c
-			t1 = 0.2969*(math.sqrt(xc))
-			t2 = -0.1260*xc
-			t3 = -0.3516*(xc**2)
-			t4 = 0.2843*(xc**3)
-			if TE_t == False:
-				t5 = -0.1015*(xc**4)
-			else:
-				t5 = (TE_t/(10*t) - 0.1036)*(xc**4)
-			y = (a1*(t1+t2+t3+t4+t5))
-			y_upper.append(y)
-			y_lower.append(y*(-1)) # is just for pick the y axis
-										   # negative numbers
+        for x in x_list:
+            xc= x/c # Is just for increase speed and facilitate future changes.
+            a1 = 5*t*c
+            t1 = 0.2969*(math.sqrt(xc))
+            t2 = -0.1260*xc
+            t3 = -0.3516*(xc**2)
+            t4 = 0.2843*(xc**3)
+            if TE_t == False:
+                t5 = -0.1015*(xc**4)
+            else:
+                t5 = (TE_t/(10*t) - 0.1036)*(xc**4)
+            y = (a1*(t1+t2+t3+t4+t5))
+            y_upper.append(y)
+            y_lower.append(y*(-1)) # is just for pick the y axis
+                                           # negative numbers
     elif type(x_list) == dict:
-		for x in x_list['u']:
-			xc= x/c # Is just for increase speed and facilitate future changes.
-			a1 = 5*t*c
-			t1 = 0.2969*(math.sqrt(xc))
-			t2 = -0.1260*xc
-			t3 = -0.3516*(xc**2)
-			t4 = 0.2843*(xc**3)
-			if TE_t == False:
-				t5 = -0.1015*(xc**4)
-			else:
-				t5 = (TE_t/(10*t) - 0.1036)*(xc**4)
-			y = (a1*(t1+t2+t3+t4+t5))
-			y_upper.append(y)
+        for x in x_list['u']:
+            xc= x/c # Is just for increase speed and facilitate future changes.
+            a1 = 5*t*c
+            t1 = 0.2969*(math.sqrt(xc))
+            t2 = -0.1260*xc
+            t3 = -0.3516*(xc**2)
+            t4 = 0.2843*(xc**3)
+            if TE_t == False:
+                t5 = -0.1015*(xc**4)
+            else:
+                t5 = (TE_t/(10*t) - 0.1036)*(xc**4)
+            y = (a1*(t1+t2+t3+t4+t5))
+            y_upper.append(y)
 
-		for x in x_list['l']:
-			xc= x/c # Is just for increase speed and facilitate future changes.
-			a1 = 5*t*c
-			t1 = 0.2969*(math.sqrt(xc))
-			t2 = -0.1260*xc
-			t3 = -0.3516*(xc**2)
-			t4 = 0.2843*(xc**3)
-			if TE_t == False:
-				t5 = -0.1015*(xc**4)
-			else:
-				t5 = (TE_t/(10*t) - 0.1036)*(xc**4)
-			y = (a1*(t1+t2+t3+t4+t5))
-			y_lower.append(y*(-1)) # is just for pick the y axis
-										   # negative numbers
+        for x in x_list['l']:
+            xc= x/c # Is just for increase speed and facilitate future changes.
+            a1 = 5*t*c
+            t1 = 0.2969*(math.sqrt(xc))
+            t2 = -0.1260*xc
+            t3 = -0.3516*(xc**2)
+            t4 = 0.2843*(xc**3)
+            if TE_t == False:
+                t5 = -0.1015*(xc**4)
+            else:
+                t5 = (TE_t/(10*t) - 0.1036)*(xc**4)
+            y = (a1*(t1+t2+t3+t4+t5))
+            y_lower.append(y*(-1)) # is just for pick the y axis
+                                           # negative numbers
     if len(x_list) == 1:
         y = {'u': y_upper[0],
              'l': y_lower[0]}        
@@ -346,7 +346,7 @@ def Naca00XX(c, t, x_list, TE_t = False, return_dict = 'y', for_xfoil = True):
                      'l':x_list}                
             return x, y
         elif type(x_list) == dict:
-            return x_list, y			
+            return x_list, y            
 #==============================================================================
 # The following function are related to the use of plain flaps
 #==============================================================================
@@ -1181,8 +1181,8 @@ def offset_point(x, y, rho, output_format = 'separate'):
 
 if __name__ == '__main__':  
     
-    import xfoil_module as xf
-    import aero_module as ar
+    import aeropy.xfoil_module as xf
+    import aeropy.aero_module as ar
     
     alpha = 0.
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1206,7 +1206,7 @@ if __name__ == '__main__':
     upper_static, upper_flap = find_flap(upper, hinge)
     lower_static, lower_flap = find_flap(lower, hinge, extra_points = 'lower')
     
-    deflection = -90.
+    deflection = -10.
     
     upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
     

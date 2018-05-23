@@ -12,15 +12,15 @@ import math
 import numpy as np
 from numpy.linalg import inv
 
-from airfoil_module import CST
-from CST_module_3D import CST_3D
-from CST_module import calculate_c_baseline, calculate_psi_goal, calculate_spar_direction
+from aeropy.airfoil_module import CST
+from aeropy.CST.module_3D import CST_3D
+from aeropy.CST.module_2D import calculate_c_baseline, calculate_psi_goal, calculate_spar_direction
 
 # Just as quick trick, to make upper morph I just mirror the image in regards to x
 inverted = False
 # Defines if basckwards or forwards morphing
 morphing_direction = 'forwards'
-	
+    
 #==============================================================================
 # Calculate dependent shape function parameters
 #==============================================================================
@@ -260,8 +260,13 @@ if __name__ == '__main__':
     chord_C = {'eta':[0,1], 'A':[0.], 'N1':Na, 'N2':Nb, 
              'initial':chord_c[0],'final':chord_c[1]}     
 
-    [X_u,X_l,Y_u,Y_l,Z_u, Z_l] = CST_3D(BP_c, BA_c,  span, N, mesh, chord_C, sweep, twist)
-
+    Data = CST_3D(BP_c, BA_c,  span, N, mesh, chord_C, sweep, twist)
+    X_u = Data['upper']['z']
+    X_l = Data['lower']['z']
+    Y_u = Data['upper']['y']
+    Y_l = Data['lower']['y']
+    Z_u = Data['upper']['z']
+    Z_l = Data['lower']['z']
     # fig = plt.figure()
     # ax = fig.gca(projection='3d')
     # surf_u = ax.plot_surface(X_u, Z_u, Y_u, cmap=plt.get_cmap('jet'),
@@ -292,7 +297,13 @@ if __name__ == '__main__':
     ax.plot_trisurf(X_l.flatten(),  Y_l.flatten(), Z_l.flatten(), linewidth=0.2, antialiased=True,color='r', alpha=1.)
     
     # Doing for the original configuration
-    [X_u,X_l,Y_u,Y_l,Z_u, Z_l] = CST_3D(BP_p, BA_p,  span, N, mesh, chord_C, sweep, twist)
+    Data = CST_3D(BP_p, BA_p,  span, N, mesh, chord_C, sweep, twist)
+    X_u = Data['upper']['z']
+    X_l = Data['lower']['z']
+    Y_u = Data['upper']['y']
+    Y_l = Data['lower']['y']
+    Z_u = Data['upper']['z']
+    Z_l = Data['lower']['z']
     ax.plot_trisurf(X_u.flatten(),  Y_u.flatten(), Z_u.flatten(), linewidth=0.2, antialiased=True,color='b', alpha=1.)
     ax.plot_trisurf(X_l.flatten(),  Y_l.flatten(), Z_l.flatten(), linewidth=0.2, antialiased=True,color='b', alpha=1.)
     # ax.plot([sweep['initial'] + twist['psi_root']*chord['initial'],sweep['initial'] + twist['psi_root']*chord['initial'] + axis[0]],[0,axis[1]])
