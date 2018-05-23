@@ -481,7 +481,31 @@ def find_flap(data, hinge, extra_points = None):
             static_data['y'].append(yi)   
     return static_data, flap_data
 
-def rotate(upper, lower, origin, theta, unit_theta = 'deg'):
+def find_edges(x, y):
+    '''Defining chord as the greatest distance from the trailing edge,
+       find the leading edge'''
+       
+    # The Trailing edge will always be the point with greatest x for small angles
+    TE_x = max(x)
+    TE_index = x.index(TE_x)
+    TE_y = y[TE_index]
+    
+    chord = 0
+    LE_index = 0
+    
+    for i in range(len(x)):
+        distance = math.sqrt((x[i]-TE_x)**2+(y[i]-TE_y)**2)
+        if distance > chord:
+            LE_index = i
+            chord = distance
+    theta = math.atan2(y[TE_index] - y[LE_index],
+                       x[TE_index] - x[LE_index])
+    return ({'x':x[LE_index], 'y':y[LE_index]},
+            {'x':x[TE_index], 'y':y[TE_index]},
+            theta, chord)
+     
+def rotate(upper, lower, origin, theta, unit_theta = 'deg', 
+           move_to_origin = False, chord = 1.):
     """
     :param upper: dictionary with keys x and y, each a list
     
@@ -491,6 +515,9 @@ def rotate(upper, lower, origin, theta, unit_theta = 'deg'):
     
     :param theta: float representing angle in degrees clock-wise
     
+    :param move_to_origin: if true, will establish origin as (0,0)
+    
+    :param chord: will normalize results by this chors
     output: rotated_upper, rotated_lower
     """
     output = []
@@ -499,9 +526,10 @@ def rotate(upper, lower, origin, theta, unit_theta = 'deg'):
     if unit_theta == 'deg':
         theta = theta * np.pi/180.
     # Rotation transformation Matrix
+
     T = [[np.cos(theta), np.sin(theta)],
         [-np.sin(theta), np.cos(theta)]]
-        
+
     for coordinates in [upper, lower]:
         rotated_coordinates = {'x':[], 'y':[]}
         for i in range(len(coordinates['x'])):
@@ -510,13 +538,27 @@ def rotate(upper, lower, origin, theta, unit_theta = 'deg'):
             cx = coordinates['x'][i] - origin['x']
             cy = coordinates['y'][i] - origin['y']
             # Rotate
-            rot_x = T[0][0]*cx + T[0][1]*cy
-            rot_y = T[1][0]*cx + T[1][1]*cy
+            rot_x = (T[0][0]*cx + T[0][1]*cy)/chord
+            rot_y = (T[1][0]*cx + T[1][1]*cy)/chord
             # Store and add back the values of the origin
-            rotated_coordinates['x'].append(rot_x + origin['x'])
-            rotated_coordinates['y'].append(rot_y + origin['y'])
+            if move_to_origin:
+                rotated_coordinates['x'].append(rot_x)
+                rotated_coordinates['y'].append(rot_y)            
+            else:
+                rotated_coordinates['x'].append(rot_x + origin['x'])
+                rotated_coordinates['y'].append(rot_y + origin['y'])
         output.append(rotated_coordinates)
-    return output[0], output[1]
+        # import matplotlib.pyplot as plt
+        # plt.figure()
+        # plt.scatter(coordinates['x'],coordinates['y'])
+        # plt.show()
+
+    # In case only one surface is of interest
+
+    if len(lower['x']) == 0:
+        return output[0]
+    else:
+        return output[0], output[1]
 
 def clean(upper_static, upper_flap, lower_static, lower_flap, hinge, 
           deflection, N = None, return_flap_i = True,
