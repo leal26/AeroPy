@@ -1,4 +1,5 @@
 '''Programmed by Antoine BALDO'''
+from __future__ import print_function
 
 import sys
 import numpy as np
@@ -37,7 +38,7 @@ while error>tol:
                                                         A[1:], psi_spars, Au_P, Al_P,
                                                         deltaz, c_P, morphing=morphing_direction)
     error = abs((AC_u0-Au_C[0])/AC_u0) 
-    print 'Iteration: ' + str(counter) + ', Error: ' +str(error)
+    print('Iteration: ' + str(counter) + ', Error: ' +str(error))
     AC_u0 = Au_C[0]
     counter += 1
 

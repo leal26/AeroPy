@@ -11,6 +11,7 @@ Suggested anity checks:
       to be sure it is good
 @author: Pedro
 """
+from __future__ import print_function
 import math
 import numpy as np
 import warnings
@@ -317,14 +318,14 @@ def fitting_shape_coefficients(filename, bounds = 'Default', n = 5,
     else:
         bounds = upper_bounds + lower_bounds
         deltaz = (data['y'][0] - data['y'][-1])
-    print bounds
+    print(bounds)
     upper, lower = separate_upper_lower(data)
     # a = data
     # x = data['x']
     result = differential_evolution(shape_difference, bounds, 
                                             disp=True, popsize = 10, 
                                             args = [optimize_deltaz])
-    print 'order %i upper done' % n
+    print('order %i upper done' % n)
     # x = lower['x']
     # a = lower
     # result_lower = differential_evolution(shape_difference_lower, lower_bounds, 
@@ -481,15 +482,15 @@ if __name__ == '__main__':
     Al_L = [0.4, 0.2]
 
     c_C = calculate_c_baseline(c_L, Au_C, Au_L, deltaz)
-    print "Solution:      ", c_C
+    print("Solution:      ", c_C)
     
     psi_i = 0.4
-    print calculate_psi_goal(psi_i, Au_C, Au_L, deltaz, c_C, c_L)
+    print(calculate_psi_goal(psi_i, Au_C, Au_L, deltaz, c_C, c_L))
     
     # Plot for several testing calculat_c_baseline
     x = np.linspace(0., 1., 6)
     
-    print calculate_spar_distance(psi_i, Au_C, Au_L, Al_L, deltaz, c_L)
+    print(calculate_spar_distance(psi_i, Au_C, Au_L, Al_L, deltaz, c_L))
     c = []
     for x_i in x:
         Au_C[0] = x_i
@@ -559,7 +560,7 @@ if __name__ == '__main__':
         Au_C[0] = x_i
         cbeta_i = calculate_cbeta(psi_i, Au_C, deltaz/c_C)
         cbeta_list.append(cbeta_i)
-        print Au_C, cbeta_i
+        print(Au_C, cbeta_i)
 
     plt.plot(x, cbeta_list)
     plt.xlabel('$A_{u_0}^C$', fontsize = 20)
@@ -568,7 +569,7 @@ if __name__ == '__main__':
     plt.show()
     
 #    # Plot spar vector in landing and cruise configuration
-    print 'Plot spar vector in landing and cruise configuration'
+    print('Plot spar vector in landing and cruise configuration')
     x_landing = np.linspace(0, c_L, 500)
     plt.figure()
     colors = iter(cm.rainbow(np.linspace(0, 1, len(x))))
@@ -610,7 +611,7 @@ if __name__ == '__main__':
         s = calculate_spar_direction(psi_i, Au_C, Au_L, deltaz, c_L)
         #calculate spar length
         l = calculate_spar_distance(psi_i, Au_C, Au_L, Al_L, deltaz, c_L)
-        print s, s[0]**2 + s[1]**2
+        print(s, s[0]**2 + s[1]**2)
         color = next(colors)
         plt.scatter([psi_goal_i*c_L], [y_goal_i], c=color)
         plt.plot([psi_goal_i*c_L,psi_goal_i*c_L - l*s[0]],[y_goal_i, y_goal_i - l*s[1]], c = color, label = '$A_{u_0}$ = %.2f' % x_i)
@@ -640,7 +641,7 @@ if __name__ == '__main__':
     y = CST(psi_i*c_C, c_C, [deltaz/2., deltaz/2.], Au = Au_C, Al = Al_C)
     plt.plot([psi_i*c_C,psi_i*c_C], [y['l'], y['u']], 'b')
     
-    print 'cruise spar y', y
+    print('cruise spar y', y)
     
     #Plot cruise spars
     x = np.linspace(0, c_L, 200)
@@ -658,7 +659,7 @@ if __name__ == '__main__':
     s = calculate_spar_direction(psi_i, Au_C, Au_L, deltaz, c_L)
     l = calculate_spar_distance(psi_i, Au_C, Au_L, Al_L, deltaz, c_L)
     plt.plot([x_goal_i, x_goal_i - l*s[0]],[y_goal_i, y_goal_i - l*s[1]], c = 'r')
-    print 'landing spar y', [y_goal_i, y_goal_i - l*s[1]]
+    print('landing spar y', [y_goal_i, y_goal_i - l*s[1]])
     plt.legend()
     plt.show()
 #==============================================================================

@@ -7,6 +7,7 @@ Created on Mon Oct 17 10:36:34 2016
 
 @author: Pedro
 """
+from __future__ import print_function
 import os
 import math
 import numpy as np
@@ -79,7 +80,7 @@ def calculate_A0_moving_LE(psi_baseline, psi_goal_0, Au_baseline, Au_goal, delta
         Au_goal[0] = A0
         c = calculate_c_baseline(c_P, Au_goal, Au_baseline, deltaz/c_P, l_LE, eps_LE, psi_spars[0])
         y, err = quad(integrand, 0, psi_goal_0, args=(Au_goal, deltaz, c))
-        print 'y', y, y - (1-eps_LE)*L_baseline, A0, c
+        print('y', y, y - (1-eps_LE)*L_baseline, A0, c)
         return y - (1-eps_LE)*(L_baseline - c*l_LE)
     L_baseline, err = quad(integrand, 0, psi_baseline[0], args=(Au_baseline, deltaz, 
                                                          c_baseline))
@@ -178,7 +179,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
             # psi_baseline, Au_baseline, Au_goal, deltaz, c_baseline, c_goal
             psi_upper_children = []
             for j in range(len(psi_spars)):
-                print j
+                print(j)
                 psi_upper_children.append(calculate_psi_goal(psi_spars[j], Au_P, Au_C, deltaz,
                                        c_P, c_C,l_LE, eps_LE, psi_spars[0]))
                 
@@ -196,7 +197,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
             # plt.grid()
             # plt.show()
             # BREAK
-            print Au_P, Au_C, len(psi_spars), n
+            print(Au_P, Au_C, len(psi_spars), n)
             for j in range(len(psi_spars)):
                 xi_parent = CST(psi_spars, 1., deltasz= [deltaz/2./c_P, deltaz/2./c_P],  Al= Al_P, Au =Au_P)
                 delta_j_P = xi_parent['u'][j]-xi_parent['l'][j]
@@ -220,15 +221,15 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
                     #coherent for equations
                     r = i + 1
                     F[j][i] = K(r,n)*(psi_lower_children[j]**r)*(1-psi_lower_children[j])**(n-r)
-            print F
-            print f
+            print(F)
+            print(f)
             A_lower = np.dot(inv(F), f)
-            print 'result', A_lower
+            print('result', A_lower)
             Al_C = [Al_C0]
             for i in range(len(A_lower)):
                 Al_C.append(A_lower[i][0]) #extra [0] is necessary because of array
         error_denominator = 0
-        print 'before', former_Au_C, Au_C
+        print('before', former_Au_C, Au_C)
         for i in range(len(Au_C)):
             error_denominator += Au_C[i]**2
         error = 0
@@ -237,7 +238,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
         error = math.sqrt(error)
         # error = abs(c_C-former_chord)/c_C
         # AC_u0 = calculate_AC_u0(AC_u0, constant_LE=False)
-        print error, Al_C, Au_C
+        print(error, Al_C, Au_C)
         # former_chord = c_C
     return Au_C, Al_C, c_C, spar_thicknesses
 
@@ -255,7 +256,7 @@ def calculate_shape_coefficients_tracing(A0, x, y, N1, N2, chord = 1., EndThickn
  
     n = len(x)
     
-    print x
+    print(x)
     Psi = np.array(x)/chord
     Xi = np.array(y)/chord
     
@@ -267,7 +268,7 @@ def calculate_shape_coefficients_tracing(A0, x, y, N1, N2, chord = 1., EndThickn
         for i in range(1,n+1):
             ii = i -1
             T[jj][ii] = K(i,n)* Psi[jj]**i * (1-Psi[jj])**(n-i)
-        print Xi[jj], EndThickness, Psi[jj], A0,Psi[jj]**N1*(1-Psi[jj])**N2
+        print(Xi[jj], EndThickness, Psi[jj], A0,Psi[jj]**N1*(1-Psi[jj])**N2)
         t[jj] = (Xi[jj] - Psi[jj]*EndThickness)/(Psi[jj]**N1*(1-Psi[jj])**N2) - A0*(1-Psi[jj])**n
     # Calculate the inverse
     A = np.dot(inv(T), t)
@@ -399,7 +400,7 @@ if __name__ == '__main__':
         # Check if y values are smaller than tip y
         for y_i in other_points['y']:
             if y_i>=tip_displacement['y']:
-                print 'Y value out of bounds!'
+                print('Y value out of bounds!')
         A = calculate_shape_coefficients_tracing(A0, other_points['y'], other_points['x'], N1, N2, chord = tip_displacement['y'], EndThickness = tip_displacement['x'])
         
         #plotting
@@ -560,4 +561,4 @@ if __name__ == '__main__':
         plt.gca().set_aspect('equal', adjustable='box')
         plt.legend(loc=1)
         plt.show()
-    print calculate_strains( Au_P, Al_P, c_P, Au_C, Al_C, c_C, deltaz, psi_spars, spar_thicknesses)
+    print(calculate_strains( Au_P, Al_P, c_P, Au_C, Al_C, c_C, deltaz, psi_spars, spar_thicknesses))

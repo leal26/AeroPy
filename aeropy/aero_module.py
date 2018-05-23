@@ -9,6 +9,8 @@ Created on Mon Jul 20 17:26:19 2015
 
 @author: Pedro Leal
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import math
 import numpy as np
 
@@ -477,13 +479,13 @@ def Reynolds(height, V, c):
 if __name__ == '__main__':
 
     alpha  = 0.
-    import xfoil_module as xf
+    from . import xfoil_module as xf
     data = xf.find_pressure_coefficients('naca0012', alpha)
     C_m = calculate_moment_coefficient(data['x'], data['y'], data['Cp'], alpha)
     data_CM = xf.find_coefficients('naca0012', alpha)
-    print 'calculated:', C_m
+    print('calculated:', C_m)
 
-    print 'objective:', data_CM['CM']
+    print('objective:', data_CM['CM'])
 
     import matplotlib.pyplot as plt
 

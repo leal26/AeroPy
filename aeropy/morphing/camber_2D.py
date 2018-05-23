@@ -7,6 +7,7 @@ Created on Mon Oct 17 10:36:34 2016
 
 @author: Pedro
 """
+from __future__ import print_function
 import os
 import math
 import numpy as np
@@ -58,10 +59,10 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
     # Now that AC_u0 is known we can calculate the actual chord and AC_l0
     c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
     AC_l0 = np.sqrt(c_P/c_C)*Al_P[0]
-    print Au_C
-    print Au_P
-    print Al_P
-    print c_C, AC_l0, AC_u0
+    print(Au_C)
+    print(Au_P)
+    print(Al_P)
+    print(c_C, AC_l0, AC_u0)
     # print '0 lower shape coefficient: ',AC_l0
     # Calculate thicknessed and tensor B for the constraint linear system problem
     spar_thicknesses = []
@@ -101,7 +102,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
         xi_upper_children = []
 
         c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
-        print c_C, AC_u0, AC_l0
+        print(c_C, AC_u0, AC_l0)
         # psi_baseline, Au_baseline, Au_goal, deltaz, c_baseline, c_goal
         psi_upper_children = []
         for j in range(len(psi_spars)):
@@ -135,7 +136,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
             xi_lower_children.append(xi_l_j)
 
             f[j] = (2*xi_l_j + psi_l_j*deltaz/c_C)/(2*(psi_l_j**0.5)*(psi_l_j-1))  - AC_l0*(1-psi_l_j)**n
-        print psi_lower_children
+        print(psi_lower_children)
         F = np.zeros((n,n))
         #j is the row dimension and i the column dimension in this case
         for j in range(n):
@@ -144,7 +145,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
                 #coherent for equations
                 r = i +1
                 F[j][i] = K(r,n)*(psi_lower_children[j]**r)*(1-psi_lower_children[j])**(n-r)
-                print K(r,n)*(psi_lower_children[j]**r)*(1-psi_lower_children[j])**(n-r)
+                print(K(r,n)*(psi_lower_children[j]**r)*(1-psi_lower_children[j])**(n-r))
         A_lower = np.dot(inv(F), f)
 
         Al_C = [AC_l0]
@@ -166,7 +167,7 @@ def calculate_shape_coefficients_tracing(A0, x, y, N1, N2, chord = 1., EndThickn
  
     n = len(x)
     
-    print x
+    print(x)
     Psi = np.array(x)/chord
     Xi = np.array(y)/chord
     
@@ -178,7 +179,7 @@ def calculate_shape_coefficients_tracing(A0, x, y, N1, N2, chord = 1., EndThickn
         for i in range(1,n+1):
             ii = i -1
             T[jj][ii] = K(i,n)* Psi[jj]**i * (1-Psi[jj])**(n-i)
-        print Xi[jj], EndThickness, Psi[jj], A0,Psi[jj]**N1*(1-Psi[jj])**N2
+        print(Xi[jj], EndThickness, Psi[jj], A0,Psi[jj]**N1*(1-Psi[jj])**N2)
         t[jj] = (Xi[jj] - Psi[jj]*EndThickness)/(Psi[jj]**N1*(1-Psi[jj])**N2) - A0*(1-Psi[jj])**n
     # Calculate the inverse
     A = np.dot(inv(T), t)
@@ -310,7 +311,7 @@ if __name__ == '__main__':
         # Check if y values are smaller than tip y
         for y_i in other_points['y']:
             if y_i>=tip_displacement['y']:
-                print 'Y value out of bounds!'
+                print('Y value out of bounds!')
         A = calculate_shape_coefficients_tracing(A0, other_points['y'], other_points['x'], N1, N2, chord = tip_displacement['y'], EndThickness = tip_displacement['x'])
         
         #plotting
@@ -387,8 +388,8 @@ if __name__ == '__main__':
                                                             AC_u,
                                                             psi_spars, Au_P, Al_P,
                                                             deltaz, c_P, morphing=morphing_direction)
-        print 'solution'
-        print Al_C
+        print('solution')
+        print(Al_C)
         #==============================================================================
         #  Plot results
         #==============================================================================
@@ -474,7 +475,7 @@ if __name__ == '__main__':
         plt.show()
         
         if morphing_direction == 'forwards':
-            print c_C, c_P
+            print(c_C, c_P)
             # Calculate initial lengths
             strains, av_strains = calculate_strains(Au_P, Al_P, c_P, Au_C, Al_C, c_C, deltaz, psi_spars)
             
@@ -488,4 +489,4 @@ if __name__ == '__main__':
                                           (intersections_y_parent[i]-intersections_y_parent[i+1])**2)
                 length_children = math.sqrt((intersections_x_children[i]-intersections_x_children[i+1])**2+
                                             (intersections_y_children[i]-intersections_y_children[i+1])**2)
-                print (length_children-length_parent)/length_parent
+                print((length_children-length_parent)/length_parent)

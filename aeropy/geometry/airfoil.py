@@ -8,6 +8,7 @@ Current functionalities:
 - rotate
 @author: Pedro Leal
 """
+from __future__ import print_function
 
 import math
 import numpy as np
@@ -1005,7 +1006,7 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
             previous_deflection = deflection
             history.append([previous_deflection, previous_Cl, previous_Cd])
             deflection = deflection + step
-            print deflection
+            print(deflection)
             upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
             
             flapped_airfoil = clean(upper_static, upper_rotated, lower_static, 
@@ -1048,7 +1049,7 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
                 #Rename to make more convenient
                 current_Cd = Data['CD'][0]
                 current_Cl = Data['CL'][0]
-            print current_Cl, deflection
+            print(current_Cl, deflection)
 
     elif type == 'Same Cd':
         current_Cl = 0
@@ -1064,7 +1065,7 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
             previous_deflection = deflection
             history.append([previous_deflection, previous_Cl, previous_Cd])
             deflection = deflection + step
-            print deflection
+            print(deflection)
             upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
             
             flapped_airfoil = clean(upper_static, upper_rotated, lower_static, 
@@ -1105,12 +1106,12 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
                 Data = xf.output_reader(filename, output='Polar')
                 
                 #Rename to make more convenient
-                print deflection
+                print(deflection)
                 current_Cd = Data['CD'][0]
                 current_Cl = Data['CL'][0]
-            print current_Cd, deflection
-            print history
-            print Cd_objective
+            print(current_Cd, deflection)
+            print(history)
+            print(Cd_objective)
         deflection = previous_deflection
         Cd = previous_Cd
         Cl = previous_Cl
@@ -1129,7 +1130,7 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
             previous_deflection = deflection
 
             deflection = deflection + step
-            print deflection
+            print(deflection)
             upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
             
             flapped_airfoil = clean(upper_static, upper_rotated, lower_static, 
@@ -1143,7 +1144,7 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
             Data = xf.output_reader(filename, output='Polar')
             
             #Rename to make more convenient
-            print deflection
+            print(deflection)
             current_Cd = Data['CD'][0]
             current_Cl = Data['CL'][0]
             if deflection <= max_deflection:
@@ -1224,4 +1225,4 @@ if __name__ == '__main__':
                                     Cp = Data['Cp'], i_separator = i_separator)
     Cm = ar.calculate_moment_coefficient(x, y, Cp, alpha = alpha, c = 1., 
                                          x_ref = x_hinge, y_ref = 0.)
-    print Cm
+    print(Cm)

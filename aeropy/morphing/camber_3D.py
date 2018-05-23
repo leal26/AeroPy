@@ -7,6 +7,7 @@ Created on Mon Oct 17 10:36:34 2016
 
 @author: Pedro
 """
+from __future__ import print_function
 import os
 import math
 import numpy as np
@@ -89,7 +90,7 @@ def calculate_dependent_shape_coefficients(BP_p, BA_p, BP_c, chord_p, sweep_p,
         BP_c[0][k] = BP_c0
         BA_c[0][k] = np.sqrt(c_P/c_c)*BA_p[0][k]
         chord_c.append(c_c)
-        print c_c, BP_c0, np.sqrt(c_P/c_c)*BA_p[0][k]
+        print(c_c, BP_c0, np.sqrt(c_P/c_c)*BA_p[0][k])
     # Calculate thicknessed and tensor C for the constraint linear system problem
     psi_A_c = []
     
@@ -196,7 +197,7 @@ def calculate_dependent_shape_coefficients(BP_p, BA_p, BP_c, chord_p, sweep_p,
             for i in range(n):
                 jj = n*(j) + i 
                 BA_c[i+1][j] = solution[jj][0]
-        print BA_c
+        print(BA_c)
     return BA_c, chord_c
         
 if __name__ == '__main__':

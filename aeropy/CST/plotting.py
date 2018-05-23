@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import pickle
 import math
@@ -9,11 +10,11 @@ from aeropy.xfoil_module import output_reader
 data = pickle.load(open('shape_study.p','rb'))
 
 n=5
-print 'For n=', n, ': '
-print '\t error: ', data['error'][n-1]
-print '\t deltaz: ', data['deltaz'][n-1]
-print '\t Au: ', data['Au'][n-1]
-print '\t Al: ', data['Al'][n-1]
+print('For n=', n, ': ')
+print('\t error: ', data['error'][n-1])
+print('\t deltaz: ', data['deltaz'][n-1])
+print('\t Au: ', data['Au'][n-1])
+print('\t Al: ', data['Al'][n-1])
 
 filename = 'sampled_airfoil_data.csv'
 raw_data = output_reader(filename, separator = ', ', header = ['x', 'y'])

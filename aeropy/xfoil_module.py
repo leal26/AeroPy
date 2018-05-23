@@ -1,3 +1,4 @@
+from __future__ import print_function
 #Created on Mar  9 14:58:25 2014
 #Last update Jul 20 16:26:40 2015
 #@author: Pedro Leal
@@ -106,7 +107,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
 
         ps.stdin.write(cmd + '\n')
         if echo:
-            print cmd
+            print(cmd)
 
     def submit(output, alfa):
         """Submit job to xfoil and saves file.
@@ -161,7 +162,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0, plots=False,
         Viscid = True
     # Is alpha given or not?(in case of Alfa_L_0, then alfas=False)
     if alfas != 'none':
-        print type(alfas)
+        print(type(alfas))
         # Single or multiple runs?
         if type(alfas) == list or type(alfas) == np.ndarray:
             Multiple = True
@@ -440,7 +441,7 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,
             TExL = max(cxL)
 
             x_TE = (TExU+TExL) / 2.
-            print 'trailing edge x', x_TE
+            print('trailing edge x', x_TE)
             for i in range(len(cxU)):
                 cxU[i] = cxU[i] - x_TE
             for i in range(len(cxL)):
@@ -493,7 +494,7 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,
 
     upper = []
     lower = []
-    print "Starting to prepare points"
+    print("Starting to prepare points")
 
     # At first we'll organize the files by its x values
     for i in range(len(Coordinates_Upper['x'])):
@@ -507,13 +508,13 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,
         # that we  can classify them as upper or lower
         lower.append([Coordinates_Lower['x'][i] / chord,
                       Coordinates_Lower['y'][i] / chord])
-    print "Sorting Stuff up"
+    print("Sorting Stuff up")
 
     if reposition == True:
         # Sort in a convenient way for calculating the error
         upper = sorted(upper, key=lambda coord:coord[0], reverse=False)
         lower = sorted(lower, key=lambda coord:coord[0], reverse=False)
-        print 'Repositioning'
+        print('Repositioning')
         cu = {'x':[], 'y':[]}
         cl = {'x':[], 'y':[]}
         for i in range(len(upper)):
@@ -523,12 +524,12 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,
             cl['x'].append(lower[i][0])
             cl['y'].append(lower[i][1])
         upper, lower = Reposition(cu, cl)
-        print "Done preparing points"
+        print("Done preparing points")
         return upper,lower
     elif FSI == True:
         upper = sorted(upper, key=lambda coord:coord[0], reverse=False)
         lower = sorted(lower, key=lambda coord:coord[0], reverse=False)
-        print "Done preparing points"
+        print("Done preparing points")
         return upper, lower
     else:
         # Sort in a way that comprehensible for xfoil and elimates the
@@ -536,7 +537,7 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,
         upper = sorted(upper, key=lambda coord:coord[0], reverse=True)
         lower = sorted(lower, key=lambda coord:coord[0], reverse=False)[1:]
         Coordinates = upper + lower
-        print "Done preparing points"
+        print("Done preparing points")
         return Coordinates
 
 def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
@@ -707,11 +708,11 @@ def output_reader(filename, separator='\t', output=None, rows_to_skip=0,
                                 Data[header[j]].append(format_output(line_components[j],
                                                                      type_structure[j]))
                             except:
-                                print 'Error when recording for: '
-                                print 'Line components:', line_components
-                                print 'ttpe structure:', type_structure
-                                print 'index:', j
-                                print 'header:', header
+                                print('Error when recording for: ')
+                                print('Line components:', line_components)
+                                print('ttpe structure:', type_structure)
+                                print('index:', j)
+                                print('header:', header)
                                 raise ValueError('Something went wrong')
                 # Use structure code
                 else:
@@ -904,7 +905,7 @@ def M_crit(airfoil, pho, speed_sound, lift, c):
         previous_iteration = Data_crit['CL']
         for i in range(0, len(Data['CL'])):
             if Data['CL'][i] >= cl and M > Data_crit['M']:
-                print M
+                print(M)
                 Data_crit['M'] = M
                 Data_crit['CL'] = Data['CL'][i]
                 Data_crit['alpha'] = Data['alpha'][i]
@@ -912,7 +913,7 @@ def M_crit(airfoil, pho, speed_sound, lift, c):
     return Data_crit
 
 if __name__ == '__main__':
-    print find_coefficients('naca0012',1., Reynolds = 1000000)
+    print(find_coefficients('naca0012',1., Reynolds = 1000000))
 
     import matplotlib.pyplot as plt
     upper = {'x':[0,.1,10,20,30], 'y':[0,2,4,2,1]}
@@ -920,8 +921,8 @@ if __name__ == '__main__':
     plt.plot(lower['x'], lower['y'], 'r')
     plt.plot(upper['x'], upper['y'], 'r', label = 'original data')
     rotated_upper, rotated_lower = prepare_xfoil(upper, lower, 1.0, reposition=True)
-    print rotated_upper
-    print rotated_lower
+    print(rotated_upper)
+    print(rotated_lower)
 
     plt.plot(rotated_lower['x'], rotated_lower['y'], 'b')
     plt.plot(rotated_upper['x'], rotated_upper['y'], 'b', label='after LE rotation/translation')

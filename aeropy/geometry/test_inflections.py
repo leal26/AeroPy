@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -20,12 +21,12 @@ y = CST(x, c_avian, [deltaz/2., deltaz/2.], Au = Au, Al= Al)
 xf.create_input(x, y['u'], y['l'], airfoil, different_x_upper_lower = False)
 
 Data = xf.find_coefficients(airfoil, 2., Reynolds=Reynolds(10000, 30, c_avian), iteration=100, NACA=False)
-print Data
+print(Data)
 
 
 psi_u_inflection, psi_l_inflection = find_inflection_points(Au, Al)
-print 'upper: ', psi_u_inflection
-print 'lower: ', psi_l_inflection
+print('upper: ', psi_u_inflection)
+print('lower: ', psi_l_inflection)
 psi = np.linspace(0.001,0.999,100)
 xi = CST(psi, 1, [deltaz/2., deltaz/2.], Au, Al)
 plt.plot(psi, xi['u'], 'b', label = 'Upper outer mold line')
@@ -52,8 +53,8 @@ plt.plot(psi,ddxi_l(psi,Al), 'r--', label = 'Lower second derivative')
 camber = calculate_camber(psi, Au, Al, deltaz/c_avian)
 plt.plot(psi,camber, 'k', label = 'camber')
 psi_camber, xi_camber = calculate_max_camber(Au, Al, deltaz/c_avian)
-print psi_camber, xi_camber, type(psi_camber), type(xi_camber)
-print 'average camber: ', calculate_average_camber( Au, Al, deltaz/c_avian)
+print(psi_camber, xi_camber, type(psi_camber), type(xi_camber))
+print('average camber: ', calculate_average_camber( Au, Al, deltaz/c_avian))
 plt.scatter(psi_camber, xi_camber, label = 'Inflection points')
 plt.ylim([-0.1,0.1])
 plt.legend(loc='best')

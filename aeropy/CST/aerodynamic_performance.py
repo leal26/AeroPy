@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -22,6 +23,6 @@ x = create_x(1., distribution = 'linear')
 y = CST(x, 1., [deltaz/2., deltaz/2.], Au = Au, Al= Al)
 # Create file for Xfoil to read coordinates
 xf.create_input(x, y['u'], y['l'], airfoil, different_x_upper_lower = False)
-print 'Reynolds: ', Reynolds(10000, 30, c_avian)
+print('Reynolds: ', Reynolds(10000, 30, c_avian))
 Data = xf.find_coefficients(airfoil, 0., Reynolds=Reynolds(10000, 30, c_avian), iteration=100, NACA=False)
-print Data
+print(Data)
