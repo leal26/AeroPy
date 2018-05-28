@@ -179,7 +179,7 @@ def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1., deltasLE=None):
     y={}
     Shape={}
     
-    if Al and Au:
+    if Al is not None and Au is not None:
         deltaz['u']=deltasz[0]
         deltaz['l']=deltasz[1]
         if deltasLE != None:
@@ -190,7 +190,7 @@ def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1., deltasLE=None):
         elif len(deltasz)!=2:
             raise Exception("If both surfaces are being analyzed, two values for deltasz are needed")
         
-    elif Au and not Al:
+    elif Au is not None and Al is None:
         if type(deltasz)==list:
             if len(deltaz['u'])!=1:
                 raise Exception("If only one surface is being analyzed, one value for deltasz is needed")
@@ -202,7 +202,7 @@ def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1., deltasLE=None):
             deltaz['u']=deltasz
             if deltasLE != None:
                 deltaLE['u'] = deltasLE      
-    elif Al and not Au:
+    elif Al is not None and Au is None:
         if type(deltasz)==list:
             if (deltaz['l'])!=1:
                 raise Exception("If only one surface is being analyzed, one value for deltasz is needed")
@@ -221,7 +221,7 @@ def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1., deltasLE=None):
         deltaLE = {'u':0, 'l':0}
     A={'u':Au,'l':Al}
     for surface in ['u','l']:
-        if A[surface]:
+        if A[surface] is not None:
             
             if type(A[surface])==int or type(A[surface])==float:
                 A[surface]=[A[surface]]
@@ -250,9 +250,9 @@ def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1., deltasLE=None):
                 eta[surface]= C*Shape[surface]+psi*deltaz[surface]/c + (1.-psi)*deltaLE[surface]/c;  
             # Giving back the dimensions
             y[surface]=c*eta[surface]
-    if Al and Au:     
+    if Al is not None and Au is not None:     
         return y
-    elif Au:
+    elif Au is not None:
         return y['u']
     else:
         return y['l']
@@ -347,7 +347,38 @@ def Naca00XX(c, t, x_list, TE_t = False, return_dict = 'y', for_xfoil = True):
                      'l':x_list}                
             return x, y
         elif type(x_list) == dict:
-            return x_list, y            
+            return x_list, y
+
+def NACA_four_digit(chord, t, p, m):
+
+    # Mean line coordinates
+    x_fwd = np.linspace(0,p*chord)
+    x_aft = np.linspace(p*chord, chord)
+
+    y_fwd = (m/p**2)*(2*p*(x/chord)-(x/chord)**2)
+    y_aft = (m/(1-p)**2)*((1-2*p)+2*p*(x/chord)-(x/chord)**2)
+
+    # Thickness coordinates
+    yt_fwd = Naca00XX(chord, t, x_fwd)
+    yt_aft = Naca00XX(chord, t, x_fwd)
+
+    # Angle calculation so that thickness is perpendicular
+    dydx_fwd = (2*m/p**2)*(p-x/chord)
+    dydx_aft = (2*m/(1-p)**2)*(p-x/chord)
+
+    theta_fwd = np.atan(dydc_fwd)
+    theta_aft = np.atan(dydc_aft)
+
+    # Calculate airfoil coordinates
+    y_upper = {'x': np.append(x_fwd - yt_fwd*np.sin(theta),
+                              x_aft - yt_aft*np.sin(theta)),
+               'y': np.append(y_fwd + yt_fwd*np.cos(theta),
+                              y_aft + yt_aft*np.cos(theta))}
+    y_lower = {'x': np.append(x_fwd + yt_fwd*np.sin(theta),
+                              x_aft + yt_aft*np.sin(theta)),
+               'y': np.append(y_fwd - yt_fwd*np.cos(theta),
+                              y_aft - yt_aft*np.cos(theta))}
+    return y_upper, y_lower
 #==============================================================================
 # The following function are related to the use of plain flaps
 #==============================================================================
@@ -1180,12 +1211,243 @@ def offset_point(x, y, rho, output_format = 'separate'):
     if output_format == 'separate': 
         return x_offset, y_offset
 
+def fitting_shape_coefficients(data, order, translate=True, rotate=True, 
+                               mirror=True, filter_size = 10, deltaz = 0,
+                               N1 = None, N2 = None, 
+                               solver = 'differential_evolution',
+                               error = 'eucledian'):
+    '''Fit shape coefficient to 2D geometry. Assumes data is sorted from 
+      TE to LE along upper surface and back to TE along lower surface.
+      Can calculate leading edge for a simple case where upper surface
+      is all positive.
+
+    :param data: dictionary with x and y keys.
+    
+    :param order: order of the CST equations.
+    '''
+    from scipy.optimize import differential_evolution
+    from optimization_tools import hausdorff_distance_2D, eucledian_shape_difference
+    from scipy.optimize import minimize
+
+
+    def total_shape_difference(inputs, error_type = 'eucledian'):
+        Au = inputs[:order+1]
+        Al = inputs[order+1:2*order+2]
+
+        
+        if find_class:
+            N1 = inputs[-2]
+            N2 = inputs[-1]
+            
+        else:
+            N1 = 0.5
+            N2 = 1.0
+
+        error = 0
+        error += shape_difference_upper(inputs, upper, error_type)
+        error += shape_difference_lower(inputs, lower, error_type)
+
+        return error
+
+    def shape_difference_upper(inputs, raw_upper, error):
+        shape_coefficients = inputs[:order+1]
+        if find_class:
+            y = CST(raw_upper['x'], 1, deltasz = deltaz/2., Au=shape_coefficients,
+                    N1 = inputs[-2], N2 = inputs[-1])
+        else:
+            y = CST(raw_upper['x'], 1, deltasz = deltaz/2., Au=shape_coefficients)
+        a = raw_upper
+        b = {'x': raw_upper['x'], 'y': y}
+
+        if error == 'eucledian':
+            d = eucledian_shape_difference(a,b)
+        else:
+            d = hausdorff_distance_2D(a, b)
+
+        return d
+
+    def shape_difference_lower(inputs, raw_lower, error):
+        shape_coefficients = inputs[order+1:2*order+2]
+
+        if find_class:
+            y = CST(raw_lower['x'], 1, deltasz = deltaz/2., Al=shape_coefficients,
+                    N1 = inputs[-2], N2 = inputs[-1])
+        else:
+            y = CST(raw_lower['x'], 1, deltasz = deltaz/2., Al=shape_coefficients,)
+
+        a = raw_lower
+        b = {'x': raw_lower['x'], 'y': y}
+        if error == 'eucledian':
+            d = eucledian_shape_difference(a,b)
+        else:
+            d = hausdorff_distance_2D(a, b)
+        return d
+
+    def separate_upper_lower(data):
+        for i in range(len(data['x'])):
+            if data['y'][i] < 0:
+                break
+        upper = {'x': data['x'][0:i],
+                 'y': data['y'][0:i]}
+        lower = {'x': data['x'][i:],
+                 'y': data['y'][i:]}
+        return upper, lower
+
+    def processing_data():
+
+        processed_data = {'x':[], 'y':[]}
+        min_x = min(data['x'])
+        chord = max(data['x']) - min(data['x'])
+
+        # translate to origin and normalize everything
+        for i in range(len(data['x'])):
+            processed_data['x'].append((data['x'][i] - min_x)/chord)
+            processed_data['y'].append(data['y'][i]/chord)
+        data = processed_data
+
+        # Mirroring data
+        if mirror:
+            processed_data = {'x':[], 'y':[]}
+            for i in range(len(data['x'])):
+                processed_data['x'].append(.5 - (data['x'][i] - .5))
+                processed_data['y'].append(data['y'][i])
+            data = processed_data
+
+        # plt.scatter(data['x'], data['y'])
+        # plt.show()
+
+        # Tranlating in y
+        if translate:
+            LE_x = min(data['x'])
+            LE_index = data['x'].index(LE_x)
+            LE_y = data['y'][LE_index]
+            print LE_x, LE_y
+            for i in range(len(data['x'])):
+                data['y'][i] -= LE_y
+
+        # plt.scatter(data['x'], data['y'])
+        # plt.show()
+
+        if rotate:
+            x_TE = (data['x'][0] + data['x'][-1])/2.
+            y_TE = (data['y'][0] + data['y'][-1])/2.
+
+            # Rotating airfoil
+            theta_TE = math.atan(-y_TE/x_TE)
+
+            # position trailing edge at the x-axis
+            processed_data = {'x':[], 'y':[]}
+            for i in range(len(data['x'])):
+                x = data['x'][i]
+                y = data['y'][i]
+                c_theta = math.cos(theta_TE)
+                s_theta = math.sin(theta_TE)
+                x_rotated = c_theta*x - s_theta*y
+                y_rotated = s_theta*x + c_theta*y
+                processed_data['x'].append(x_rotated)
+                processed_data['y'].append(y_rotated)
+            data = processed_data
+
+        # Reduce number of points
+        if filter_size != 1:
+            processed_data = {'x':[], 'y':[]}
+            for i in range(len(data['x'])):
+                for key in data.keys():
+                    if i%filter_size == 0:
+                        processed_data[key].append(data[key][i])
+                    elif i == len(data['x']) -1:
+                        processed_data[key].append(data[key][i])
+            data = processed_data
+
+        for key in data.keys():
+            data[key] = list(reversed(data[key]))
+        print data['y']
+
+        deltaz = (data['y'][0] - data['y'][-1])/2.
+
+        upper, lower = separate_upper_lower(data)
+        return upper, lower
+
+    def find_values(order, solver):
+        bounds = [[0., 1.]] + order*[[0. , 1.],]+ [[0., 1.]] + order*[[-1., 1.],]
+        
+        # If N1 and N2 are not defined the default values for a subsonic airfoil are 
+        # used. N1 and N2 are the same for upper and lower.
+        if find_class:
+            bounds += [[0., 1.],[0., 1.]]
+        if solver == 'differential_evolution':
+            result = differential_evolution(total_shape_difference, bounds,
+                                                  disp=True, popsize = 40)
+            Au = result.x[:order+1]
+            Al = result.x[order+1:2*order+2]
+            if find_class:
+                N1 = result.x[-2]
+                N2 = result.x[-1]
+            else:
+                N1 = 0.5
+                N2 = 1.0
+            error = solution.fun
+
+        if solver == 'gradient':
+            x0 = (2*order+2)*[0.05,]
+            if find_class:
+                x0 += [0.5, 1.0]
+            solution = minimize(total_shape_difference, x0, bounds = bounds)
+            # print solution
+
+            Au = solution['x'][:order+1]
+            Al = solution['x'][order+1:2*order+2]
+            if find_class:
+                N1 = solution['x'][-2]
+                N2 = solution['x'][-1]
+            else:
+                N1 = 0.5
+                N2 = 1.0
+            error = solution['fun']
+        return Au, Al, N1, N2, deltaz, error
+    # If data is a list with two dictionaries, it is assumed that the data
+    # has been already processed
+    if type(data) == list:
+        upper = data[0]
+        lower = data[1]
+    else:
+        [upper, lower] = processing_data()
+    
+    if N1 is None and N2 is None:
+        find_class = True
+    # print total_shape_difference([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    # BREAK
+    #==============================================================================
+    # Optimizing shape
+    #==============================================================================
+    if type(order) == float or type(order) == int:
+        [Au, Al, N1, N2, deltaz, error] = find_values(order, solver)
+    else:
+        Au = []
+        Al = []
+        N1 = []
+        N2 = []
+
+        error = []
+        order_list = order
+        for i in range(len(order)):
+            order = order_list[i]
+            [Au_i, Al_i, N1_i, N2_i, deltaz_i, error_i] = find_values(order, solver)
+            Au.append(Au_i)
+            Al.append(Al_i)
+            N1.append(N1_i)
+            N2.append(N2_i) 
+            error.append(error_i)
+    return Au, Al, N1, N2, deltaz, error
+
 if __name__ == '__main__':  
     
     import aeropy.xfoil_module as xf
     import aeropy.aero_module as ar
-    
+    import matlplotlib.pyplot as plt
     alpha = 0.
+
+    NACA_four_digit(1., 0.03, 0.374, 0.00865)
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # First step: generate original airfoil
     airfoil = "naca0012"
