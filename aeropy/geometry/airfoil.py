@@ -1321,7 +1321,6 @@ def fitting_shape_coefficients(data, order, translate=True, rotate=True,
             LE_x = min(data['x'])
             LE_index = data['x'].index(LE_x)
             LE_y = data['y'][LE_index]
-            print LE_x, LE_y
             for i in range(len(data['x'])):
                 data['y'][i] -= LE_y
 
@@ -1361,7 +1360,6 @@ def fitting_shape_coefficients(data, order, translate=True, rotate=True,
 
         for key in data.keys():
             data[key] = list(reversed(data[key]))
-        print data['y']
 
         deltaz = (data['y'][0] - data['y'][-1])/2.
 

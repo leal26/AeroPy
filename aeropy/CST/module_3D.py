@@ -16,15 +16,25 @@ def interpolation_function(eta, shape = 'linear',
     function = interp1d(points['eta'], points['to_interpolate'])
     return function(eta)
     
-def CST_3D(Bu, Bl, span, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.], 'chord':[1., 0]},
-           mesh = (100,100), chord = {'eta':[0,1], 'A':[1.], 'N1':1, 'N2':1, 'initial':1., 'final':0.1}, 
-           sweep = {'eta':[0,1], 'A':[1.], 'N1':1, 'N2':1, 'initial':0, 'final':0},
-           twist = {'eta':[0,1], 'A':[1.], 'N1':1, 'N2':1, 'initial':0, 'final':1},
+def CST_3D(B, span=1., mesh = (100,100), eta_known = [0, 1], N1 = [.5, .5],
+           N2 = [1., 1.], chord = [1., 1.], sweep = [0., 0.], twist = [0., 0.],
+           shear = [0.,0.], twist_axis = {'x':0, 'z':0, 'vector':[0,1,0]},
            surfaces = 'both'):
     """
-    - Bu: upper shape coefficients
-    - Bl: lower shape coefficients
-    - mesh: list of number of points in x and y
+    - B: input that defines shape coefficients:
+         - if surfaces == 'lower': B = Bl (upper shape coefficients)
+         - if surfaces == 'upper': B = Bu (lower shape coefficients)
+         - if type==list and surfaces=='both': B=[Bu, Bl]
+
+    - mesh: input for mesh. If type(mesh) == list, a uniform mesh generator
+            is used and mesh =  list of number of points in x and y. If len==2,
+            the upper and lower surfaces have the same mesh. If len==4, they are
+            different. To import a mesh, use a dictionary with the following
+            formatting:
+            mesh = {'psi_u':psi_u, 'eta_u':eta_u, 'Neta_u':Npsi_u, 
+                    'Neta_u':Neta_u,
+                    'psi_l':psi_l, 'eta_l':eta_l, 'Neta_l':Npsi_l, 
+                    'Neta_u':Neta_l}
     - surfaces: surfaces to be analyzed (options: 'upper', 'lower', and 'both'.
     """
     def S(B, psi, eta):
@@ -56,7 +66,10 @@ def CST_3D(Bu, Bl, span, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.], 'chord':[
         output = ((psi)**N1(eta))*((1.-psi)**N2(eta))/C_max/2
         return output
 
-    def Rotation(ux, uy, uz, theta):
+    def Rotation(euler_vector, theta):
+        ux = euler_vector[0]
+        uy = euler_vector[1]
+        uz = euler_vector[2]
         # Check if vector are normalized
         norm = math.sqrt(ux**2+uy**2+uz*2)
         if norm != 1:
@@ -76,76 +89,129 @@ def CST_3D(Bu, Bl, span, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.], 'chord':[
                       [R21, R22, R23],
                       [R31, R32, R33]])
         return R
+
+    def uniform_mesh_generator(mesh):
+        '''Default genrator for uniform meshes. If 
+           len(mesh)==2, upper and lower have same
+           mesh'''
+        # 
+        if len(mesh) == 2:
+            Npsi_u = mesh[0]
+            Neta_u = mesh[1]
+            Npsi_l = mesh[0]
+            Neta_l = mesh[1]
+        elif len(mesh) == 4:
+            Npsi_u = mesh[0]
+            Neta_u = mesh[1]
+            Npsi_l = mesh[2]
+            Neta_l = mesh[3]
+        psi_u, eta_u = np.meshgrid(np.linspace(0,1,Npsi_u), 
+                                   np.linspace(0,1,Neta_u))
+        psi_l, eta_l = np.meshgrid(np.linspace(0,1,Npsi_l), 
+                                   np.linspace(0,1,Neta_l))
+        mesh = {'psi_u':psi_u, 'eta_u':eta_u, 'Npsi_u':Npsi_u, 
+                'Neta_u':Neta_u,
+                'psi_l':psi_l, 'eta_l':eta_l, 'Npsi_l':Npsi_l, 
+                'Neta_l':Neta_l}
+        return mesh
+
+    # Check if inputs are formatted properly
+    for property in [N1, N2, chord, sweep, twist, shear]:
+        if len(eta_known) != len(property):
+            raise('All geometric properties must have same length')
+
+    # Processing inputs
+    if surfaces == 'both':
+        Bu = B[0]
+        Bl = B[1]
+    elif surfaces == 'upper':
+        Bu = B
+    elif surfaces == 'lower':
+        Bl = B
+
+    if type(mesh) != dict:
+        mesh = uniform_mesh_generator(mesh)
+        psi_u = mesh['psi_u']
+        psi_l = mesh['psi_l']
+        eta_u = mesh['eta_u']
+        eta_l = mesh['eta_l']
+        Npsi_u = mesh['Npsi_u']
+        Npsi_l = mesh['Npsi_l']
+        Neta_u = mesh['Neta_u']
+        Neta_l = mesh['Neta_l']
+
     # Define non-dimensional domains
-
-    psi = np.linspace(0,1,mesh[1])
-    eta = np.linspace(0,1,mesh[1])
-    zeta_u = np.zeros(mesh)
-    zeta_l = np.zeros(mesh)
+    zeta_u = np.zeros((Npsi_u, Neta_u))
+    zeta_l = np.zeros((Npsi_l, Neta_l))
     
-    # Interpolate class function coefficients
+    # Interpolate class function coefficients and other properties
+    N1 = interp1d(eta_known, N1)
+    N2 = interp1d(eta_known, N2)
+    chord = interp1d(eta_known, chord)
+    sweep = interp1d(eta_known, sweep)
+    twist = interp1d(eta_known, twist)   
+    shear = interp1d(eta_known, shear)
 
-    N1 = interp1d(N['eta'], N['N1'])
-    N2 = interp1d(N['eta'], N['N2'])
-    
+    # Calculating non-dimensional surface
+    if surfaces == 'upper' or surfaces == 'both':
+        for i in range(Npsi_u):
+            for j in range(Neta_u):
+                zeta_u[j][i] = C(psi_u[j][i], eta_u[j][i]
+                         )*S(Bu, psi_u[j][i], eta_u[j][i])
 
-    for i in range(mesh[0]):
-        for j in range(mesh[1]):
-            if surfaces == 'upper' or surfaces == 'both':
-                zeta_u[j][i] = C(psi[i], eta[j])*S(Bu, psi[i], eta[j])
-            if surfaces == 'lower' or surfaces == 'both':
-                zeta_l[j][i] = -C(psi[i], eta[j])*S(Bl, psi[i], eta[j])
+    if surfaces == 'lower' or surfaces == 'both':
+        for i in range(Npsi_l):
+            for j in range(Neta_l):
+                zeta_l[j][i] = -C(psi_l[j][i], eta_l[j][i]
+                          )*S(Bl, psi_l[j][i], eta_l[j][i])
 
-    chord_distribution = CST(eta, chord['eta'][1], chord['initial'], Au=chord['A'], N1=chord['N1'], N2=chord['N2'], deltasLE=chord['final'])
-    sweep_distribution = CST(eta, sweep['eta'][1], deltasz = sweep['final'], Au=sweep['A'], N1=sweep['N1'], N2=sweep['N2'])
-    chord_distribution = chord_distribution[::-1]
-    sweep_distribution = sweep_distribution
-    twist_distribution = CST(eta, twist['eta'][1], twist['initial'], Au=twist['A'], N1=twist['N1'], N2=twist['N2'], deltasLE=twist['final'])
+    # Calculate surface on physical domain
+    X_u = np.zeros((Npsi_u, Neta_u))
+    X_l = np.zeros((Npsi_l, Neta_l))
+    Y_u = np.zeros((Npsi_u, Neta_u))
+    Y_l = np.zeros((Npsi_l, Neta_l))
+    Z_u = np.zeros((Npsi_u, Neta_u))
+    Z_l = np.zeros((Npsi_l, Neta_l))
+    if surfaces == 'upper' or surfaces == 'both':
+        for i in range(Npsi_u):
+            for j in range(Neta_u):
+                X_u[j][i] = psi_u[j][i]*chord(eta_u[j][i]) + sweep(eta_u[j][i])
+                Y_u[j][i] = span*eta_u[j][i]
+                Z_u[j][i] = zeta_u[j][i]*chord(eta_u[j][i])
 
-    # taper_function(eta, shape = 'linear', N)
-    x = np.zeros(len(psi))
-    for i in range(len(x)):
-        x[i] = psi[i]*chord_distribution[i]
-    y = eta
+                # Twisting component
+                R = Rotation(twist_axis['vector'], twist(eta_u[j][i]))
+                t_u = np.array([X_u[j][i] - twist_axis['x'],
+                                Y_u[j][i],
+                                Z_u[j][i] - twist_axis['z']])
+                T_u = R.dot(t_u)
+                X_u[j][i] = twist_axis['x'] + T_u[0]
+                Y_u[j][i] = T_u[1]
+                Z_u[j][i] = twist_axis['z'] + T_u[2] + shear(eta_l[j][i])
 
-    X = np.zeros(mesh)
-    Y = np.zeros(mesh)
-    X_u = np.zeros(mesh)
-    X_l = np.zeros(mesh)
-    Y_u = np.zeros(mesh)
-    Y_l = np.zeros(mesh)
-    Z_u = np.zeros(mesh)
-    Z_l = np.zeros(mesh)
-    for i in range(mesh[0]):
-        for j in range(mesh[1]):
-            X[j][i] = psi[i]*chord_distribution[j] + sweep_distribution[j]
-            Y[j][i] = span*eta[j]
-            Z_u[j][i] = zeta_u[j][i] *chord_distribution[j]
-            Z_l[j][i] = zeta_l[j][i] *chord_distribution[j]
-            if twist != None:
-                xr = twist['psi_root']
-                zr = twist['zeta_root']
-                R = Rotation(twist['axis'][0], twist['axis'][1], twist['axis'][2],
-                         twist_distribution[j])
-                if surfaces == 'upper' or surfaces == 'both':
-                    t_u = np.array([X[j][i]-xr,Y[j][i],Z_u[j][i]-zr])
-                    T_u = R.dot(t_u)
-                    X_u[j][i] = xr + T_u[0]
-                    Y_u[j][i] = T_u[1]
-                    Z_u[j][i] = zr + T_u[2]
-                    
-                if surfaces == 'lower' or surfaces == 'both':
-                    t_l = np.array([X[j][i]-xr,Y[j][i],Z_l[j][i]-zr])
-                    T_l = R.dot(t_l)
-                    X_l[j][i] = xr + T_l[0]
-                    Y_l[j][i] = T_l[1]
-                    Z_l[j][i] = zr + T_l[2]
+    if surfaces == 'lower' or surfaces == 'both':
+        for i in range(Npsi_l):
+            for j in range(Neta_l):
+                X_l[j][i] = psi_l[j][i]*chord(eta_l[j][i]) + sweep(eta_l[j][i])
+                Y_l[j][i] = span*eta_l[j][i]
+                Z_l[j][i] = zeta_l[j][i]*chord(eta_l[j][i])
+
+                # Twisting component
+                R = Rotation(twist_axis['vector'], twist(eta_u[j][i]))
+                t_l = np.array([X_l[j][i] - twist_axis['x'],
+                                Y_l[j][i],
+                                Z_l[j][i] - twist_axis['z']])
+                T_l = R.dot(t_l)
+                X_l[j][i] = twist_axis['x'] + T_l[0]
+                Y_l[j][i] = T_l[1]
+                Z_l[j][i] = twist_axis['z'] + T_l[2] + shear(eta_l[j][i])
+
     # Formating data for output
     if surfaces == 'upper' or surfaces == 'both':
         output_u = {}
         if twist == None:
-            output_u['x'] = X
-            output_u['y'] = Y
+            output_u['x'] = X_u
+            output_u['y'] = Y_u
         else:
             output_u['x'] = X_u
             output_u['y'] = Y_u
@@ -154,8 +220,8 @@ def CST_3D(Bu, Bl, span, N={'eta':[0,1], 'N1':[.5, .5], 'N2':[1., 1.], 'chord':[
     if surfaces == 'upper' or surfaces == 'both':
         output_l = {}
         if twist == None:
-            output_l['x'] = X
-            output_l['y'] = Y
+            output_l['x'] = X_l
+            output_l['y'] = Y_l
         else:
             output_l['x'] = X_l
             output_l['y'] = Y_l
@@ -176,35 +242,19 @@ if __name__ == '__main__':
     
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # Inputs
-    # One of the diameters
-    initial_chord = 2.
-    final_chord = 1.
-    # Nosecone height
     span = 4.
     # Shape coefficient for cross section (if A=1, circular, otherwise it is an ellipse)
-    A = .5
-    # location of the nosecone tip
-    initial_nosecone_x = 0
-    final_nosecone_x = 2.
-    # Class coefficient for chord distribution (Nb=.5, elliptical, Nb=1, Haack series)
-    Nb = 0.0
- 
-    axis = [final_nosecone_x - initial_nosecone_x, span,0]
+    Au = np.array([0.172802, 0.167353, 0.130747, 0.172053, 0.112797, 0.168891])
+    Al = np.array([0.163339, 0.175407, 0.134176, 0.152834, 0.133240, 0.161677])
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    
-    B = [[A], [A]]
-    #B = [[A], [A]]
-    Na = 0.0
-    mesh =(20,20)
-    N={'eta':[0,0.5,.8,1], 'N1':[.5, .5, 1., 1.], 'N2':[1., 1., 1., 1.]}
-    chord = {'eta':[0,1], 'A':[0.], 'N1':Na, 'N2':Nb, 
-             'initial':initial_chord,'final':final_chord}
-    sweep = {'eta':[0,1], 'A':[0.], 'N1':Nb, 'N2':Na, 
-             'initial':initial_nosecone_x, 'final':final_nosecone_x}
-    twist = {'eta':[0,1], 'A':[0.], 'N1':1, 'N2':1,'initial':0.5, 'final':0, 'psi_root':0.2,'zeta_root':0, 'axis':axis}    
-    
-    output = CST_3D(B, B,  span, N, mesh, chord, sweep, twist)
+    B = [Au.reshape(len(Au),1), Al.reshape(len(Al),1)]
+    output = CST_3D([B,B])    
+    # A = 0.5
+    # # Mesh size in case default mesh generator is used
+    # mesh = (20,40)
+    # B = [[A], [A]] 
+    # output = CST_3D([B,B], span =4., shear = [0,.5], twist = [0,0.1],
+                    # chord = [1.0,.1])
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
