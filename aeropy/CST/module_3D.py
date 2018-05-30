@@ -16,9 +16,9 @@ def interpolation_function(eta, shape = 'linear',
     function = interp1d(points['eta'], points['to_interpolate'])
     return function(eta)
     
-def CST_3D(B, span=1., mesh = (100,100), eta_known = [0, 1], N1 = [.5, .5],
-           N2 = [1., 1.], chord = [1., 1.], sweep = [0., 0.], twist = [0., 0.],
-           shear = [0.,0.], twist_axis = {'x':0, 'z':0, 'vector':[0,1,0]},
+def CST_3D(B, span=1., mesh = (100,100), eta_control = [0, 1], N1_control = [.5, .5],
+           N2_control = [1., 1.], chord_control = [1., 1.], sweep_control = [0., 0.], 
+           twist_control = [0., 0.], shear_control = [0.,0.], twist_axis = {'x':0, 'z':0, 'vector':[0,1,0]},
            surfaces = 'both'):
     """
     - B: input that defines shape coefficients:
@@ -116,8 +116,9 @@ def CST_3D(B, span=1., mesh = (100,100), eta_known = [0, 1], N1 = [.5, .5],
         return mesh
 
     # Check if inputs are formatted properly
-    for property in [N1, N2, chord, sweep, twist, shear]:
-        if len(eta_known) != len(property):
+    for property in [N1_control, N2_control, chord_control, 
+                     sweep_control, twist_control, shear_control]:
+        if len(eta_control) != len(property):
             raise('All geometric properties must have same length')
 
     # Processing inputs
@@ -145,12 +146,12 @@ def CST_3D(B, span=1., mesh = (100,100), eta_known = [0, 1], N1 = [.5, .5],
     zeta_l = np.zeros((Npsi_l, Neta_l))
     
     # Interpolate class function coefficients and other properties
-    N1 = interp1d(eta_known, N1)
-    N2 = interp1d(eta_known, N2)
-    chord = interp1d(eta_known, chord)
-    sweep = interp1d(eta_known, sweep)
-    twist = interp1d(eta_known, twist)   
-    shear = interp1d(eta_known, shear)
+    N1 = interp1d(eta_control, N1_control)
+    N2 = interp1d(eta_control, N2_control)
+    chord = interp1d(eta_control, chord_control)
+    sweep = interp1d(eta_control, sweep_control)
+    twist = interp1d(eta_control, twist_control)   
+    shear = interp1d(eta_control, shear_control)
 
     # Calculating non-dimensional surface
     if surfaces == 'upper' or surfaces == 'both':
