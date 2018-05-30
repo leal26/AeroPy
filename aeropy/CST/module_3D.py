@@ -109,6 +109,8 @@ def CST_3D(B, span=1., mesh = (100,100), eta_control = [0, 1], N1_control = [.5,
                                    np.linspace(0,1,Neta_u))
         psi_l, eta_l = np.meshgrid(np.linspace(0,1,Npsi_l), 
                                    np.linspace(0,1,Neta_l))
+        print len(psi_u),  len(psi_u[0])
+        print Npsi_u, Npsi_l, Neta_u, Neta_l
         mesh = {'psi_u':psi_u, 'eta_u':eta_u, 'Npsi_u':Npsi_u, 
                 'Neta_u':Neta_u,
                 'psi_l':psi_l, 'eta_l':eta_l, 'Npsi_l':Npsi_l, 
@@ -140,11 +142,11 @@ def CST_3D(B, span=1., mesh = (100,100), eta_control = [0, 1], N1_control = [.5,
         Npsi_l = mesh['Npsi_l']
         Neta_u = mesh['Neta_u']
         Neta_l = mesh['Neta_l']
-
+    print Npsi_u, Npsi_l, Neta_u, Neta_l
     # Define non-dimensional domains
-    zeta_u = np.zeros((Npsi_u, Neta_u))
-    zeta_l = np.zeros((Npsi_l, Neta_l))
-    
+    zeta_u = np.zeros((Neta_u, Npsi_u))
+    zeta_l = np.zeros((Neta_l, Npsi_l))
+    print len(zeta_u), len(zeta_u[0])
     # Interpolate class function coefficients and other properties
     N1 = interp1d(eta_control, N1_control)
     N2 = interp1d(eta_control, N2_control)
@@ -167,12 +169,12 @@ def CST_3D(B, span=1., mesh = (100,100), eta_control = [0, 1], N1_control = [.5,
                           )*S(Bl, psi_l[j][i], eta_l[j][i])
 
     # Calculate surface on physical domain
-    X_u = np.zeros((Npsi_u, Neta_u))
-    X_l = np.zeros((Npsi_l, Neta_l))
-    Y_u = np.zeros((Npsi_u, Neta_u))
-    Y_l = np.zeros((Npsi_l, Neta_l))
-    Z_u = np.zeros((Npsi_u, Neta_u))
-    Z_l = np.zeros((Npsi_l, Neta_l))
+    X_u = np.zeros((Neta_u, Npsi_u))
+    X_l = np.zeros((Neta_l, Npsi_l))
+    Y_u = np.zeros((Neta_u, Npsi_u))
+    Y_l = np.zeros((Neta_l, Npsi_l))
+    Z_u = np.zeros((Neta_u, Npsi_u))
+    Z_l = np.zeros((Neta_l, Npsi_l))
     if surfaces == 'upper' or surfaces == 'both':
         for i in range(Npsi_u):
             for j in range(Neta_u):
@@ -261,7 +263,7 @@ if __name__ == '__main__':
     ax = fig.gca(projection='3d')
     
     for surface in output:
-        ax.plot_surface(output[surface]['x'], output[surface]['z'], 
+        ax.scatter(output[surface]['x'], output[surface]['z'], 
                         output[surface]['y'], cmap=plt.get_cmap('jet'),
                         linewidth=0, antialiased=False)
     # cset = ax.contour(X, Z_u, Y, zdir='z', offset=0, cmap=cm.coolwarm)
