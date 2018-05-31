@@ -1,6 +1,7 @@
 from scipy.interpolate import interp1d
 import numpy as np
 import math
+import pickle
 
 from aeropy.geometry.airfoil import CST, create_x
 
@@ -16,7 +17,7 @@ def interpolation_function(eta, shape = 'linear',
     function = interp1d(points['eta'], points['to_interpolate'])
     return function(eta)
     
-def CST_3D(B, span=1., mesh = (100,100), eta_control = [0, 1], N1_control = [.5, .5],
+def CST_3D(B, span=1., mesh = (10,10), eta_control = [0, 1], N1_control = [.5, .5],
            N2_control = [1., 1.], chord_control = [1., 1.], sweep_control = [0., 0.], 
            twist_control = [0., 0.], shear_control = [0.,0.], twist_axis = {'x':0, 'z':0, 'vector':[0,1,0]},
            surfaces = 'both'):
@@ -50,13 +51,13 @@ def CST_3D(B, span=1., mesh = (100,100), eta_control = [0, 1], N1_control = [.5,
             K=math.factorial(n)/(math.factorial(r)*math.factorial(n-r))
             return K
 
-        Nx = len(B)-1
-        Ny = len(B[0])-1
+        Ny = len(B)-1
+        Nx = len(B[0])-1
 
         output = 0
         for i in range(Nx+1):
             for j in range(Ny+1):
-                output += B[i][j]*S_i(i, Nx, psi)*S_i(j, Ny, eta)
+                output += B[j][i]*S_i(i, Nx, psi)*S_i(j, Ny, eta)
         return output
 
     def C(psi, eta):
@@ -109,8 +110,7 @@ def CST_3D(B, span=1., mesh = (100,100), eta_control = [0, 1], N1_control = [.5,
                                    np.linspace(0,1,Neta_u))
         psi_l, eta_l = np.meshgrid(np.linspace(0,1,Npsi_l), 
                                    np.linspace(0,1,Neta_l))
-        print len(psi_u),  len(psi_u[0])
-        print Npsi_u, Npsi_l, Neta_u, Neta_l
+
         mesh = {'psi_u':psi_u, 'eta_u':eta_u, 'Npsi_u':Npsi_u, 
                 'Neta_u':Neta_u,
                 'psi_l':psi_l, 'eta_l':eta_l, 'Npsi_l':Npsi_l, 
@@ -142,11 +142,11 @@ def CST_3D(B, span=1., mesh = (100,100), eta_control = [0, 1], N1_control = [.5,
         Npsi_l = mesh['Npsi_l']
         Neta_u = mesh['Neta_u']
         Neta_l = mesh['Neta_l']
-    print Npsi_u, Npsi_l, Neta_u, Neta_l
+
     # Define non-dimensional domains
     zeta_u = np.zeros((Neta_u, Npsi_u))
     zeta_l = np.zeros((Neta_l, Npsi_l))
-    print len(zeta_u), len(zeta_u[0])
+
     # Interpolate class function coefficients and other properties
     N1 = interp1d(eta_control, N1_control)
     N2 = interp1d(eta_control, N2_control)
@@ -250,15 +250,15 @@ if __name__ == '__main__':
     Au = np.array([0.172802, 0.167353, 0.130747, 0.172053, 0.112797, 0.168891])
     Al = np.array([0.163339, 0.175407, 0.134176, 0.152834, 0.133240, 0.161677])
 
-    B = [Au.reshape(len(Au),1), Al.reshape(len(Al),1)]
-    output = CST_3D([B,B])    
+    B = [[Au,Au], [Al,Al]]
+    output = CST_3D(B)    
     # A = 0.5
     # # Mesh size in case default mesh generator is used
     # mesh = (20,40)
     # B = [[A], [A]] 
     # output = CST_3D([B,B], span =4., shear = [0,.5], twist = [0,0.1],
                     # chord = [1.0,.1])
-
+    pickle.dump( output, open( "test_case.p", "wb" ) )
     fig = plt.figure()
     ax = fig.gca(projection='3d')
     
@@ -288,6 +288,15 @@ if __name__ == '__main__':
     ax.set_xlim(mid_x - max_range, mid_x + max_range)
     ax.set_ylim(mid_z - max_range, mid_z + max_range)
     ax.set_zlim(mid_y - max_range, mid_y + max_range)
+    plt.xlabel('x')
+    plt.ylabel('z')
+
+    fig2 = plt.figure()
+    ax = fig2.add_subplot(111)
+    
+    for surface in output:
+        ax.scatter(output[surface]['x'], output[surface]['z'])
+
     plt.xlabel('x')
     plt.ylabel('z')
     plt.show()
