@@ -251,7 +251,7 @@ if __name__ == '__main__':
     Al = np.array([0.163339, 0.175407, 0.134176, 0.152834, 0.133240, 0.161677])
 
     B = [[Au,Au], [Al,Al]]
-    output = CST_3D(B)    
+    output = CST_3D(B, chord_control = [1., .1], twist_control = [0, .1])    
     # A = 0.5
     # # Mesh size in case default mesh generator is used
     # mesh = (20,40)
