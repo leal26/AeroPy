@@ -24,7 +24,7 @@ class control_points():
         # Check if inputs are formatted properly
         for property in ['N1', 'N2', 'chord', 'sweep', 'twist', 'shear']:
             if len(self.eta) != len(getattr(self,property)):
-                raise('All geometric properties must have same length')   
+                raise Exception('All geometric properties must have same length')   
     def set_functions(self):
         self.fN1 = interp1d(self.eta, self.N1)
         self.fN2 = interp1d(self.eta, self.N2)
@@ -115,7 +115,7 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
                 'Neta_l':Neta_l}
         return mesh
 
-    def process_mesh(mesh):
+    def process_mesh(mesh, cp = cp):
         if type(mesh) != dict:
                 mesh = uniform_mesh_generator(mesh)
         elif 'x_u' in mesh:
@@ -136,11 +136,12 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
             mesh['Npsi_l'] = len(lower['psi'])
             mesh['Neta_l'] = len(lower['eta'])
         if 'x' in mesh:
-            input = {'x': [x - origin['x'] for x in mesh['x']],
-                     'y': [y - origin['y'] for y in mesh['y']]}
+            input = {}
+            for key in mesh:
+                input[key] = [x - origin[key] for x in mesh[key]]
 
             coordinates = nondimensionalize({'x':input[axis_order[0]], 'y':input[axis_order[1]]},
-                                      cp)
+                                      cp=cp)
 
             if surfaces == 'upper' or surfaces == 'both':
                 mesh['psi_u'] = [coordinates['psi']]
@@ -153,6 +154,8 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
                 mesh['Npsi_l'] = len(coordinates['psi'])
                 mesh['Neta_l'] = 1
         if 'psi' in mesh:
+            if 'y' in mesh:
+                mesh['eta'] = [y/cp.half_span for y in mesh['y']]
             if surfaces == 'upper' or surfaces == 'both':
                 mesh['psi_u'] = [mesh['psi']]
                 mesh['eta_u'] = [mesh['eta']]
@@ -162,7 +165,7 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
                 mesh['psi_l'] = [mesh['psi']]
                 mesh['eta_l'] = [mesh['eta']]
                 mesh['Npsi_l'] = len(mesh['psi'])
-                mesh['Neta_l'] = 1                 
+                mesh['Neta_l'] = 1               
         return mesh
         
     cp.check_attributes()
@@ -177,33 +180,70 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
     elif surfaces == 'lower':
         Bl = B
 
-    # Process mesh
-    mesh = process_mesh(mesh)
-                    
-    # Calculating non-dimensional surface
-    if surfaces == 'upper' or surfaces == 'both':
-        # define non-dimensional domains
-        psi_u = mesh['psi_u']
-        eta_u = mesh['eta_u']
-        Npsi_u = mesh['Npsi_u']
-        Neta_u = mesh['Neta_u']
-        zeta_u = np.zeros((Neta_u, Npsi_u))
-        for i in range(Npsi_u):
-            for j in range(Neta_u):
-                zeta_u[j][i] = C(psi_u[j][i], eta_u[j][i]
-                         )*S(Bu, psi_u[j][i], eta_u[j][i])
+    # if z coordinate defined do inverse problem instead of calculating
+    # everything again
+    if 'zeta' in mesh:
+        psi_list = []
+        eta_list = []
+        zeta_list = []
+        # If zeta is a list it will work. Otherwise just say length 1
+        try:
+            Nzeta = len(mesh['zeta'])
+        except:
+            Nzeta = 1
+        for i in range(Nzeta):
+            input = {}
+            for key in mesh:
+                try:
+                    input[key] = mesh[key][i]
+                except:
+                    input[key] = mesh[key]
+            psi, eta, zeta = inverse_problem(coordinates = input, 
+                                 B = B, cp=cp, 
+                                 surface = surfaces)
+            psi_list.append(psi)
+            eta_list.append(eta)
+            zeta_list.append(zeta)
+        if surfaces == 'upper' or surfaces == 'both':
+            psi_u = [psi_list]
+            eta_u = [eta_list]
+            Npsi_u = 1
+            Neta_u = 1
+            zeta_u = [zeta_list]
+        if surfaces == 'lower' or surfaces == 'both':
+            psi_l = [psi_list]
+            eta_l = [eta_list]
+            Npsi_l = 1
+            Neta_l = 1
+            zeta_l = [zeta_list]  
+    else:
+        # Process mesh
+        mesh = process_mesh(mesh, cp)
+                        
+        # Calculating non-dimensional surface
+        if surfaces == 'upper' or surfaces == 'both':
+            # define non-dimensional domains
+            psi_u = mesh['psi_u']
+            eta_u = mesh['eta_u']
+            Npsi_u = mesh['Npsi_u']
+            Neta_u = mesh['Neta_u']
+            zeta_u = np.zeros((Neta_u, Npsi_u))
+            for i in range(Npsi_u):
+                for j in range(Neta_u):
+                    zeta_u[j][i] = C(psi_u[j][i], eta_u[j][i]
+                             )*S(Bu, psi_u[j][i], eta_u[j][i])
 
-    if surfaces == 'lower' or surfaces == 'both':
-        # define non-dimensional domains
-        psi_l = mesh['psi_l']
-        eta_l = mesh['eta_l']
-        Npsi_l = mesh['Npsi_l']
-        Neta_l = mesh['Neta_l']
-        zeta_l = np.zeros((Neta_l, Npsi_l))
-        for i in range(Npsi_l):
-            for j in range(Neta_l):
-                zeta_l[j][i] = -C(psi_l[j][i], eta_l[j][i]
-                          )*S(Bl, psi_l[j][i], eta_l[j][i])
+        if surfaces == 'lower' or surfaces == 'both':
+            # define non-dimensional domains
+            psi_l = mesh['psi_l']
+            eta_l = mesh['eta_l']
+            Npsi_l = mesh['Npsi_l']
+            Neta_l = mesh['Neta_l']
+            zeta_l = np.zeros((Neta_l, Npsi_l))
+            for i in range(Npsi_l):
+                for j in range(Neta_l):
+                    zeta_l[j][i] = -C(psi_l[j][i], eta_l[j][i]
+                              )*S(Bl, psi_l[j][i], eta_l[j][i])
 
     # Calculate surface on physical domain
     if surfaces == 'upper' or surfaces == 'both':
@@ -289,6 +329,7 @@ def nondimensionalize(Raw_data, cp = control_points()):
     z0 = []
 
     eta = [a/cp.half_span for a in y]
+
     twist = cp.ftwist(eta)
     shear = cp.fshear(eta)
     
@@ -304,7 +345,7 @@ def nondimensionalize(Raw_data, cp = control_points()):
         y0.append(u0[1])
         z0.append(u0[2])
     # Converting to psi-eta-xi domain
-    [psi, eta, xi] = uncoupled_domain(x0, z0, y0, cp,  inverse = True)
+    [psi, eta, xi] = uncoupled_domain(x0, z0, y0, cp=cp,  inverse = True)
     return {'psi': psi, 'eta': eta, 'xi': xi}
 
 def uncoupled_domain(psi, xi, eta, cp = control_points(), inverse = False):
@@ -381,8 +422,6 @@ def inverse_problem(coordinates = {'psi':0.5, 'zeta':0.5}, B = [[1]],
         # print 'shape', S_modified(B,psi,eta)
         if known_coordinate == 'eta':
             psi = (c/eta**m)**(1./n)
-            print psi0, psi,c,eta,m,n
-            BREAK
             return psi
         elif known_coordinate == 'psi':
             eta = (c/psi**n)**(1./m)
@@ -390,7 +429,6 @@ def inverse_problem(coordinates = {'psi':0.5, 'zeta':0.5}, B = [[1]],
 
     def residual(psi, eta, zeta, surface):
         output = CST_3D(B, mesh = {'psi':psi, 'eta':eta}, cp = control_points(), surfaces = surface)
-        print psi, eta, zeta
         return abs(zeta - output['z'])
     cp.check_attributes()
     cp.set_functions()
@@ -403,14 +441,21 @@ def inverse_problem(coordinates = {'psi':0.5, 'zeta':0.5}, B = [[1]],
         zeta = coordinates['zeta']
         f = lambda x: residual([psi],x,zeta, surface)
         solution = minimize(f,1., bounds = [[0,1]])
-        eta = solution.x
+        eta = solution.x[0]
     elif 'eta' in coordinates:
         eta = coordinates['eta']
         zeta = coordinates['zeta']
         f = lambda x: residual(x,[eta],zeta,  surface)
         solution = minimize(f,1., bounds = [[0,1]])
-        psi = solution.x
-    return psi, eta, zeta
+        psi = solution.x[0]
+    output = CST_3D(B, mesh = {'psi':[psi], 'eta':[eta]}, cp = control_points(), surfaces = surface)
+    # Check if found actual solution
+    tol = 1e-4
+    if abs(output['z']-zeta) < tol:
+        return psi, eta, zeta
+    else:
+        raise Exception('There is no point on surface with required z coordinate')
+    
 if __name__ == '__main__':
     from mpl_toolkits.mplot3d import Axes3D
     import matplotlib.pyplot as plt
@@ -429,9 +474,18 @@ if __name__ == '__main__':
     B = [[Au,Au], [Al,Al]]
     output = CST_3D(B, cp = cp) 
 
+    eta = 0.5
+    psi_list = []
+    eta_list = []
+    zeta_list = []
     # Inverse problem
-    [psi, eta, zeta] = inverse_problem(coordinates = {'eta':0.5, 'zeta':0.005}, B = [Au,Au], 
-                         cp=control_points(), surface = 'upper')
+    for zeta in np.linspace(0,0.03, 10):
+        [psi, eta, zeta] = inverse_problem(coordinates = {'eta':eta, 'zeta':zeta}, B = [Au,Au], 
+                             cp=control_points(), surface = 'upper')
+
+        psi_list.append(psi)
+        eta_list .append(eta)
+        zeta_list.append(zeta)
     # A = 0.5
     # # Mesh size in case default mesh generator is used
     # mesh = (20,40)
@@ -441,7 +495,7 @@ if __name__ == '__main__':
     pickle.dump( output, open( "test_case.p", "wb" ) )
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    ax.scatter(psi,  zeta, eta)
+    ax.scatter(psi_list,  zeta_list, eta_list)
     for surface in output:
         ax.scatter(output[surface]['x'], output[surface]['z'], 
                         output[surface]['y'], cmap=plt.get_cmap('jet'),
