@@ -764,7 +764,11 @@ def output_reader(filename, separator='\t', output=None,  # noqa C901
                                                     ).replace(
                                                         '------', ''
                                                         )
-                    line_components = line.split(' ')
+                                                        
+                    
+                    line_components = " -".join(line.rsplit("-",1))
+                    line_components = line_components.split(' ')
+                    #line_components = line.split(' ')
 
                     n_del = line_components.count('')
                     for n in range(0, n_del):
@@ -780,7 +784,7 @@ def output_reader(filename, separator='\t', output=None,  # noqa C901
                             except:  #noqa E722
                                 print('Error when recording for: ')
                                 print('Line components:', line_components)
-                                print('ttpe structure:', type_structure)
+                                print('type structure:', type_structure)
                                 print('index:', j)
                                 print('header:', header)
                                 raise ValueError('Something went wrong')
@@ -813,7 +817,10 @@ def output_reader(filename, separator='\t', output=None,  # noqa C901
                                                     ).replace('-', ' -'
                                                               )
 
-                    line_components = line.split(' ')
+                    
+                    line_components = " -".join(line.rsplit("-",1))
+                    line_components = line_components.split(' ')
+                    #line_components = line.split(' ')
 
                     n_del = line_components.count('')
                     for n in range(0, n_del):
