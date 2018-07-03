@@ -923,7 +923,8 @@ def file_name(airfoil, alfas='none', output='Cp'):
 
 
 def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10,
-                      NACA=True, delete=False, PANE=False):
+                      NACA=True, delete=False, PANE=False,
+                      GDES = False):
     """Calculate the coefficients of an airfoil.
 
     Includes lift, drag, moment, friction etc coefficients.
@@ -932,7 +933,8 @@ def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10,
     # If file already exists, there is no need to recalculate it.
     if not os.path.isfile(filename):
         call(airfoil, alpha, Reynolds=Reynolds,
-             output='Polar', iteration=iteration, NACA=NACA, PANE=PANE)
+             output='Polar', iteration=iteration, NACA=NACA, PANE=PANE,
+             GDES=GDES)
     coefficients = {}
     # Data from file
     Data = output_reader(filename, output='Polar', delete=False)
