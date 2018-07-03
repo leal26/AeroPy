@@ -5,7 +5,35 @@ import pickle
 
 from aeropy.geometry.airfoil import CST, create_x
 from aeropy.geometry.wing import Rotation_euler_vector
+
+
+# class aircraft():
+    # def __init__():
+        # self.fuselage = 
+        # self.wing = 
+        # self.tail = None
     
+    # def intersection():
+        # return 0
+    # def meshing():
+        # return 0
+    # def run_panair():
+        # return 0
+    # def run_sboom():
+        # return 0
+    # def run_pyldb():
+        # return 0
+    # def generate_vtk()
+        # return 0
+    # def generate_stl()
+        # return 0
+ 
+# class CST_object(surfaces, origin, axis_order):
+    # def __init__():
+        # self.surfaces = surfaces
+        
+    # def 
+
 class control_points():
     def __init__(self):
         self.eta = [0,1]
@@ -20,12 +48,34 @@ class control_points():
         
         self.half_span = 1.
 
-    def check_attributes(self):
+        # Prepare interpolation functions for default value
+        self._set_functions()
+        
+    def set(self, **inputs):
+        """Set control point values
+        """
+        for property, value in inputs.items():
+            try:
+                setattr(self,property,value)
+            except:
+                raise Exception(property + " keyword argument not recognized")
+
+        # update values
+        self._check_attributes()
+        self._set_functions()
+
+    def _check_attributes(self):
         # Check if inputs are formatted properly
         for property in ['N1', 'N2', 'chord', 'sweep', 'twist', 'shear']:
-            if len(self.eta) != len(getattr(self,property)):
-                raise Exception('All geometric properties must have same length')   
-    def set_functions(self):
+            try: 
+                if len(self.eta) != len(getattr(self,property)):
+                    raise Exception('All geometric properties must have same length')
+            except:
+                raise Exception('Excepted list. Got ' + 
+                                str(type(getattr(self,property))) + 
+                                ' for ' + property)
+                
+    def _set_functions(self):
         self.fN1 = interp1d(self.eta, self.N1)
         self.fN2 = interp1d(self.eta, self.N2)
         self.fchord = interp1d(self.eta, self.chord)
@@ -33,6 +83,31 @@ class control_points():
         self.ftwist = interp1d(self.eta, self.twist)
         self.fshear = interp1d(self.eta, self.shear)
 
+def uniform_mesh_generator(mesh):
+    '''Default genrator for uniform meshes. If 
+       len(mesh)==2, upper and lower have same
+       mesh'''
+    # 
+    if len(mesh) == 2:
+        Npsi_u = mesh[0]
+        Neta_u = mesh[1]
+        Npsi_l = mesh[0]
+        Neta_l = mesh[1]
+    elif len(mesh) == 4:
+        Npsi_u = mesh[0]
+        Neta_u = mesh[1]
+        Npsi_l = mesh[2]
+        Neta_l = mesh[3]
+        
+    upper = np.meshgrid(np.linspace(0,1,Npsi_u), 
+                        np.linspace(0,1,Neta_u))
+    lower = np.meshgrid(np.linspace(0,1,Npsi_l), 
+                        np.linspace(0,1,Neta_l))
+
+    mesh = {'upper': upper.T.reshape(Npsi_u,3),
+            'lower': lower.T.reshape(Npsi_u,3)}
+    return mesh
+        
 def CST_3D(B, mesh = (10,10), cp = control_points(),
            surfaces = 'both', origin = {'x':0, 'y':0, 'z':0}, axis_order = ['x','y','z']):
     """
@@ -43,7 +118,7 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
 
     - mesh: input for mesh. If type(mesh) == list, a uniform mesh generator
             is used and mesh =  list of number of points in x and y. If len==2,
-            the upper and lower surfaces have the same mesh. If len==4, they are
+            the upper and lower surfaces have the same mesh. If len==4,      they are
             different. To import a mesh, use a dictionary with the following
             formatting:
             mesh = {'psi_u':psi_u, 'eta_u':eta_u, 'Npsi_u':Npsi_u, 
@@ -72,7 +147,7 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
         Ny = len(B)-1
         Nx = len(B[0])-1
 
-        output = 0
+        output = np.zeros(psi.shape)
         for i in range(Nx+1):
             for j in range(Ny+1):
                 output += B[j][i]*S_i(i, Nx, psi)*S_i(j, Ny, eta)
@@ -87,41 +162,13 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
 
         return output
 
-
-    
-    def uniform_mesh_generator(mesh):
-        '''Default genrator for uniform meshes. If 
-           len(mesh)==2, upper and lower have same
-           mesh'''
-        # 
-        if len(mesh) == 2:
-            Npsi_u = mesh[0]
-            Neta_u = mesh[1]
-            Npsi_l = mesh[0]
-            Neta_l = mesh[1]
-        elif len(mesh) == 4:
-            Npsi_u = mesh[0]
-            Neta_u = mesh[1]
-            Npsi_l = mesh[2]
-            Neta_l = mesh[3]
-        psi_u, eta_u = np.meshgrid(np.linspace(0,1,Npsi_u), 
-                                   np.linspace(0,1,Neta_u))
-        psi_l, eta_l = np.meshgrid(np.linspace(0,1,Npsi_l), 
-                                   np.linspace(0,1,Neta_l))
-
-        mesh = {'psi_u':psi_u, 'eta_u':eta_u, 'Npsi_u':Npsi_u, 
-                'Neta_u':Neta_u,
-                'psi_l':psi_l, 'eta_l':eta_l, 'Npsi_l':Npsi_l, 
-                'Neta_l':Neta_l}
-        return mesh
-
     def process_mesh(mesh, cp = cp):
         if type(mesh) != dict:
                 mesh = uniform_mesh_generator(mesh)
         elif 'x_u' in mesh:
             input = {'x': [x - origin['x'] for x in mesh['x_u']],
                      'y': [y - origin['y'] for y in mesh['y_u']]}
-            upper = nondimensionalize(input, cp)
+            upper = physical_transformation(input, cp, inverse = True)
             mesh['psi_u'] = upper['psi']
             mesh['eta_u'] = upper['eta']
             mesh['Npsi_u'] = len(upper['psi'])
@@ -130,7 +177,7 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
             input = {'x': [x - origin['x'] for x in mesh['x_l']],
                      'y': [y - origin['y'] for y in mesh['y_l']]} 
             
-            lower = nondimensionalize(input, cp)
+            lower = physical_transformation(input, cp, inverse = True)
             mesh['psi_l'] = lower['psi']
             mesh['eta_l'] = lower['eta']
             mesh['Npsi_l'] = len(lower['psi'])
@@ -140,8 +187,8 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
             for key in mesh:
                 input[key] = [x - origin[key] for x in mesh[key]]
 
-            coordinates = nondimensionalize({'x':input[axis_order[0]], 'y':input[axis_order[1]]},
-                                      cp=cp)
+            coordinates = physical_transformation({'x':input[axis_order[0]], 'y':input[axis_order[1]]},
+                                      cp=cp, inverse=True)
 
             if surfaces == 'upper' or surfaces == 'both':
                 mesh['psi_u'] = [coordinates['psi']]
@@ -168,8 +215,6 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
                 mesh['Neta_l'] = 1               
         return mesh
         
-    cp.check_attributes()
-    cp.set_functions()
 
     # Processing inputs
     if surfaces == 'both':
@@ -223,68 +268,19 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
         # Calculating non-dimensional surface
         if surfaces == 'upper' or surfaces == 'both':
             # define non-dimensional domains
-            psi_u = mesh['psi_u']
-            eta_u = mesh['eta_u']
-            Npsi_u = mesh['Npsi_u']
-            Neta_u = mesh['Neta_u']
-            zeta_u = np.zeros((Neta_u, Npsi_u))
-            for i in range(Npsi_u):
-                for j in range(Neta_u):
-                    zeta_u[j][i] = C(psi_u[j][i], eta_u[j][i]
-                             )*S(Bu, psi_u[j][i], eta_u[j][i])
-
+            psi_u = mesh['upper'][...,0]
+            eta = mesh['upper'][...,1]
+            zeta_u = C(psi, eta)*S(Bu, psi, eta)
+                
+            upper = dimensionalize(Raw_data, cp)
+            
         if surfaces == 'lower' or surfaces == 'both':
             # define non-dimensional domains
-            psi_l = mesh['psi_l']
-            eta_l = mesh['eta_l']
-            Npsi_l = mesh['Npsi_l']
-            Neta_l = mesh['Neta_l']
-            zeta_l = np.zeros((Neta_l, Npsi_l))
-            for i in range(Npsi_l):
-                for j in range(Neta_l):
-                    zeta_l[j][i] = -C(psi_l[j][i], eta_l[j][i]
-                              )*S(Bl, psi_l[j][i], eta_l[j][i])
-
-    # Calculate surface on physical domain
-    if surfaces == 'upper' or surfaces == 'both':
-        X_u = np.zeros((Neta_u, Npsi_u))
-        Y_u = np.zeros((Neta_u, Npsi_u))
-        Z_u = np.zeros((Neta_u, Npsi_u))
-        for i in range(Npsi_u):
-            for j in range(Neta_u):
-                X_u[j][i] = psi_u[j][i]*cp.fchord(eta_u[j][i]) + cp.fsweep(eta_u[j][i])
-                Y_u[j][i] = cp.half_span*eta_u[j][i]
-                Z_u[j][i] = zeta_u[j][i]*cp.fchord(eta_u[j][i])
-
-                # Twisting component
-                R = Rotation_euler_vector(cp.twist_axis, cp.ftwist(eta_u[j][i]))
-                t_u = np.array([X_u[j][i] - cp.twist_origin['x'],
-                                Y_u[j][i],
-                                Z_u[j][i] - cp.twist_origin['z']])
-                T_u = R.dot(t_u)
-                X_u[j][i] = cp.twist_origin['x'] + T_u[0]
-                Y_u[j][i] = T_u[1]
-                Z_u[j][i] = cp.twist_origin['z'] + T_u[2] + cp.fshear(eta_u[j][i])
-
-    if surfaces == 'lower' or surfaces == 'both':
-        X_l = np.zeros((Neta_l, Npsi_l))
-        Y_l = np.zeros((Neta_l, Npsi_l))
-        Z_l = np.zeros((Neta_l, Npsi_l))
-        for i in range(Npsi_l):
-            for j in range(Neta_l):
-                X_l[j][i] = psi_l[j][i]*cp.fchord(eta_l[j][i]) + cp.fsweep(eta_l[j][i])
-                Y_l[j][i] = cp.half_span*eta_l[j][i]
-                Z_l[j][i] = zeta_l[j][i]*cp.fchord(eta_l[j][i])
-
-                # Twisting component
-                R = Rotation_euler_vector(cp.twist_axis, cp.ftwist(eta_l[j][i]))
-                t_l = np.array([X_l[j][i] - cp.twist_origin['x'],
-                                Y_l[j][i],
-                                Z_l[j][i] - cp.twist_origin['z']])
-                T_l = R.dot(t_l)
-                X_l[j][i] = cp.twist_origin['x'] + T_l[0]
-                Y_l[j][i] = T_l[1]
-                Z_l[j][i] = cp.twist_origin['z'] + T_l[2] + cp.fshear(eta_l[j][i])
+            psi_l = mesh['lower'][...,0]
+            eta_l = mesh['eta_l'][...,1]
+            zeta_l = -C(mesh['lower'])*S(Bl, mesh['lower'])
+            
+            lower = dimensionalize(Raw_data, cp)
 
     # Formating data for output
     if surfaces == 'upper' or surfaces == 'both':
@@ -310,69 +306,92 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
         return {'upper':output_u,
                 'lower':output_l}
 
-def nondimensionalize(Raw_data, cp = control_points()):
-
-    cp.check_attributes()
-    cp.set_functions()
-    
-    # Defining coordinates
-    x = Raw_data['x']
-    y = Raw_data['y']
-    if 'z' in Raw_data:
-        z = Raw_data['z']
-    else:
-        z = np.zeros(len(x))
-
-    # Converting to x0-y0-z0 domain
-    x0 = []
-    y0 = []
-    z0 = []
-
-    eta = [a/cp.half_span for a in y]
-
-    twist = cp.ftwist(eta)
-    shear = cp.fshear(eta)
-    
-    for i in range(len(y)):
-        # transpose/inverse of rotation matrix
-        R_i = np.transpose(Rotation_euler_vector(cp.twist_axis, twist[i])) 
-        u = np.array([x[i]-cp.twist_origin['x'],
-                      y[i],
-                      z[i]-shear[i]])
-        u0 = R_i.dot(u)
-        
-        x0.append(u0[0] + cp.twist_origin['x'])
-        y0.append(u0[1])
-        z0.append(u0[2])
-    # Converting to psi-eta-xi domain
-    [psi, eta, xi] = uncoupled_domain(x0, z0, y0, cp=cp,  inverse = True)
-    return {'psi': psi, 'eta': eta, 'xi': xi}
-
-def uncoupled_domain(psi, xi, eta, cp = control_points(), inverse = False):
-    '''Converts from Parameterized domain to uncoupled domain (not rotated).
-       - psi, xi, eta are the coordintes of the points to be analyzed
-       - eta_control points where we know values such as chord etc'''
-
-    cp.check_attributes()
-    cp.set_functions()
+def dimensionalize(Raw_data, cp = control_points(), inverse = False):
     
     if inverse:
-        eta = [a/cp.half_span for a in eta]
+        data = physical_transformation(Raw_data, cp, inverse)
+        data = intermediate_transformation(data, cp, inverse)
+    else:
+        data = intermediate_transformation(Raw_data, cp, inverse)  
+        data = physical_transformation(data, cp, inverse)
+        
+    return data
+    
+    
+def physical_transformation(data, cp = control_points(), inverse = False):
+            
+    if inverse:
+        # Defining coordinates
+        x = Raw_data['x']
+        y = Raw_data['y']
+        if 'z' in Raw_data:
+            z = Raw_data['z']
+        else:
+            z = np.zeros(len(x))
+
+        # Converting to x0-y0-z0 domain
+        output = np.zeros(len(data), len(data[0]),3)
+
+        eta = [a/cp.half_span for a in y]
+
+        twist = cp.ftwist(eta)
+        shear = cp.fshear(eta)
+        
+        for i in range(len(y)):
+            # transpose/inverse of rotation matrix
+            R_i = np.transpose(Rotation_euler_vector(cp.twist_axis, twist[i])) 
+            u = np.array([x[i]-cp.twist_origin['x'],
+                          y[i],
+                          z[i]-shear[i]])
+            u0 = R_i.dot(u)
+            
+            output[i].append(u0[0] + cp.twist_origin['x'])
+            y0.append(u0[1])
+            z0.append(u0[2])
+        # Converting to psi-eta-xi domain
+        return x0, y0, z0
+    else:
+        
+            
+        X = psi_u*cp.fchord(eta_u) + cp.fsweep(eta_u)
+        Y = cp.half_span*eta_u
+        Z = zeta_u*cp.fchord(eta_u)
+
+        # Twisting component
+        R = Rotation_euler_vector(cp.twist_axis, cp.ftwist(eta_u))
+        t = np.array([X - cp.twist_origin['x'],
+                      Y,
+                      Z - cp.twist_origin['z']])
+        T = R.dot(t)
+        X = cp.twist_origin['x'] + T[0]
+        Y = T[1]
+        Z = cp.twist_origin['z'] + T[2] + cp.fshear(eta)
+    return {'psi': psi, 'eta': eta, 'xi': xi}
+
+def intermediate_transformation(data_nondimensional, cp = control_points(), inverse = False):
+    '''Converts from Parameterized domain to uncoupled domain (not rotated).
+       - psi, xi, eta are the coordinates of the points to be analyzed
+       - eta_control points where we know values such as chord etc'''
+
+    psi, eta, zeta = data_nondimensional.T
+    if inverse:
+        eta = eta/cp.half_span
     chord = cp.fchord(eta)
     sweep = cp.fsweep(eta)
-    x0 = []
-    y0 = []
-    z0 = []
-    for i in range(len(eta)):
-        if not inverse:
-            x0.append(chord[i]*psi[i] + sweep[i])
-            y0.append(cp.half_span*eta[i])
-            z0.append(chord[i]*xi[i])
-        else:
-            x0.append((psi[i] - sweep[i])/chord[i])
-            y0.append(eta[i])
-            z0.append(xi[i]/chord[i])
-    return x0,y0,z0    
+
+    if not inverse:
+        x0 = chord*psi + sweep
+        y0 = cp.half_span*eta
+        z0 = chord*xi
+    else:
+        x0 = (psi - sweep)/chord
+        y0 = eta
+        z0 = xi/chord
+    return zip(*x0,y0,z0)    
+
+def assembly_transsformation():
+
+    return 0
 
 def inverse_problem(coordinates = {'psi':0.5, 'zeta':0.5}, B = [[1]], 
                     cp=control_points(), surface = 'upper'):
@@ -430,8 +449,7 @@ def inverse_problem(coordinates = {'psi':0.5, 'zeta':0.5}, B = [[1]],
     def residual(psi, eta, zeta, surface):
         output = CST_3D(B, mesh = {'psi':psi, 'eta':eta}, cp = control_points(), surfaces = surface)
         return abs(zeta - output['z'])
-    cp.check_attributes()
-    cp.set_functions()
+
 
     m = len(B)-1
     n = len(B[0])-1
@@ -469,8 +487,8 @@ if __name__ == '__main__':
     Al = np.array([0.163339, 0.175407, 0.134176, 0.152834, 0.133240, 0.161677])
     # Wing properties (control points)
     cp = control_points()
-    cp.check_attributes()
-    cp.set_functions()
+    cp.set(chord = [1.,1.])
+    
     B = [[Au,Au], [Al,Al]]
     output = CST_3D(B, cp = cp) 
 
