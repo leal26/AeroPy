@@ -84,8 +84,7 @@ class control_points():
         self.fshear = interp1d(self.eta, self.shear)
         
 def CST_3D(B, mesh = (10,10), cp = control_points(),
-           origin = [0,0,0], axis_order = [0,1,2],
-           format = 'array', **optional_arguments):
+           origin = [0,0,0], axis_order = [0,1,2], **optional_arguments):
     """
     - B: dict (keys 'upper' and 'lower') input that defines shape coefficients
 
@@ -103,9 +102,10 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
             Furthermore, you can define for only lower or upper surface.
             No need to have both.
     - 
-    
-    - format: controls format of output as either 'array' (size = [N,3])
-              or 'matrix' (size = [N,M,3])
+    - optional_arguments:
+        - format: controls format of output as either 'array' (size = [N,3])
+                  or 'matrix' (size = [N,M,3])
+        - meshtype
     
     
     """
@@ -123,12 +123,16 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
         # Position part in assembly_transformation
         data_assembly = assembly_transformation(data_phys, axis_order, origin)
         
-        if format == 'matrix':
-            data_assembly.resize(dimensions[surface] + [3])
+        # Reformat if necessary
+        try:
+            if optional_arguments['format'] == 'matrix':
+                data_assembly.resize(dimensions[surface] + [3])
+        except:
+            pass
         output[surface] = data_assembly
 
     if len(output.keys()) == 1:
-        return output[output.keys()[0]]
+        return output[list(output.keys())[0]]
     else:
         return output
 
@@ -191,7 +195,6 @@ def intermediate_transformation(data_nondimensional, cp = control_points(),
        - eta_control points where we know values such as chord etc'''
 
     psi, eta, zeta = data_nondimensional.T
-    print(psi)
     if inverse:
         eta = eta/cp.half_span
     chord = cp.fchord(eta)
@@ -269,29 +272,41 @@ def assembly_transformation(data, axis_order, origin):
 # Extra functionalities        
 def inverse_problem(coordinates = {'psi':0.5, 'zeta':0.5}, B = {'upper':[[1]]}, 
                     cp=control_points()):
+    '''
+    TODO: Inverse problem function is still NOT robust to
+    function for any case. For example:
+        Au = np.array([0.172802, 0.167353, 0.130747, 0.172053, 0.112797, 0.168891])
+        Al = np.array([0.163339, 0.175407, 0.134176, 0.152834, 0.133240, 0.161677])
+        # Wing properties (control points)
+        cp = control_points()
+        cp.set(chord = [1.,1.],
+               twist = [0, 0])'''
+               
     from scipy.optimize import minimize
     
-    def residual(psi, eta, zeta, surface):
-        mesh = np.array([[psi,eta],])
-        output = CST_3D(B, mesh = mesh, cp = control_points(),mesh_options=)
-        return abs(zeta - output['z'])
+    def residual(psi, eta, zeta):
+        mesh = {surface: np.array([[psi[0],eta[0]],])}
+        output = CST_3D(B, mesh = mesh, cp = control_points(),
+                        mesh_type = 'parameterized')  
+        return abs(zeta - output[0][2])
     
     zeta = coordinates['zeta']
+    surface = list(B.keys())[0]
     if 'psi' in coordinates:
         psi = coordinates['psi']
-        f = lambda x: residual([psi],x,zeta, surface)
-        solution = minimize(f,1., bounds = [[0,1]])
+        f = lambda x: residual([psi],x,zeta)
+        solution = minimize(f,0.5, bounds = [[0,1]])
         eta = solution.x[0]
     elif 'eta' in coordinates:
         eta = coordinates['eta']
-        f = lambda x: residual(x,[eta],zeta,  surface)
-        solution = minimize(f,1., bounds = [[0,1]])
+        f = lambda x: residual(x,[eta],zeta)
+        solution = minimize(f,0.5, bounds = [[0,1]])
         psi = solution.x[0]
 
     # Check if found actual solution
     tol = 1e-4
-    print(solution.f)
-    if abs(solution.f) < tol:
+
+    if abs(solution.fun) < tol:
         return psi, eta, zeta
     else:
         raise Exception('There is no point on surface with required z coordinate')
@@ -322,62 +337,64 @@ def uniform_mesh_generator(mesh):
 
     return mesh, dimensions
 
-def process_mesh(mesh, cp = control_points(), mesh_options={}):
+def process_mesh(mesh, cp = control_points(), options={}):
     ''' 'Universal' tool processing for following cases:
         - mesh_options not defined: mesh=[Npsi_upper, Neta_upper, Npsi_lower, Neta_lower]
                                     or mesh=[Npsi_upper, Neta_upper]=[Npsi_lower, Neta_lower]
                                     '''
-
-    if len(mesh_options.keys())==0:
+    if 'mesh_type' not in options:
         mesh, dimensions = uniform_mesh_generator(mesh)
-    elif 'x_u' in mesh:
-        input = {'x': [x - origin['x'] for x in mesh['x_u']],
-                 'y': [y - origin['y'] for y in mesh['y_u']]}
-        upper = physical_transformation(input, cp, inverse = True)
-        mesh['psi_u'] = upper['psi']
-        mesh['eta_u'] = upper['eta']
-        mesh['Npsi_u'] = len(upper['psi'])
-        mesh['Neta_u'] = len(upper['eta'])
-    if 'x_l' in mesh:   
-        input = {'x': [x - origin['x'] for x in mesh['x_l']],
-                 'y': [y - origin['y'] for y in mesh['y_l']]} 
+    else:
+        if options['mesh_type'] == 'parameterized':
+            dimensions = NotImplementedError
+    # elif 'x_u' in mesh:
+        # input = {'x': [x - origin['x'] for x in mesh['x_u']],
+                 # 'y': [y - origin['y'] for y in mesh['y_u']]}
+        # upper = physical_transformation(input, cp, inverse = True)
+        # mesh['psi_u'] = upper['psi']
+        # mesh['eta_u'] = upper['eta']
+        # mesh['Npsi_u'] = len(upper['psi'])
+        # mesh['Neta_u'] = len(upper['eta'])
+    # if 'x_l' in mesh:   
+        # input = {'x': [x - origin['x'] for x in mesh['x_l']],
+                 # 'y': [y - origin['y'] for y in mesh['y_l']]} 
         
-        lower = physical_transformation(input, cp, inverse = True)
-        mesh['psi_l'] = lower['psi']
-        mesh['eta_l'] = lower['eta']
-        mesh['Npsi_l'] = len(lower['psi'])
-        mesh['Neta_l'] = len(lower['eta'])
-    if 'x' in mesh:
-        input = {}
-        for key in mesh:
-            input[key] = [x - origin[key] for x in mesh[key]]
+        # lower = physical_transformation(input, cp, inverse = True)
+        # mesh['psi_l'] = lower['psi']
+        # mesh['eta_l'] = lower['eta']
+        # mesh['Npsi_l'] = len(lower['psi'])
+        # mesh['Neta_l'] = len(lower['eta'])
+    # if 'x' in mesh:
+        # input = {}
+        # for key in mesh:
+            # input[key] = [x - origin[key] for x in mesh[key]]
 
-        coordinates = physical_transformation({'x':input[axis_order[0]], 'y':input[axis_order[1]]},
-                                  cp=cp, inverse=True)
+        # coordinates = physical_transformation({'x':input[axis_order[0]], 'y':input[axis_order[1]]},
+                                  # cp=cp, inverse=True)
 
-        if surfaces == 'upper' or surfaces == 'both':
-            mesh['psi_u'] = [coordinates['psi']]
-            mesh['eta_u'] = [coordinates['eta']]
-            mesh['Npsi_u'] = len(coordinates['psi'])
-            mesh['Neta_u'] = 1
-        if surfaces == 'lower' or surfaces == 'both':
-            mesh['psi_l'] = [coordinates['psi']]
-            mesh['eta_l'] = [coordinates['eta']]
-            mesh['Npsi_l'] = len(coordinates['psi'])
-            mesh['Neta_l'] = 1
-    if 'psi' in mesh:
-        if 'y' in mesh:
-            mesh['eta'] = [y/cp.half_span for y in mesh['y']]
-        if surfaces == 'upper' or surfaces == 'both':
-            mesh['psi_u'] = [mesh['psi']]
-            mesh['eta_u'] = [mesh['eta']]
-            mesh['Npsi_u'] = len(mesh['psi'])
-            mesh['Neta_u'] = 1
-        if surfaces == 'lower' or surfaces == 'both':
-            mesh['psi_l'] = [mesh['psi']]
-            mesh['eta_l'] = [mesh['eta']]
-            mesh['Npsi_l'] = len(mesh['psi'])
-            mesh['Neta_l'] = 1               
+        # if surfaces == 'upper' or surfaces == 'both':
+            # mesh['psi_u'] = [coordinates['psi']]
+            # mesh['eta_u'] = [coordinates['eta']]
+            # mesh['Npsi_u'] = len(coordinates['psi'])
+            # mesh['Neta_u'] = 1
+        # if surfaces == 'lower' or surfaces == 'both':
+            # mesh['psi_l'] = [coordinates['psi']]
+            # mesh['eta_l'] = [coordinates['eta']]
+            # mesh['Npsi_l'] = len(coordinates['psi'])
+            # mesh['Neta_l'] = 1
+    # if 'psi' in mesh:
+        # if 'y' in mesh:
+            # mesh['eta'] = [y/cp.half_span for y in mesh['y']]
+        # if surfaces == 'upper' or surfaces == 'both':
+            # mesh['psi_u'] = [mesh['psi']]
+            # mesh['eta_u'] = [mesh['eta']]
+            # mesh['Npsi_u'] = len(mesh['psi'])
+            # mesh['Neta_u'] = 1
+        # if surfaces == 'lower' or surfaces == 'both':
+            # mesh['psi_l'] = [mesh['psi']]
+            # mesh['eta_l'] = [mesh['eta']]
+            # mesh['Npsi_l'] = len(mesh['psi'])
+            # mesh['Neta_l'] = 1               
     return mesh, dimensions
     
 if __name__ == '__main__':
@@ -393,8 +410,8 @@ if __name__ == '__main__':
     Al = np.array([0.163339, 0.175407, 0.134176, 0.152834, 0.133240, 0.161677])
     # Wing properties (control points)
     cp = control_points()
-    cp.set(chord = [1.,.2],
-           twist = [0, .1])
+    cp.set(chord = [1.,1.],
+           twist = [0, 0])
     
     B = {'upper':[Au,Au], 'lower':[Al,Al]}
     output = CST_3D(B, cp = cp, format='matrix') 
@@ -408,8 +425,9 @@ if __name__ == '__main__':
     zeta_list = []
     # Inverse problem
     for zeta in np.linspace(0,0.03, 10):
-        [psi, eta, zeta] = inverse_problem(coordinates = {'eta':eta, 'zeta':zeta}, B = [Au,Au], 
-                             cp=control_points())
+        [psi, eta, zeta] = inverse_problem(coordinates = {'eta':eta, 'zeta':zeta}, 
+                                           B = {'upper':[Au,Au]}, 
+                                           cp=cp)
 
         psi_list.append(psi)
         eta_list.append(eta)
@@ -423,7 +441,7 @@ if __name__ == '__main__':
     pickle.dump( output, open( "test_case.p", "wb" ) )
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    # ax.scatter(psi_list,  zeta_list, eta_list)
+    ax.scatter(psi_list,  zeta_list, eta_list)
     for surface in output:
         x,y,z = output[surface].T
         ax.scatter(x, z, y, cmap=plt.get_cmap('jet'),
