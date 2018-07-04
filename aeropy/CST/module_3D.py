@@ -27,12 +27,23 @@ from panairwrapper.filehandling import generate_vtk_input
         # return 0
     # def generate_stl()
         # return 0
- 
-# class CST_object(surfaces, origin, axis_order):
-    # def __init__():
-        # self.surfaces = surfaces
+B, mesh = (10,10), cp = control_points(),
+           origin = [0,0,0], axis_order = [0,1,2], **optional_arguments 
+class CST_object():
+    def __init__(B, cp=control_points(), origin = [0,0,0], 
+                 axis_order = [0,1,2], mesh = (10,10)):
+        self.surfaces = list(B.keys())
+        self.B = B
+        self.cp = cp
+        self.origin = origin
+        self.axis_order = axis_order
         
-    # def 
+    def calculate_mesh(mesh,mesh_type):
+        self.mesh_input = mesh
+        self.mesh_surface = CST_3D(self.B, self.mesh_input, 
+                                   cp = self.cp, origin = self.origin, 
+                                   axis_order = self.axis_order, 
+                                   mesh_type = mesh_type)
 
 class control_points():
     def __init__(self):
@@ -105,17 +116,22 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
     - optional_arguments:
         - format: controls format of output as either 'array' (size = [N,3])
                   or 'matrix' (size = [N,M,3])
-        - meshtype
+        - meshtype: if equal to:
+            - 'parameterized' uses point as is as mesh
+            - 'assembly'
+            - 'mixed'
+
     
     
     """
     # Process mesh
     mesh, dimensions = process_mesh(mesh, cp, optional_arguments)
+
     output = {}
     for surface in B:
         # Calculating non-dimensional surface
         data_parm = parameterized_transformation(mesh[surface], 
-                                 B=B[surface], surface=surface)
+                                 B=B[surface], cp=cp, surface=surface)
             
         # Dimensionalize
         data_phys= dimensionalize(data_parm, cp)
@@ -131,12 +147,13 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
             pass
         output[surface] = data_assembly
 
-    if len(output.keys()) == 1:
-        return output[list(output.keys())[0]]
+    if len(B.keys()) == 1:
+        return output[list(B.keys())[0]]
     else:
         return output
 
-def parameterized_transformation(mesh, B, surface = 'upper'):
+def parameterized_transformation(mesh, B, cp=control_points(),
+                                 surface = 'upper'):
     def S(B, psi, eta):
         """ Cross section shape function. Validated for high dimensions.
            To debug just verify if it turns all ones when B=ones"""
@@ -217,42 +234,27 @@ def intermediate_transformation(data_nondimensional, cp = control_points(),
 def physical_transformation(data, cp = control_points(), inverse = False):
             
     if inverse:
-        # Defining coordinates
-        x = Raw_data['x']
-        y = Raw_data['y']
-        if 'z' in Raw_data:
-            z = Raw_data['z']
-        else:
-            z = np.zeros(len(x))
+        eta= data[:,1]/cp.half_span
+        #Move to rotation and remove shear
+        data[:,0] += cp.twist_origin['x']
+        data[:,1] += +cp.twist_origin['z'] - cp.fshear(eta)
 
-        # Converting to x0-y0-z0 domain
-        output = np.zeros(len(data), len(data[0]),3)
+        # Twisting
+        R = np.transpose(Rotation_euler_vector(cp.twist_axis, cp.ftwist(eta)))
+        data = np.array([np.dot(R[:,:,l],data[l]) for l in range(len(eta))])
 
-        eta = [a/cp.half_span for a in y]
-
-        twist = cp.ftwist(eta)
-        shear = cp.fshear(eta)
+        # Returning from twist origin
+        data[:,0] += cp.twist_origin['x']
+        data[:,1] += cp.twist_origin['z']
         
-        for i in range(len(y)):
-            # transpose/inverse of rotation matrix
-            R_i = np.transpose(Rotation_euler_vector(cp.twist_axis, twist[i])) 
-            u = np.array([x[i]-cp.twist_origin['x'],
-                          y[i],
-                          z[i]-shear[i]])
-            u0 = R_i.dot(u)
-            
-            output[i].append(u0[0] + cp.twist_origin['x'])
-            y0.append(u0[1])
-            z0.append(u0[2])
-        # Converting to psi-eta-xi domain
-        return x0, y0, z0
     else:
-        eta= data[:,1]
+        eta= data[:,1]/cp.half_span
         #displacing to center of rotation
         data[:,0] -= cp.twist_origin['x']
         data[:,1] -= cp.twist_origin['z']
 
         # Twisting
+
         R = Rotation_euler_vector(cp.twist_axis, cp.ftwist(eta))
         data = np.array([np.dot(R[:,:,l],data[l]) for l in range(len(eta))])
 
@@ -261,10 +263,15 @@ def physical_transformation(data, cp = control_points(), inverse = False):
         data[:,1] += -cp.twist_origin['z'] + cp.fshear(eta)
     return(data)
 
-def assembly_transformation(data, axis_order, origin):
+def assembly_transformation(data, axis_order, origin, inverse=False):
     '''Transform from physical domain to assembly domain'''
-    data[:,axis_order] = data
-    data += np.array(origin)
+    if inverse:
+        data -= np.array(origin)
+        data[:,[0,1,2]] = data[:,axis_order]
+
+    else:
+        data[:,axis_order] = data[:,[0,1,2]]
+        data += np.array(origin)
             
     return(data)
 
@@ -347,6 +354,14 @@ def process_mesh(mesh, cp = control_points(), options={}):
     else:
         if options['mesh_type'] == 'parameterized':
             dimensions = NotImplementedError
+            
+        elif options['mesh_type'] == 'mixed':
+            # non-dimensionalize y
+            mesh[:,1] /= cp.half_span
+            dimensions = NotImplementedError
+            
+        elif options['mesh_type'] == 'assembly':
+            
     # elif 'x_u' in mesh:
         # input = {'x': [x - origin['x'] for x in mesh['x_u']],
                  # 'y': [y - origin['y'] for y in mesh['y_u']]}
@@ -419,19 +434,19 @@ if __name__ == '__main__':
     # Generate vtk file
     generate_vtk_input(output, filename='test')
     
-    eta = 0.5
-    psi_list = []
-    eta_list = []
-    zeta_list = []
-    # Inverse problem
-    for zeta in np.linspace(0,0.03, 10):
-        [psi, eta, zeta] = inverse_problem(coordinates = {'eta':eta, 'zeta':zeta}, 
-                                           B = {'upper':[Au,Au]}, 
-                                           cp=cp)
+    # eta = 0.5
+    # psi_list = []
+    # eta_list = []
+    # zeta_list = []
+    # # Inverse problem
+    # for zeta in np.linspace(0,0.03, 10):
+        # [psi, eta, zeta] = inverse_problem(coordinates = {'eta':eta, 'zeta':zeta}, 
+                                           # B = {'upper':[Au,Au]}, 
+                                           # cp=cp)
 
-        psi_list.append(psi)
-        eta_list.append(eta)
-        zeta_list.append(zeta)
+        # psi_list.append(psi)
+        # eta_list.append(eta)
+        # zeta_list.append(zeta)
     # A = 0.5
     # # Mesh size in case default mesh generator is used
     # mesh = (20,40)
@@ -441,7 +456,7 @@ if __name__ == '__main__':
     pickle.dump( output, open( "test_case.p", "wb" ) )
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    ax.scatter(psi_list,  zeta_list, eta_list)
+    # ax.scatter(psi_list,  zeta_list, eta_list)
     for surface in output:
         x,y,z = output[surface].T
         ax.scatter(x, z, y, cmap=plt.get_cmap('jet'),
