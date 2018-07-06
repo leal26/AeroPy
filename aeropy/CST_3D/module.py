@@ -5,47 +5,10 @@ import pickle
 
 from aeropy.geometry.airfoil import CST, create_x
 from aeropy.geometry.wing import Rotation_euler_vector
-from panairwrapper.filehandling import generate_vtk_input
+from aeropy.CST_3D.meshing import uniform_mesh_generator
+from aeropy.filehandling.vtk import generate_surface
 
-# class aircraft():
-    # def __init__():
-        # self.fuselage = 
-        # self.wing = 
-        # self.tail = None
-    
-    # def intersection():
-        # return 0
-    # def meshing():
-        # return 0
-    # def run_panair():
-        # return 0
-    # def run_sboom():
-        # return 0
-    # def run_pyldb():
-        # return 0
-    # def generate_vtk()
-        # return 0
-    # def generate_stl()
-        # return 0
-B, mesh = (10,10), cp = control_points(),
-           origin = [0,0,0], axis_order = [0,1,2], **optional_arguments 
-class CST_object():
-    def __init__(B, cp=control_points(), origin = [0,0,0], 
-                 axis_order = [0,1,2], mesh = (10,10)):
-        self.surfaces = list(B.keys())
-        self.B = B
-        self.cp = cp
-        self.origin = origin
-        self.axis_order = axis_order
-        
-    def calculate_mesh(mesh,mesh_type):
-        self.mesh_input = mesh
-        self.mesh_surface = CST_3D(self.B, self.mesh_input, 
-                                   cp = self.cp, origin = self.origin, 
-                                   axis_order = self.axis_order, 
-                                   mesh_type = mesh_type)
-
-class control_points():
+class ControlPoints():
     def __init__(self):
         self.eta = [0,1]
         self.N1 = [.5, .5]
@@ -93,8 +56,45 @@ class control_points():
         self.fsweep = interp1d(self.eta, self.sweep)
         self.ftwist = interp1d(self.eta, self.twist)
         self.fshear = interp1d(self.eta, self.shear)
+
+class CST_Object():
+    def __init__(self, B = {'upper':[[1]]}, cp=ControlPoints(), origin = [0,0,0], 
+                    axis_order = [0,1,2], mesh = (10,10)):
+        self.surfaces = list(B.keys())
+        self.B = B
+        self.cp = cp
+        self.origin = origin
+        self.axis_order = axis_order
         
-def CST_3D(B, mesh = (10,10), cp = control_points(),
+    def calculate_surface(self, mesh=(10,10), mesh_type='uniform'):
+        if type(mesh) == dict or mesh_type=='uniform':
+            self.mesh_input = mesh
+            self.dimensions = list(mesh)
+        else:
+            self.mesh_input = {}
+            for surface in self.surfaces:
+                self.mesh_input[surface] = np.array(mesh)
+            #TODO: how to determine dimensions for cases where I do
+            # not how the mesh is (seed per x and y)
+            self.dimensions = NotImplementedError
+        if mesh_type is None:
+            self.mesh_surface = CST_3D(self.B, self.mesh_input, 
+                                       cp = self.cp, origin = self.origin, 
+                                       axis_order = self.axis_order)
+        else:
+            self.mesh_surface = CST_3D(self.B, self.mesh_input, 
+                                       cp = self.cp, origin = self.origin, 
+                                       axis_order = self.axis_order, 
+                                       mesh_type = mesh_type)
+    
+    def generate_vtk(self, filename = 'test'):
+        # Format data
+        data = np.reshape(self.mesh_surface, self.dimensions + [3])
+        # Generate vtk
+        generate_surface(data=data, filename=filename) 
+
+        
+def CST_3D(B, mesh = (10,10), cp = ControlPoints(),
            origin = [0,0,0], axis_order = [0,1,2], **optional_arguments):
     """
     - B: dict (keys 'upper' and 'lower') input that defines shape coefficients
@@ -117,22 +117,22 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
         - format: controls format of output as either 'array' (size = [N,3])
                   or 'matrix' (size = [N,M,3])
         - meshtype: if equal to:
+            - 'uniform' use list (len=2 or len=4) as the seeding
             - 'parameterized' uses point as is as mesh
             - 'assembly'
             - 'mixed'
-
-    
     
     """
     # Process mesh
-    mesh, dimensions = process_mesh(mesh, cp, optional_arguments)
+    mesh, dimensions = process_mesh(mesh, cp, origin, axis_order,
+                                    optional_arguments)
 
     output = {}
     for surface in B:
         # Calculating non-dimensional surface
         data_parm = parameterized_transformation(mesh[surface], 
                                  B=B[surface], cp=cp, surface=surface)
-            
+
         # Dimensionalize
         data_phys= dimensionalize(data_parm, cp)
         
@@ -152,7 +152,7 @@ def CST_3D(B, mesh = (10,10), cp = control_points(),
     else:
         return output
 
-def parameterized_transformation(mesh, B, cp=control_points(),
+def parameterized_transformation(mesh, B, cp=ControlPoints(),
                                  surface = 'upper'):
     def S(B, psi, eta):
         """ Cross section shape function. Validated for high dimensions.
@@ -193,19 +193,21 @@ def parameterized_transformation(mesh, B, cp=control_points(),
 
     return(output)
         
-def dimensionalize(Raw_data, cp = control_points(), inverse = False):
+def dimensionalize(Raw_data, cp = ControlPoints(), inverse = False):
     '''Converts from parameterized domain to physical domain'''
+        
     if inverse:
         data = physical_transformation(Raw_data, cp, inverse)
         data = intermediate_transformation(data, cp, inverse)
+    
     else:
-        data = intermediate_transformation(Raw_data, cp, inverse)  
+        data = intermediate_transformation(Raw_data, cp, inverse)
         data = physical_transformation(data, cp, inverse)
-        
+
     return data
     
 
-def intermediate_transformation(data_nondimensional, cp = control_points(), 
+def intermediate_transformation(data_nondimensional, cp = ControlPoints(), 
                                 inverse = False):
     '''Converts from Parameterized domain to intermediate domain (not rotated).
        - psi, xi, eta are the coordinates of the points to be analyzed
@@ -231,27 +233,36 @@ def intermediate_transformation(data_nondimensional, cp = control_points(),
     z0.resize([len(z0),1])
     return np.concatenate([x0,y0,z0],1)    
 
-def physical_transformation(data, cp = control_points(), inverse = False):
+def physical_transformation(data, cp = ControlPoints(), inverse = False):
             
     if inverse:
+        # CURRENTLY ONLY WORKS FOR NO TWIST ON FUSELAGE
         eta= data[:,1]/cp.half_span
+
         #Move to rotation and remove shear
         data[:,0] += cp.twist_origin['x']
-        data[:,1] += +cp.twist_origin['z'] - cp.fshear(eta)
+
+        # Adjust if only two coordinates are provided. Using zero values
+        # which is true if there is no twist
+        try:
+            data[:,2] += cp.twist_origin['z'] - cp.fshear(eta)
+        except:
+            dummy_z = np.reshape(np.zeros(data.shape[0]),(data.shape[0],1))
+            data = np.append(data,dummy_z, axis=1)
 
         # Twisting
-        R = np.transpose(Rotation_euler_vector(cp.twist_axis, cp.ftwist(eta)))
+        R = np.transpose(Rotation_euler_vector(cp.twist_axis, cp.ftwist(eta)),(1,0,2))
         data = np.array([np.dot(R[:,:,l],data[l]) for l in range(len(eta))])
 
         # Returning from twist origin
         data[:,0] += cp.twist_origin['x']
-        data[:,1] += cp.twist_origin['z']
-        
+        data[:,2] += cp.twist_origin['z']
+
     else:
         eta= data[:,1]/cp.half_span
         #displacing to center of rotation
         data[:,0] -= cp.twist_origin['x']
-        data[:,1] -= cp.twist_origin['z']
+        data[:,2] -= cp.twist_origin['z']
 
         # Twisting
 
@@ -260,7 +271,7 @@ def physical_transformation(data, cp = control_points(), inverse = False):
 
         #Return to position and shear
         data[:,0] -= cp.twist_origin['x']
-        data[:,1] += -cp.twist_origin['z'] + cp.fshear(eta)
+        data[:,2] += -cp.twist_origin['z'] + cp.fshear(eta)
     return(data)
 
 def assembly_transformation(data, axis_order, origin, inverse=False):
@@ -274,18 +285,16 @@ def assembly_transformation(data, axis_order, origin, inverse=False):
         data += np.array(origin)
             
     return(data)
-
-###########################
-# Extra functionalities        
+       
 def inverse_problem(coordinates = {'psi':0.5, 'zeta':0.5}, B = {'upper':[[1]]}, 
-                    cp=control_points()):
+                    cp=ControlPoints()):
     '''
     TODO: Inverse problem function is still NOT robust to
     function for any case. For example:
         Au = np.array([0.172802, 0.167353, 0.130747, 0.172053, 0.112797, 0.168891])
         Al = np.array([0.163339, 0.175407, 0.134176, 0.152834, 0.133240, 0.161677])
         # Wing properties (control points)
-        cp = control_points()
+        cp = ControlPoints()
         cp.set(chord = [1.,1.],
                twist = [0, 0])'''
                
@@ -293,7 +302,7 @@ def inverse_problem(coordinates = {'psi':0.5, 'zeta':0.5}, B = {'upper':[[1]]},
     
     def residual(psi, eta, zeta):
         mesh = {surface: np.array([[psi[0],eta[0]],])}
-        output = CST_3D(B, mesh = mesh, cp = control_points(),
+        output = CST_3D(B, mesh = mesh, cp = ControlPoints(),
                         mesh_type = 'parameterized')  
         return abs(zeta - output[0][2])
     
@@ -318,38 +327,15 @@ def inverse_problem(coordinates = {'psi':0.5, 'zeta':0.5}, B = {'upper':[[1]]},
     else:
         raise Exception('There is no point on surface with required z coordinate')
 
-###########################
-# Meshing
-def uniform_mesh_generator(mesh):
-    '''Default genrator for uniform meshes. If 
-       len(mesh)==2, upper and lower have same
-       mesh'''
-    # Defining dimensions matrix
-    if len(mesh) == 2:
-        dimensions = {'upper': list(mesh),
-                      'lower': list(mesh)}
-    elif len(mesh) == 4:
-        dimensions = {'upper': list(mesh[:2]),
-                      'lower': list(mesh[2:])}
-    # Calculating grid
-    upper_x, upper_y = np.meshgrid(np.linspace(0,1,dimensions['upper'][0]), 
-                                   np.linspace(0,1,dimensions['upper'][1]))
-    lower_x, lower_y = np.meshgrid(np.linspace(0,1,dimensions['lower'][0]), 
-                                   np.linspace(0,1,dimensions['lower'][1]))
 
-    mesh = {'upper': np.concatenate([upper_x.reshape(1,np.size(upper_x)),
-                                     upper_y.reshape(1,np.size(upper_y))]).T,
-            'lower': np.concatenate([lower_x.reshape(1,np.size(lower_x)),
-                                     lower_y.reshape(1,np.size(lower_y))]).T}
-
-    return mesh, dimensions
-
-def process_mesh(mesh, cp = control_points(), options={}):
+def process_mesh(mesh, cp = ControlPoints(), origin = [0,0,0],
+                 axis_order = [], options={}):
     ''' 'Universal' tool processing for following cases:
         - mesh_options not defined: mesh=[Npsi_upper, Neta_upper, Npsi_lower, Neta_lower]
                                     or mesh=[Npsi_upper, Neta_upper]=[Npsi_lower, Neta_lower]
                                     '''
-    if 'mesh_type' not in options:
+
+    if options['mesh_type'] == 'uniform':
         mesh, dimensions = uniform_mesh_generator(mesh)
     else:
         if options['mesh_type'] == 'parameterized':
@@ -357,59 +343,23 @@ def process_mesh(mesh, cp = control_points(), options={}):
             
         elif options['mesh_type'] == 'mixed':
             # non-dimensionalize y
-            mesh[:,1] /= cp.half_span
+            for surface in mesh:
+                mesh[surface][:,1] /= cp.half_span
             dimensions = NotImplementedError
             
-        elif options['mesh_type'] == 'assembly':
-            
-    # elif 'x_u' in mesh:
-        # input = {'x': [x - origin['x'] for x in mesh['x_u']],
-                 # 'y': [y - origin['y'] for y in mesh['y_u']]}
-        # upper = physical_transformation(input, cp, inverse = True)
-        # mesh['psi_u'] = upper['psi']
-        # mesh['eta_u'] = upper['eta']
-        # mesh['Npsi_u'] = len(upper['psi'])
-        # mesh['Neta_u'] = len(upper['eta'])
-    # if 'x_l' in mesh:   
-        # input = {'x': [x - origin['x'] for x in mesh['x_l']],
-                 # 'y': [y - origin['y'] for y in mesh['y_l']]} 
+        elif options['mesh_type'] == 'physical':
+            for surface in mesh:
+                mesh[surface] = dimensionalize(mesh[surface], cp = cp, 
+                                               inverse = True)[:,[0,1]]
+            dimensions = NotImplementedError
         
-        # lower = physical_transformation(input, cp, inverse = True)
-        # mesh['psi_l'] = lower['psi']
-        # mesh['eta_l'] = lower['eta']
-        # mesh['Npsi_l'] = len(lower['psi'])
-        # mesh['Neta_l'] = len(lower['eta'])
-    # if 'x' in mesh:
-        # input = {}
-        # for key in mesh:
-            # input[key] = [x - origin[key] for x in mesh[key]]
+        elif options['mesh_type'] == 'assembly':
+            for surface in mesh:
+                mesh[surface] = assembly_transformation(mesh[surface], axis_order, origin, inverse=True)
+                mesh[surface] = dimensionalize(mesh[surface], cp = cp, 
+                                               inverse = True)[:,[0,1]]
+            dimensions = NotImplementedError
 
-        # coordinates = physical_transformation({'x':input[axis_order[0]], 'y':input[axis_order[1]]},
-                                  # cp=cp, inverse=True)
-
-        # if surfaces == 'upper' or surfaces == 'both':
-            # mesh['psi_u'] = [coordinates['psi']]
-            # mesh['eta_u'] = [coordinates['eta']]
-            # mesh['Npsi_u'] = len(coordinates['psi'])
-            # mesh['Neta_u'] = 1
-        # if surfaces == 'lower' or surfaces == 'both':
-            # mesh['psi_l'] = [coordinates['psi']]
-            # mesh['eta_l'] = [coordinates['eta']]
-            # mesh['Npsi_l'] = len(coordinates['psi'])
-            # mesh['Neta_l'] = 1
-    # if 'psi' in mesh:
-        # if 'y' in mesh:
-            # mesh['eta'] = [y/cp.half_span for y in mesh['y']]
-        # if surfaces == 'upper' or surfaces == 'both':
-            # mesh['psi_u'] = [mesh['psi']]
-            # mesh['eta_u'] = [mesh['eta']]
-            # mesh['Npsi_u'] = len(mesh['psi'])
-            # mesh['Neta_u'] = 1
-        # if surfaces == 'lower' or surfaces == 'both':
-            # mesh['psi_l'] = [mesh['psi']]
-            # mesh['eta_l'] = [mesh['eta']]
-            # mesh['Npsi_l'] = len(mesh['psi'])
-            # mesh['Neta_l'] = 1               
     return mesh, dimensions
     
 if __name__ == '__main__':
@@ -424,21 +374,38 @@ if __name__ == '__main__':
     Au = np.array([0.172802, 0.167353, 0.130747, 0.172053, 0.112797, 0.168891])
     Al = np.array([0.163339, 0.175407, 0.134176, 0.152834, 0.133240, 0.161677])
     # Wing properties (control points)
-    cp = control_points()
-    cp.set(chord = [1.,1.],
-           twist = [0, 0])
-    
+    cp = ControlPoints()
+    cp.set(chord = [1.,.3],
+           twist = [0, .3],
+           shear = [0, .1],
+           sweep = [0, .3],
+           N1 = [.5, 1.],
+           N2 = [1., 1.])
+ 
     B = {'upper':[Au,Au], 'lower':[Al,Al]}
-    output = CST_3D(B, cp = cp, format='matrix') 
-
-    # Generate vtk file
-    generate_vtk_input(output, filename='test')
     
+    # Using CST_3D function
+    #output = CST_3D(B, cp = cp, format='matrix')
+    #generate_vtk(output, filename='test')
+    
+    # Using CST_object
+    wing_upper = CST_Object(B = {'upper':[Au,Au]}, cp = cp)
+    wing_upper.calculate_surface((20,20))
+    wing_upper.generate_vtk('upper')
+    
+    wing_lower = CST_Object(B = {'lower':[Al,Al]}, cp = cp)
+    wing_lower.calculate_surface((20,20))
+    wing_lower.generate_vtk('lower')
+    
+    # Just for plotting
+    output = {'upper':wing_upper.mesh_surface,
+              'lower':wing_lower.mesh_surface}
+    
+    # Inverse problem
     # eta = 0.5
     # psi_list = []
     # eta_list = []
     # zeta_list = []
-    # # Inverse problem
     # for zeta in np.linspace(0,0.03, 10):
         # [psi, eta, zeta] = inverse_problem(coordinates = {'eta':eta, 'zeta':zeta}, 
                                            # B = {'upper':[Au,Au]}, 
@@ -447,59 +414,24 @@ if __name__ == '__main__':
         # psi_list.append(psi)
         # eta_list.append(eta)
         # zeta_list.append(zeta)
-    # A = 0.5
-    # # Mesh size in case default mesh generator is used
-    # mesh = (20,40)
-    # B = [[A], [A]] 
-    # output = CST_3D([B,B], span =4., shear = [0,.5], twist = [0,0.1],
-                    # chord = [1.0,.1])
-    pickle.dump( output, open( "test_case.p", "wb" ) )
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    # ax.scatter(psi_list,  zeta_list, eta_list)
-    for surface in output:
-        x,y,z = output[surface].T
-        ax.scatter(x, z, y, cmap=plt.get_cmap('jet'),
-                        linewidth=0, antialiased=False)
     
-    # Customize the z axis.
-    ax.set_zlim(0, 4)
-
-    # max_range = np.array([output['upper']['x'].max()-output['upper']['x'].min(),
-                          # output['lower']['y'].max()-output['lower']['y'].min(),
-                          # output['upper']['z'].max()-output['lower']['z'].min(),
-                          # output['upper']['y'].max()-output['upper']['y'].min(),
-                          # output['lower']['y'].max()-output['lower']['y'].min()]).max() / 2.0
-
-    # mid_x = (output['upper']['x'].max()+output['lower']['x'].min()) * 0.5
-    # mid_y = (output['upper']['y'].max()+output['lower']['x'].min()) * 0.5
-    # mid_z = (output['upper']['z'].max()+output['lower']['z'].min()) * 0.5
-    # ax.set_xlim(mid_x - max_range, mid_x + max_range)
-    # ax.set_ylim(mid_z - max_range, mid_z + max_range)
-    # ax.set_zlim(mid_y - max_range, mid_y + max_range)
-    plt.xlabel('x')
-    plt.ylabel('z')
-
-    fig2 = plt.figure()
-    ax = fig2.add_subplot(111)
-    
-    for surface in output:
-        x,y,z = output[surface].T
-        ax.scatter(x, z)
-
-    plt.xlabel('x')
-    plt.ylabel('z')
-    plt.show()
-
+    # Plotting
     # fig = plt.figure()
     # ax = fig.gca(projection='3d')
-
-    # ax.plot_trisurf(X_u.flatten(),  Y_u.flatten(), Z_u.flatten(), linewidth=0.2, antialiased=True,)
-    # ax.plot_trisurf(X_l.flatten(),  Y_l.flatten(), Z_l.flatten(), linewidth=0.2, antialiased=True,)
-    # ax.plot([sweep['initial'] + twist['psi_root']*chord['initial'],sweep['initial'] + twist['psi_root']*chord['initial'] + axis[0]],[0,axis[1]])
-    # ax.set_xlim(mid_x - max_range, mid_x + max_range)
-    # ax.set_ylim(mid_y - max_range, mid_y + max_range)
-    # ax.set_zlim(mid_z - max_range, mid_z + max_range)
+    # # ax.scatter(psi_list,  zeta_list, eta_list)
+    # for surface in output:
+        # x,y,z = output[surface].T
+        # ax.scatter(x, z, y, cmap=plt.get_cmap('jet'),
+                        # linewidth=0, antialiased=False)
+    # ax.set_zlim(0, 4)
     # plt.xlabel('x')
-    # plt.ylabel('y')
+    # plt.ylabel('z')
+
+    # fig2 = plt.figure()
+    # ax = fig2.add_subplot(111)
+    # for surface in output:
+        # x,y,z = output[surface].T
+        # ax.scatter(x, z)
+    # plt.xlabel('x')
+    # plt.ylabel('z')
     # plt.show()
