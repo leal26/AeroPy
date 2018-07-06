@@ -821,7 +821,8 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
         else:
             return modified_airfoil 
 
-def intersect_curves(x1, y1, x2, y2, input_type = 'list'):
+def intersect_curves(x1, y1, x2, y2, input_type = 'list', 
+                     skip_TE_LE = True):
     """
     Find all intersections betweens curves 1 and 2
     :param x1: x data vector for curve 1
@@ -904,6 +905,14 @@ def intersect_curves(x1, y1, x2, y2, input_type = 'list'):
             else:
                 x0.append(xa[0] + r[0] * (xa[1] - xa[0]))
                 y0.append(ya[0] + r[0] * (ya[1] - ya[0]))
+    # filter points close to leading edge and trailing edges
+    if skip_TE_LE:
+        tol=1e-4
+        try:
+            x0, y0 = zip(*[(i, j) for i, j in zip(x0, y0) if i < tol and i>1-tol])
+        except:
+            x0 = []
+            y0 = []
 
     return (x0, y0)
 

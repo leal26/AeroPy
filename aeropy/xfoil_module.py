@@ -765,7 +765,11 @@ def output_reader(filename, separator='\t', output=None,  # noqa C901
                                                     ).replace(
                                                         '------', ''
                                                         )
-                    line_components = line.split(' ')
+                                                        
+                    
+                    line_components = " -".join(line.rsplit("-",1))
+                    line_components = line_components.split(' ')
+                    #line_components = line.split(' ')
 
                     n_del = line_components.count('')
                     for n in range(0, n_del):
@@ -781,7 +785,7 @@ def output_reader(filename, separator='\t', output=None,  # noqa C901
                             except:  #noqa E722
                                 print('Error when recording for: ')
                                 print('Line components:', line_components)
-                                print('ttpe structure:', type_structure)
+                                print('type structure:', type_structure)
                                 print('index:', j)
                                 print('header:', header)
                                 raise ValueError('Something went wrong')
@@ -814,7 +818,10 @@ def output_reader(filename, separator='\t', output=None,  # noqa C901
                                                     ).replace('-', ' -'
                                                               )
 
-                    line_components = line.split(' ')
+                    
+                    line_components = " -".join(line.rsplit("-",1))
+                    line_components = line_components.split(' ')
+                    #line_components = line.split(' ')
 
                     n_del = line_components.count('')
                     for n in range(0, n_del):
@@ -926,6 +933,8 @@ def file_name(airfoil, alfas='none', output='Cp'):
 def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10,
                       NACA=True, delete=False, PANE=False,
                       GDES=False):
+                      GDES = False):
+
     """Calculate the coefficients of an airfoil.
 
     Includes lift, drag, moment, friction etc coefficients.
@@ -936,6 +945,7 @@ def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10,
         call(airfoil, alpha, Reynolds=Reynolds,
              output='Polar', iteration=iteration, NACA=NACA,
              PANE=PANE, GDES=GDES)
+
     coefficients = {}
     # Data from file
     Data = output_reader(filename, output='Polar', delete=False)
