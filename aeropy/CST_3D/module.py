@@ -400,7 +400,9 @@ if __name__ == '__main__':
     # Just for plotting
     output = {'upper':wing_upper.mesh_surface,
               'lower':wing_lower.mesh_surface}
-    
+ 
+    # Dump CST data for curve fitting
+    pickle.dump(output, open("CST_example.p", "wb" ) )
     # Inverse problem
     # eta = 0.5
     # psi_list = []

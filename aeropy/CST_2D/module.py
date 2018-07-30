@@ -205,7 +205,7 @@ def calculate_arc_length(psi_initial, psi_final, A_j, deltaz, c_j):
     
 def fitting_shape_coefficients(filename, bounds = 'Default', n = 5,
                                return_data = False, return_error = False,
-                               optimize_deltaz = False):
+                               optimize_deltaz = False, solver = 'gradient'):
     """Fit shape parameters to given data points
         Inputs:
         - filename: name of the file where the original data is
@@ -312,33 +312,36 @@ def fitting_shape_coefficients(filename, bounds = 'Default', n = 5,
     if bounds == 'Default':
         upper_bounds = [[0, 1.]]*(n+1)
         lower_bounds = [[0, 1]] +  [[-1., 1.]]*n
-
+    
     if optimize_deltaz:
         bounds = upper_bounds + lower_bounds + [[0, 0.1]]
+        x0 = (n+1)*[0.,] +  (n+1)*[0.,] + [0.]
     else:
         bounds = upper_bounds + lower_bounds
         deltaz = (data['y'][0] - data['y'][-1])
-    print(bounds)
+        x0 = (n+1)*[0.,] +  (n+1)*[0.,]
+
     upper, lower = separate_upper_lower(data)
     # a = data
     # x = data['x']
-    result = differential_evolution(shape_difference, bounds, 
-                                            disp=True, popsize = 10, 
-                                            args = [optimize_deltaz])
-    print('order %i upper done' % n)
-    # x = lower['x']
-    # a = lower
-    # result_lower = differential_evolution(shape_difference_lower, lower_bounds, 
-                                            # disp=True, popsize = 10,
-                                            # args = (optimize_deltaz))
-    # print 'order %i lower done' % n
+    if solver == 'differential_evolution':
+        result = differential_evolution(shape_difference, bounds, 
+                                                disp=True, popsize = 10, 
+                                                args = [optimize_deltaz])
+        x = result.x
+    elif solver == 'gradient':
+
+        solution = minimize(shape_difference, x0, bounds = bounds,
+                            options={'maxfun':30000, 'eps': 1e-07})
+        x = solution['x']
+    print('order %i  done' % n)
+
+    Au = list(x[:n+1])
     if optimize_deltaz:
-        Au = list(result.x[:n+1])
-        Al = list(result.x[n+1:-1])
-        deltaz = result.x[-1]
+        Al = list(x[n+1:-1])
+        deltaz = x[-1]
     else:
-        Au = list(result.x[:n+1])
-        Al = list(result.x[n+1:])
+        Al = list(x[n+1:])
         
     # Return Al, Au, and others
     if return_data:

@@ -164,7 +164,6 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0,  # noqa C901
         Viscid = True
     # Is alpha given or not?(in case of Alfa_L_0, then alfas=False)
     if alfas != 'none':
-        print(type(alfas))
         # Single or multiple runs?
         if type(alfas) == list or type(alfas) == np.ndarray:
             Multiple = True
@@ -933,7 +932,6 @@ def file_name(airfoil, alfas='none', output='Cp'):
 def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10,
                       NACA=True, delete=False, PANE=False,
                       GDES=False):
-                      GDES = False):
 
     """Calculate the coefficients of an airfoil.
 
@@ -961,18 +959,18 @@ def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10,
 
 def find_pressure_coefficients(airfoil, alpha, Reynolds=0, iteration=10,
                                NACA=True, use_previous=False, chord=1.,
-                               PANE=False, delete=False):
+                               PANE=False, delete=False, GDES=False):
     """Calculate the pressure coefficients of an airfoil."""
     filename = file_name(airfoil, alpha, output='Cp')
 
     # If file already exists, there is no need to recalculate it.
     if not use_previous:
         call(airfoil, alpha, Reynolds=Reynolds, output='Cp',
-             iteration=iteration, NACA=NACA, PANE=PANE)
+             iteration=iteration, NACA=NACA, PANE=PANE, GDES=GDES)
     else:
         if not os.path.isfile(filename):
             call(airfoil, alpha, Reynolds=Reynolds, output='Cp',
-                 iteration=iteration, NACA=NACA, PANE=PANE)
+                 iteration=iteration, NACA=NACA, PANE=PANE, GDES=GDES)
     coefficients = {}
     # Data from file
     Data = output_reader(filename, output='Cp', delete=delete)

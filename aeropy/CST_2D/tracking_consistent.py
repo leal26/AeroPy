@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from aeropy.morphing.camber_2D import calculate_shape_coefficients_tracing, calculate_dependent_shape_coefficients
 from aeropy.geometry.airfoil import CST
-from aeropy.CST.module_2D import *
+from aeropy.CST_2D.module import *
 
 morphing_direction = 'forwards'
 inverted = False

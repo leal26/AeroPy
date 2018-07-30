@@ -1240,6 +1240,8 @@ def fitting_shape_coefficients(data, order, translate=True, rotate=True,
 
 
     def total_shape_difference(inputs, error_type = 'eucledian'):
+        #TODO: update this so that there is an argument upper and lower
+        #from raw data
         Au = inputs[:order+1]
         Al = inputs[order+1:2*order+2]
 

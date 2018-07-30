@@ -21,7 +21,7 @@ from aeropy.CST_2D.module import *
 # Just as quick trick, to make upper morph I just mirror the image in regards to x
 inverted = False
 # Defines if basckwards or forwards morphing
-morphing_direction = 'backwards'
+# morphing_direction = 'backwards'
     
 #==============================================================================
 # Calculate dependent shape function parameters
@@ -61,10 +61,10 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
     # Now that AC_u0 is known we can calculate the actual chord and AC_l0
     c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
     AC_l0 = np.sqrt(c_P/c_C)*Al_P[0]
-    print(Au_C)
-    print(Au_P)
-    print(Al_P)
-    print(c_C, AC_l0, AC_u0)
+    # print(Au_C)
+    # print(Au_P)
+    # print(Al_P)
+    # print(c_C, AC_l0, AC_u0)
     # print '0 lower shape coefficient: ',AC_l0
     # Calculate thicknessed and tensor B for the constraint linear system problem
     spar_thicknesses = []
@@ -104,7 +104,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
         xi_upper_children = []
 
         c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
-        print(c_C, AC_u0, AC_l0)
+        # print(c_C, AC_u0, AC_l0)
         # psi_baseline, Au_baseline, Au_goal, deltaz, c_baseline, c_goal
         psi_upper_children = []
         for j in range(len(psi_spars)):
@@ -138,7 +138,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
             xi_lower_children.append(xi_l_j)
 
             f[j] = (2*xi_l_j + psi_l_j*deltaz/c_C)/(2*(psi_l_j**0.5)*(psi_l_j-1))  - AC_l0*(1-psi_l_j)**n
-        print(psi_lower_children)
+
         F = np.zeros((n,n))
         #j is the row dimension and i the column dimension in this case
         for j in range(n):
@@ -147,7 +147,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
                 #coherent for equations
                 r = i +1
                 F[j][i] = K(r,n)*(psi_lower_children[j]**r)*(1-psi_lower_children[j])**(n-r)
-                print(K(r,n)*(psi_lower_children[j]**r)*(1-psi_lower_children[j])**(n-r))
+
         A_lower = np.dot(inv(F), f)
 
         Al_C = [AC_l0]
@@ -167,25 +167,41 @@ def calculate_shape_coefficients_tracing(A0, x, y, N1, N2, chord = 1., EndThickn
         K=math.factorial(n)/(math.factorial(r)*math.factorial(n-r))
         return K
  
-    n = len(x)
     
-    print(x)
+    
     Psi = np.array(x)/chord
     Xi = np.array(y)/chord
-    
     EndThickness = EndThickness/chord
-    T = np.zeros((n,n))
-    t = np.zeros((n,1))
-    for j in range(1,n+1):
-        jj = j - 1
-        for i in range(1,n+1):
-            ii = i -1
-            T[jj][ii] = K(i,n)* Psi[jj]**i * (1-Psi[jj])**(n-i)
-        print(Xi[jj], EndThickness, Psi[jj], A0,Psi[jj]**N1*(1-Psi[jj])**N2)
-        t[jj] = (Xi[jj] - Psi[jj]*EndThickness)/(Psi[jj]**N1*(1-Psi[jj])**N2) - A0*(1-Psi[jj])**n
-    # Calculate the inverse
-    A = np.dot(inv(T), t)
-    A = [A0] + list(A.transpose()[0])
+    
+    # If A0 is given (constant leading edge assumption)
+    if A0 is not None:
+        n = len(x)
+        T = np.zeros((n,n))
+        t = np.zeros((n,1))
+    
+        for j in range(1,n+1):
+            jj = j - 1
+            for i in range(1,n+1):
+                ii = i -1
+                T[jj][ii] = K(i,n)* Psi[jj]**i * (1-Psi[jj])**(n-i)
+            
+            t[jj] = (Xi[jj] - Psi[jj]*EndThickness)/(Psi[jj]**N1*(1-Psi[jj])**N2) - A0*(1-Psi[jj])**n
+        # Calculate the inverse
+        A = np.dot(inv(T), t)
+        A = [A0] + list(A.transpose()[0])
+    # If A0 is unknown
+    else:
+        n = len(x) -1
+        T = np.zeros((n+1,n+1))
+        t = np.zeros((n+1,1))
+        for j in range(n+1):
+            for i in range(n+1):
+                T[j][i] = K(i,n)* Psi[j]**i * (1-Psi[j])**(n-i)
+            
+            t[j] = (Xi[j] - Psi[j]*EndThickness)/(Psi[j]**N1*(1-Psi[j])**N2)
+        # Calculate the inverse
+        A = np.dot(inv(T), t)
+        A = list(A.transpose()[0])    
     return A
 
 def calculate_strains( Au_P, Al_P, c_P, Au_C, Al_C, c_C, deltaz, psi_spars, spar_thicknesses):
@@ -224,60 +240,90 @@ def calculate_strains( Au_P, Al_P, c_P, Au_C, Al_C, c_C, deltaz, psi_spars, spar
                 
     return strains, av_strain
 
-def plot_airfoil(AC, psi_spars, c_L, deltaz, Au_L, Al_L, image = 'plot',
-                 iteration=0, return_coordinates=True, dir = 'current'):
+def plot_airfoil(AC, psi_spars, c_P, deltaz, Au_P, Al_P, image = 'plot',
+                 iteration=0, return_coordinates=True, dir = 'current',
+                 morphing_direction = 'backwards'):
     import matplotlib.pyplot as plt
     
-    plt.figure()
-    n = len(Au_L) - 1
+    #plt.figure()
+    n = len(Au_P) - 1
     Au_C, Al_C, c_C, spar_thicknesses = calculate_dependent_shape_coefficients(
                                                         AC,
-                                                        psi_spars, Au_L, Al_L,
-                                                        deltaz, c_L, morphing=morphing_direction)
-    
+                                                        psi_spars, Au_P, Al_P,
+                                                        deltaz, c_P, morphing=morphing_direction)
+    print('CST chord', c_C)
     #==============================================================================
     #  Plot results
     #==============================================================================
     np.set_printoptions(precision=20)
     x = np.linspace(0, c_C, 1000)
     y = CST(x, c_C, deltasz= [deltaz/2., deltaz/2.],  Al= Al_C, Au =Au_C)
-    plt.plot(x, y['u'], 'b', label = 'Children')
-    plt.plot(x, y['l'], '-b', label = None)
+    plt.plot(x, y['u'], 'b', label = 'Children',lw=1)
+    plt.plot(x, y['l'], '-b', label = None,lw=1)
     
     # store variables in case return_coordinates is True
     x = list(x[::-1]) + list(x[1:])
     y = list(y['u'][::-1]) + list(y['l'][1:])
     
     children_coordinates = {'x':x, 'y':y}
-    x = np.linspace(0, c_L, 1000)
-    y = CST(x, c_L, deltasz= [deltaz/2., deltaz/2.],  Al= Al_L, Au =Au_L)
-    plt.plot(x, y['u'], 'r--', label='Parent')
-    plt.plot(x, y['l'], 'r--', label=None)
+    x = np.linspace(0, c_P, 1000)
+    y = CST(x, c_P, deltasz= [deltaz/2., deltaz/2.],  Al= Al_P, Au =Au_P)
+    plt.plot(x, y['u'], 'r--', label='Parent',lw=1)
+    plt.plot(x, y['l'], 'r--', label=None, lw=1)
     
     y_limits = y
     
-    for i in range(len(psi_spars)):
-        psi_i = psi_spars[i]
-        # Calculate psi at landing
-        psi_goal_i = calculate_psi_goal(psi_i, Au_C, Au_L, deltaz, c_C, c_L)
-        x_goal_i = psi_goal_i*c_L
-        # Calculate xi at landing
-        temp = CST(x_goal_i, c_L, [deltaz/2., deltaz/2.], Al= Al_L, Au =Au_L)
-        y_goal_i = temp['u']
-    
-        #calculate spar direction
-        s = calculate_spar_direction(psi_i, Au_C, Au_L, deltaz, c_L)
-    
-        plt.plot([x_goal_i, x_goal_i - spar_thicknesses[i]*s[0]],[y_goal_i, y_goal_i - spar_thicknesses[i]*s[1]], 'r--')
+    if morphing_direction == 'backwards':
+        for i in range(len(psi_spars)):
+            psi_i = psi_spars[i]
+            # Calculate psi at landing
+            psi_goal_i = calculate_psi_goal(psi_i, Au_C, Au_P, deltaz, c_C, c_P)
+            x_goal_i = psi_goal_i*c_P
+            # Calculate xi at landing
+            temp = CST(x_goal_i, c_P, [deltaz/2., deltaz/2.], Al= Al_P, Au =Au_P)
+            y_goal_i = temp['u']
         
-        y = CST(np.array([psi_i*c_C]), c_C, deltasz=[deltaz/2., deltaz/2.], Al= Al_C, Au =Au_C)
-        plt.plot([psi_i*c_C, psi_i*c_C], [y['u'], y['u']-spar_thicknesses[i]], 'b', label = None)
+            #calculate spar direction
+            s = calculate_spar_direction(psi_i, Au_C, Au_P, deltaz, c_P)
+        
+            plt.plot([x_goal_i, x_goal_i - spar_thicknesses[i]*s[0]],[y_goal_i, y_goal_i - spar_thicknesses[i]*s[1]], 'r--')
+            
+            y = CST(np.array([psi_i*c_C]), c_C, deltasz=[deltaz/2., deltaz/2.], Al= Al_C, Au =Au_C)
+            plt.plot([psi_i*c_C, psi_i*c_C], [y['u'], y['u']-spar_thicknesses[i]], 'b', label = None)
+    elif morphing_direction == 'forwards':
+        for j in range(len(psi_spars)):
+            psi_parent_j = psi_spars[j]
+            # Calculate psi at landing
+            # psi_baseline, Au_baseline, Au_goal, deltaz, c_baseline, c_goal
+            psi_children_j = calculate_psi_goal(psi_parent_j, Au_P, Au_C, deltaz, c_P, c_C)
+            x_children_j = psi_children_j*c_C
 
+            
+            # Calculate xi at landing
+            temp = CST(x_children_j, c_C, [deltaz/2., deltaz/2.], Al= Al_C, Au =Au_C)
+            y_children_j = temp['u']
+        
+            s = calculate_spar_direction(psi_spars[j], Au_P, Au_C, deltaz, c_C)
+            
+            # Print spars for children
+            if not inverted:
+                plt.plot([x_children_j, x_children_j - spar_thicknesses[j]*s[0]],[y_children_j, y_children_j - spar_thicknesses[j]*s[1]], c = 'b', lw=1, label=None)
+            else:
+                plt.plot([x_children_j, x_children_j - spar_thicknesses[j]*s[0]],[-y_children_j, -y_children_j + spar_thicknesses[j]*s[1]], c = 'b', lw=1, label=None)
+
+            y = CST(np.array([psi_parent_j*c_P]), c_P, deltasz=[deltaz/2., deltaz/2.], Al= Al_P, Au =Au_P)
+            
+            # Print spars for parents
+            if not inverted:
+                plt.plot([psi_parent_j*c_P, psi_parent_j*c_P], [y['u'], y['u']-spar_thicknesses[j]], 'r--', lw=1, label = None)
+            else:
+                plt.plot([psi_parent_j*c_P, psi_parent_j*c_P], [-y['u'], -y['u']+spar_thicknesses[j]], 'r--', lw=1, label = None)
+                plt.plot([psi_i*c_C, psi_i*c_C], [y['u'], y['u']-spar_thicknesses[i]], 'b', label = None)
     plt.xlabel('$\psi$', fontsize = 16)
     plt.ylabel(r'$\xi$', fontsize = 16)
     plt.grid()
     plt.legend(loc="upper right")
-    plt.gca().set_aspect('equal', adjustable='box')
+    plt.gca().set_aspect(2, adjustable='box')
     x1,x2,y1,y2 = plt.axis()
     plt.axis((x1,x2,y1,2*y2))
     
@@ -286,7 +332,7 @@ def plot_airfoil(AC, psi_spars, c_L, deltaz, Au_L, Al_L, image = 'plot',
         plt.show()
     elif image == 'save':
         if dir == 'current':
-            plt.savefig('%03i.png' % (iteration), bbox_inches='tight')
+            plt.savefig('%03i.pdf' % (iteration), bbox_inches='tight')
         else:
             cwd = os.getcwd()
             directory = os.path.join(cwd, dir)
@@ -390,8 +436,7 @@ if __name__ == '__main__':
                                                             AC_u,
                                                             psi_spars, Au_P, Al_P,
                                                             deltaz, c_P, morphing=morphing_direction)
-        print('solution')
-        print(Al_C)
+
         #==============================================================================
         #  Plot results
         #==============================================================================
@@ -477,7 +522,7 @@ if __name__ == '__main__':
         plt.show()
         
         if morphing_direction == 'forwards':
-            print(c_C, c_P)
+            print('chords', c_P, c_C)
             # Calculate initial lengths
             strains, av_strains = calculate_strains(Au_P, Al_P, c_P, Au_C, Al_C, c_C, deltaz, psi_spars)
             
