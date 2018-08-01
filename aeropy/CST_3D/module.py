@@ -66,7 +66,11 @@ class CST_Object():
         self.origin = origin
         self.axis_order = axis_order
         
-    def calculate_surface(self, mesh=(10,10), mesh_type='uniform'):
+        self.spars = []
+        self.ribs = []
+    
+    def calculate_surface(self, mesh=(10,10), mesh_type='uniform',
+                          return_output = False):
         if type(mesh) == dict or mesh_type=='uniform':
             self.mesh_input = mesh
             self.dimensions = list(mesh)
@@ -77,21 +81,38 @@ class CST_Object():
             #TODO: how to determine dimensions for cases where I do
             # not how the mesh is (seed per x and y)
             self.dimensions = NotImplementedError
+
         if mesh_type is None:
-            self.mesh_surface = CST_3D(self.B, self.mesh_input, 
+            output = CST_3D(self.B, self.mesh_input, 
                                        cp = self.cp, origin = self.origin, 
                                        axis_order = self.axis_order)
         else:
-            self.mesh_surface = CST_3D(self.B, self.mesh_input, 
+            output = CST_3D(self.B, self.mesh_input, 
                                        cp = self.cp, origin = self.origin, 
                                        axis_order = self.axis_order, 
                                        mesh_type = mesh_type)
-    
+        if return_output:
+            return(output)
+        else:
+            self.mesh_surface = output
     def generate_vtk(self, filename = 'test'):
         # Format data
         data = np.reshape(self.mesh_surface, self.dimensions + [3])
         # Generate vtk
-        generate_surface(data=data, filename=filename) 
+        generate_surface(data=data, filename=filename)
+        
+    def calculate_structure(self, structure_x, structure_y=np.linspace(0,1), 
+                                  inverse=False, component = 'spar'):
+        import itertools
+        if component == 'spar':
+            for spar_x in structure_x:   
+                structure_coordinates = np.array(list((itertools.product([spar_x], structure_y))))
+                if inverse == False:
+                    print(structure_coordinates)
+                    self.spars.append(self.calculate_surface(structure_coordinates, 
+                                      'parameterized',return_output=True))
+                else:
+                    self.spars.append(dimensionalize(structure_coordinates, cp = self.cp, inverse = inverse))
 
         
 def CST_3D(B, mesh = (10,10), cp = ControlPoints(),
@@ -237,6 +258,7 @@ def physical_transformation(data, cp = ControlPoints(), inverse = False):
             
     if inverse:
         # CURRENTLY ONLY WORKS FOR NO TWIST ON FUSELAGE
+
         eta= data[:,1]/cp.half_span
 
         #Move to rotation and remove shear

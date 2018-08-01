@@ -38,16 +38,36 @@ class Aircraft():
         return 0
         
     def generate_vtk(self, filename = 'test'):
-        wing_upper.generate_vtk('assembly_upper')
-        wing_lower.generate_vtk('assembly_lower')
-        fuselage.generate_vtk('assembly_fuselage')
+        self.wing_upper.generate_vtk('assembly_upper')
+        self.wing_lower.generate_vtk('assembly_lower')
+        self.fuselage.generate_vtk('assembly_fuselage')
         
         if self.intersections is not None:
             generate_points(self.intersections['upper'], 'upper_intersection')
             generate_points(self.intersections['lower'], 'lower_intersection')
+            
+        # Spar files
+        spar_len = len(self.wing_upper.spars[0])
+        for i in range(len(self.wing_upper.spars)):
+            spar_i = np.zeros((2*spar_len,3))
+            for j in range(spar_len):
+                spar_i[2*j] = self.wing_upper.spars[i][j]
+                spar_i[2*j+1] = self.wing_lower.spars[i][j]
+            # Format data
+            data = np.reshape(spar_i, [2,spar_len, 3])
+            # Generate vtk
+            generate_surface(data=data, filename='spar-{}'.format(i+1))
+            
     def generate_stl(self, ):
         return 0 
         
+    def calculate_structure(self, structure_x, structure_y =np.linspace(0,1), 
+                                  inverse=False, component = 'spar'):
+        self.wing_upper.calculate_structure(structure_x, structure_y=structure_y,
+                                            inverse=inverse, component = component)
+        self.wing_lower.calculate_structure(structure_x, structure_y=structure_y,
+                                            inverse=inverse, component = component)
+                
 def intersection_curve(wing, fuselage, eta0, debugging = False):
     '''Find coordinates along x (including all geometry of wing)
        that include fuselage.'''
@@ -139,6 +159,12 @@ if __name__ == '__main__':
     # Calculating intersections
     JAXA.find_intersections(eta0 = chord_control_f/2.)
     
+    # Generate inner structure
+    spar_x = [.2,.5,.8]
+    spar_y = np.linspace(0,1,10)
+    JAXA.calculate_structure(structure_x = spar_x, structure_y = spar_y, 
+                             inverse = False)
+    
     # Generating data for generic plot
     wing_upper.calculate_surface((10,10))
     wing_lower.calculate_surface((10,10))
@@ -165,6 +191,10 @@ if __name__ == '__main__':
     x,y,z = output_f.T
     ax.scatter(x, y, z, color='k', linewidth=0, antialiased=False)
 
+    # Spars
+    for i in range(len(spar_x)):
+        x,y,z = JAXA.wing_upper.spars[i].T
+        ax.scatter(x, y, z, color='g', linewidth=0, antialiased=False)   
     plt.xlabel('x')
     plt.ylabel('y')
     plt.show()
