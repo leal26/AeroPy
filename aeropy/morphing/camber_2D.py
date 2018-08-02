@@ -14,7 +14,6 @@ import numpy as np
 from numpy.linalg import inv
 
 from aeropy.geometry.airfoil import CST
-
 from aeropy.CST_2D.module import *
 
 
