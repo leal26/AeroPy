@@ -3,7 +3,7 @@ from aeropy.filehandling.vtk import generate_points, generate_surface
 import numpy as np
 
 
-class Aircraft():
+class Aircraft(object):
     def __init__(self, fuselage=None,
                  wing_upper=None,
                  wing_lower=None,
@@ -49,10 +49,8 @@ class Aircraft():
         # Spar files
         spar_len = len(self.wing_upper.spars[0])
         for i in range(len(self.wing_upper.spars)):
-            spar_i = np.zeros((2 * spar_len, 3))
-            for j in range(spar_len):
-                spar_i[2*j] = self.wing_upper.spars[i][j]
-                spar_i[2*j + 1] = self.wing_lower.spars[i][j]
+            spar_i = np.vstack((self.wing_upper.spars[i],
+                                self.wing_lower.spars[i]))
             # Format data
             data = np.reshape(spar_i, [2, spar_len, 3])
             # Generate vtk
@@ -62,15 +60,34 @@ class Aircraft():
         return 0
 
     def calculate_structure(self, structure_x, structure_y=np.linspace(0, 1),
-                            inverse=False, component='spar'):
+                            inverse=False, component='spar', n_points=100,
+                            output_domain='assembly'):
         self.wing_upper.calculate_structure(structure_x,
                                             structure_y=structure_y,
-                                            inverse=inverse,
+                                            inverse=False,
                                             component=component)
         self.wing_lower.calculate_structure(structure_x,
                                             structure_y=structure_y,
-                                            inverse=inverse,
+                                            inverse=False,
                                             component=component)
+        # Generating points in assembly to convert back to parameterized
+        if inverse:
+            from scipy.interpolate import interp1d
+
+            for i in range(len(structure_x)):
+                x_i, y_i, z_i = self.wing_upper.spars[i].T
+                interpolation_function = interp1d(y_i, x_i)
+                y_i = np.linspace(0, 1, n_points)
+                x_i = interpolation_function(y_i)
+                struct = np.array(list(zip(x_i, y_i)))
+                spar_u = self.wing_upper.calculate_surface(struct, 'assembly',
+                                                           return_output=True,
+                                                           output_domain=output_domain)
+                spar_l = self.wing_lower.calculate_surface(struct, 'assembly',
+                                                           return_output=True,
+                                                           output_domain=output_domain)
+                self.wing_upper.spars[i] = spar_u
+                self.wing_lower.spars[i] = spar_l
 
 
 def intersection_curve(wing, fuselage, eta0, debugging=False):

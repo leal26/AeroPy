@@ -8,7 +8,7 @@ from aeropy.CST_3D.meshing import uniform_mesh_generator
 from aeropy.filehandling.vtk import generate_surface
 
 
-class ControlPoints():
+class ControlPoints(object):
     def __init__(self):
         self.eta = [0, 1]
         self.N1 = [.5, .5]
@@ -45,9 +45,9 @@ class ControlPoints():
                 if len(self.eta) != len(getattr(self, property)):
                     raise Exception('Geometric properties must be same length')
             except(AttributeError):
-                raise Exception('Excepted list. Got ' +
-                                str(type(getattr(self, property))) +
-                                ' for ' + property)
+                raise Exception('Excepted list. Got '
+                                + str(type(getattr(self, property)))
+                                + ' for ' + property)
 
     def _set_functions(self):
         self.fN1 = interp1d(self.eta, self.N1)
@@ -58,7 +58,7 @@ class ControlPoints():
         self.fshear = interp1d(self.eta, self.shear)
 
 
-class CST_Object():
+class CST_Object(object):
     def __init__(self, B={'upper': [[1]]}, cp=ControlPoints(),
                  origin=[0, 0, 0], axis_order=[0, 1, 2], mesh=(10, 10)):
         self.surfaces = list(B.keys())
@@ -71,7 +71,12 @@ class CST_Object():
         self.ribs = []
 
     def calculate_surface(self, mesh=(10, 10), mesh_type='uniform',
-                          return_output=False):
+                          return_output=False, output_domain=None):
+        """ if mesh_type == 'uniform', mesh = (size_x, size_y),
+            if mesh_type == 'parameterized', mesh = [[psi_i, psi_i],...],
+            if mesh_type == 'assembly, mesh = [[x_i, y_i, z_i],...],
+            if mesh_type == 'mixed', mesh = [[psi_i, y_i],...]"""
+
         if type(mesh) == dict or mesh_type == 'uniform':
             self.mesh_input = mesh
             self.dimensions = list(mesh)
@@ -83,15 +88,17 @@ class CST_Object():
             # not how the mesh is (seed per x and y)
             self.dimensions = NotImplementedError
 
-        if mesh_type is None:
-            output = CST_3D(self.B, self.mesh_input,
-                            cp=self.cp, origin=self.origin,
-                            axis_order=self.axis_order)
-        else:
+        if output_domain is None:
             output = CST_3D(self.B, self.mesh_input,
                             cp=self.cp, origin=self.origin,
                             axis_order=self.axis_order,
                             mesh_type=mesh_type)
+        else:
+            output = CST_3D(self.B, self.mesh_input,
+                            cp=self.cp, origin=self.origin,
+                            axis_order=self.axis_order,
+                            mesh_type=mesh_type,
+                            output_domain=output_domain)
         if return_output:
             return(output)
         else:
@@ -103,9 +110,17 @@ class CST_Object():
         # Generate vtk
         generate_surface(data=data, filename=filename)
 
+    def calculate_parameterized(self, data):
+        # If data does not include z, calculate it based on given (x,y)
+        phys_data = assembly_transformation(data, self.axis_order, self.origin,
+                                            inverse=True)
+        param_data = dimensionalize(phys_data, cp=self.cp, inverse=True)
+        return(param_data)
+
     def calculate_structure(self, structure_x, structure_y=np.linspace(0, 1),
                             inverse=False, component='spar'):
         import itertools
+
         if component == 'spar':
             if inverse is False:
                 for x in structure_x:
@@ -116,8 +131,74 @@ class CST_Object():
                                                     return_output=True)
                     self.spars.append(spar_i)
             else:
-                self.spars.append(dimensionalize(
-                    struct_coord, cp=self.cp, inverse=inverse))
+                for i in range(len(structure_x)):
+                    struct_coord = list(zip(structure_x[i], structure_y[i]))
+                    spar_i = self.calculate_surface(struct_coord,
+                                                    'assembly',
+                                                    return_output=True)
+                    self.spars.append(spar_i)
+
+    def inverse_problem(self, coordinates={'psi': 0.5, 'zeta': 0.5}):
+        '''
+        TODO: Inverse problem function is still NOT robust to
+        function for any case. For example:
+            Au = np.array([0.172802, 0.167353, 0.130747, 0.172053, 0.112797,
+                           0.168891])
+            Al = np.array([0.163339, 0.175407, 0.134176, 0.152834, 0.133240,
+                           0.161677])
+            # Wing properties (control points)
+            cp = ControlPoints()
+            cp.set(chord = [1.,1.],
+                   twist = [0, 0])'''
+
+        from scipy.optimize import minimize
+
+        def residual(psi, eta, zeta):
+            mesh = {surface: np.array([[psi[0], eta[0]], ])}
+            output = CST_3D(self.B, mesh=mesh, cp=self.cp,
+                            mesh_type='parameterized')
+            return abs(zeta - output[0][2])
+
+        def residual_xy(psi, eta, x):
+            mesh = {surface: np.array([[psi[0], eta[0]], ])}
+            output = CST_3D(self.B, mesh=mesh, cp=self.cp,
+                            mesh_type='parameterized')
+            return abs(x - output[0][0])
+
+        if 'zeta' not in coordinates:
+            psi = coordinates['psi']
+            eta = coordinates['eta']
+
+            def f(x):
+                return residual_xy(x, [eta], psi)
+            solution = minimize(f, 0.5, bounds=[[0, 1]])
+            psi = solution.x[0]
+        else:
+            zeta = coordinates['zeta']
+            surface = list(self.B.keys())[0]
+            if 'psi' in coordinates:
+                psi = coordinates['psi']
+
+                def f(x):
+                    return residual([psi], x, zeta)
+                solution = minimize(f, 0.5, bounds=[[0, 1]])
+                eta = solution.x[0]
+            elif 'eta' in coordinates:
+                eta = coordinates['eta']
+
+                def f(x):
+                    return residual(x, [eta], zeta)
+                solution = minimize(f, 0.5, bounds=[[0, 1]])
+                psi = solution.x[0]
+
+        # Check if found actual solution
+        tol = 1e-4
+
+        if abs(solution.fun) < tol:
+            return psi, eta, zeta
+        else:
+            raise Exception('There is no point on surface with such z'
+                            + ' coordinate')
 
 
 def CST_3D(B, mesh=(10, 10), cp=ControlPoints(),
@@ -147,7 +228,6 @@ def CST_3D(B, mesh=(10, 10), cp=ControlPoints(),
             - 'parameterized' uses point as is as mesh
             - 'assembly'
             - 'mixed'
-
     """
     # Process mesh
     mesh, dimensions = process_mesh(mesh, cp, origin, axis_order,
@@ -166,13 +246,25 @@ def CST_3D(B, mesh=(10, 10), cp=ControlPoints(),
         # Position part in assembly_transformation
         data_assembly = assembly_transformation(data_phys, axis_order, origin)
 
+        if 'output_domain' in optional_arguments:
+            print(optional_arguments['output_domain'])
+            if optional_arguments['output_domain'] == 'parameterized':
+                data = data_parm
+
+            elif optional_arguments['output_domain'] == 'physical':
+                data = data_phys
+
+            elif optional_arguments['output_domain'] == 'assembly':
+                data = data_assembly
+        else:
+            data = data_assembly
         # Reformat if necessary
         try:
             if optional_arguments['format'] == 'matrix':
-                data_assembly.resize(dimensions[surface] + [3])
+                data.resize(dimensions[surface] + [3])
         except(KeyError):
             pass
-        output[surface] = data_assembly
+        output[surface] = data
 
     if len(B.keys()) == 1:
         return output[list(B.keys())[0]]
@@ -223,7 +315,8 @@ def parameterized_transformation(mesh, B, cp=ControlPoints(),
 
 
 def dimensionalize(Raw_data, cp=ControlPoints(), inverse=False):
-    '''Converts from parameterized domain to physical domain'''
+    '''Converts from parameterized domain to physical domain
+       and from physical to parameterized (if inverse=True)'''
 
     if inverse:
         data = physical_transformation(Raw_data, cp, inverse)
@@ -320,54 +413,6 @@ def assembly_transformation(data, axis_order, origin, inverse=False):
     return(data)
 
 
-def inverse_problem(coordinates={'psi': 0.5, 'zeta': 0.5}, B={'upper': [[1]]},
-                    cp=ControlPoints()):
-    '''
-    TODO: Inverse problem function is still NOT robust to
-    function for any case. For example:
-        Au = np.array([0.172802, 0.167353, 0.130747, 0.172053, 0.112797,
-                       0.168891])
-        Al = np.array([0.163339, 0.175407, 0.134176, 0.152834, 0.133240,
-                       0.161677])
-        # Wing properties (control points)
-        cp = ControlPoints()
-        cp.set(chord = [1.,1.],
-               twist = [0, 0])'''
-
-    from scipy.optimize import minimize
-
-    def residual(psi, eta, zeta):
-        mesh = {surface: np.array([[psi[0], eta[0]], ])}
-        output = CST_3D(B, mesh=mesh, cp=ControlPoints(),
-                        mesh_type='parameterized')
-        return abs(zeta - output[0][2])
-
-    zeta = coordinates['zeta']
-    surface = list(B.keys())[0]
-    if 'psi' in coordinates:
-        psi = coordinates['psi']
-
-        def f(x):
-            return residual([psi], x, zeta)
-        solution = minimize(f, 0.5, bounds=[[0, 1]])
-        eta = solution.x[0]
-    elif 'eta' in coordinates:
-        eta = coordinates['eta']
-
-        def f(x):
-            return residual(x, [eta], zeta)
-        solution = minimize(f, 0.5, bounds=[[0, 1]])
-        psi = solution.x[0]
-
-    # Check if found actual solution
-    tol = 1e-4
-
-    if abs(solution.fun) < tol:
-        return psi, eta, zeta
-    else:
-        raise Exception('There is no point on surface with such z coordinate')
-
-
 def process_mesh(mesh, cp=ControlPoints(), origin=[0, 0, 0],
                  axis_order=[], options={}):
     ''' 'Universal' tool processing for following cases:
@@ -395,6 +440,10 @@ def process_mesh(mesh, cp=ControlPoints(), origin=[0, 0, 0],
 
         elif options['mesh_type'] == 'assembly':
             for surface in mesh:
+                if len(mesh[surface][0]) == 2:
+                    b_zeros = np.zeros(len(mesh[surface]))
+                    b_zeros.resize(len(b_zeros), 1)
+                    mesh[surface] = np.hstack((mesh[surface], b_zeros))
                 mesh[surface] = assembly_transformation(
                     mesh[surface], axis_order, origin, inverse=True)
                 mesh[surface] = dimensionalize(mesh[surface], cp=cp,
