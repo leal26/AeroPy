@@ -2,7 +2,7 @@ import numpy as np
 
 
 def uniform_mesh_generator(mesh):
-    '''Default genrator for uniform meshes. If len(mesh)==2, upper and lower
+    '''Default generator for uniform meshes. If len(mesh)==2, upper and lower
        have same mesh'''
 
     # Defining dimensions matrix

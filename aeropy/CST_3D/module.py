@@ -73,7 +73,7 @@ class CST_Object(object):
     def calculate_surface(self, mesh=(10, 10), mesh_type='uniform',
                           return_output=False, output_domain=None):
         """ if mesh_type == 'uniform', mesh = (size_x, size_y),
-            if mesh_type == 'parameterized', mesh = [[psi_i, psi_i],...],
+            if mesh_type == 'parameterized', mesh = [[psi_i, eta_i],...],
             if mesh_type == 'assembly, mesh = [[x_i, y_i, z_i],...],
             if mesh_type == 'mixed', mesh = [[psi_i, y_i],...]"""
 
@@ -207,32 +207,26 @@ def CST_3D(B, mesh=(10, 10), cp=ControlPoints(),
     - B: dict (keys 'upper' and 'lower') input that defines shape coefficients
 
     - mesh: input for mesh. If type(mesh) == list, a uniform mesh generator
-            is used and mesh =  list of number of points in x and y. If len==2,
+            is used and mesh =  list of  points in x and y. If len==2,
             the upper and lower surfaces have the same mesh. If len==4 they are
             different. To import a mesh, use a dictionary with the following
             formatting:
-            mesh = {'psi_u':psi_u, 'eta_u':eta_u, 'Npsi_u':Npsi_u,
-                    'Neta_u':Neta_u,
-                    'psi_l':psi_l, 'eta_l':eta_l, 'Npsi_l':Npsi_l,
-                    'Neta_u':Neta_l}
-            Meshes can also be imported in physical space as follows
-            mesh = {'x_u', 'y_u', 'x_l', 'y_l'}
+            if mesh_type == 'uniform', mesh = (size_x, size_y),
+            if mesh_type == 'parameterized', mesh = [[psi_i, eta_i],...],
+            if mesh_type == 'assembly, mesh = [[x_i, y_i, z_i],...],
+            if mesh_type == 'mixed', mesh = [[psi_i, y_i],...]
+
             Furthermore, you can define for only lower or upper surface.
             No need to have both.
-    -
+
     - optional_arguments:
         - format: controls format of output as either 'array' (size = [N,3])
                   or 'matrix' (size = [N,M,3])
-        - meshtype: if equal to:
-            - 'uniform' use list (len=2 or len=4) as the seeding
-            - 'parameterized' uses point as is as mesh
-            - 'assembly'
-            - 'mixed'
+
     """
     # Process mesh
-    mesh, dimensions = process_mesh(mesh, cp, origin, axis_order,
-                                    optional_arguments)
-
+    mesh, dimensions = _process_mesh(mesh, cp, origin, axis_order,
+                                     optional_arguments)
     output = {}
     for surface in B:
         # Calculating non-dimensional surface
@@ -274,6 +268,11 @@ def CST_3D(B, mesh=(10, 10), cp=ControlPoints(),
 
 def parameterized_transformation(mesh, B, cp=ControlPoints(),
                                  surface='upper'):
+    '''Function that calculates zeta in parameterized domain.
+       - mesh: numpy array with [[psi,eta]] coordiantes
+       - cp: ControlPoints object with N1/N2/etc information
+       - surface: 'upper' or 'lower' surfaces
+       '''
     def S(B, psi, eta):
         """ Cross section shape function. Validated for high dimensions.
            To debug just verify if it turns all ones when B=ones"""
@@ -316,7 +315,11 @@ def parameterized_transformation(mesh, B, cp=ControlPoints(),
 
 def dimensionalize(Raw_data, cp=ControlPoints(), inverse=False):
     '''Converts from parameterized domain to physical domain
-       and from physical to parameterized (if inverse=True)'''
+       and from physical to parameterized (if inverse=True)
+
+        - Raw_data: coordinates of the points to be analyzed. Could be in
+                    physical or parameterized domain depending on 'inverse'.
+        - cp: ControlPoints object with taper/sweep/etc information'''
 
     if inverse:
         data = physical_transformation(Raw_data, cp, inverse)
@@ -332,8 +335,11 @@ def dimensionalize(Raw_data, cp=ControlPoints(), inverse=False):
 def intermediate_transformation(data_nondimensional, cp=ControlPoints(),
                                 inverse=False):
     '''Converts from Parameterized domain to intermediate domain (not rotated).
-       - psi, xi, eta are the coordinates of the points to be analyzed
-       - eta_control points where we know values such as chord etc'''
+       - data_nondimensional: np.array([[psi_i, eta_i, zeta_i],...]) are the
+            coordinates of the points to be analyzed
+       - cp: ControlPoints object with taper/sweep/etc information
+       - inverse: False: from parameterized to intermediate
+                  True: from intermediate to parameterized'''
 
     psi, eta, zeta = data_nondimensional.T
     if inverse:
@@ -357,7 +363,12 @@ def intermediate_transformation(data_nondimensional, cp=ControlPoints(),
 
 
 def physical_transformation(data, cp=ControlPoints(), inverse=False):
-
+    '''Transform from intermediate domain to physical domain.
+       - data: np.array([[x0_i, y0_i, z0_i],...]) are the
+            coordinates of the points to be analyzed
+       - cp: ControlPoints object with dihedral/twist/etc information
+       - inverse: False: from intermediate to physical
+                  True: from physical to intermediate'''
     if inverse:
         # CURRENTLY ONLY WORKS FOR NO TWIST ON FUSELAGE
 
@@ -369,6 +380,8 @@ def physical_transformation(data, cp=ControlPoints(), inverse=False):
         # Adjust if only two coordinates are provided. Using zero values
         # which is true if there is no twist
         try:
+            print('eta', min(eta), max(eta))
+            print('control', cp.eta)
             data[:, 2] += cp.twist_origin['z'] - cp.fshear(eta)
         except(IndexError):
             dummy_z = np.reshape(np.zeros(data.shape[0]), (data.shape[0], 1))
@@ -390,7 +403,6 @@ def physical_transformation(data, cp=ControlPoints(), inverse=False):
         data[:, 2] -= cp.twist_origin['z']
 
         # Twisting
-
         R = Rotation_euler_vector(cp.twist_axis, cp.ftwist(eta))
         data = np.array([np.dot(R[:, :, l], data[l]) for l in range(len(eta))])
 
@@ -401,7 +413,14 @@ def physical_transformation(data, cp=ControlPoints(), inverse=False):
 
 
 def assembly_transformation(data, axis_order, origin, inverse=False):
-    '''Transform from physical domain to assembly domain'''
+    '''Transform from physical domain to assembly domain.
+           - data: np.array([[x1_i, y1_i, z1_i],...]) are the
+                coordinates of the points to be analyzed
+           - axis_order: orientation of part axis relative to assembly
+                         axis
+           - origin: translation of part origin relative to assembly origin
+           - inverse: False: from physical to assembly
+                      True: from assembly to physical'''
     if inverse:
         data -= np.array(origin)
         data[:, [0, 1, 2]] = data[:, axis_order]
@@ -413,14 +432,19 @@ def assembly_transformation(data, axis_order, origin, inverse=False):
     return(data)
 
 
-def process_mesh(mesh, cp=ControlPoints(), origin=[0, 0, 0],
-                 axis_order=[], options={}):
+def _process_mesh(mesh, cp=ControlPoints(), origin=[0, 0, 0],
+                  axis_order=[], options={}):
     ''' 'Universal' tool processing for following cases:
-        - mesh_options not defined: mesh=[Npsi_upper, Neta_upper, Npsi_lower,
-          Neta_lower] or mesh=[Npsi_upper, Neta_upper]=[Npsi_lower, Neta_lower]
+        if mesh_type == 'uniform', mesh = (size_x, size_y),
+        if mesh_type == 'parameterized', mesh = [[psi_i, eta_i],...],
+        if mesh_type == 'assembly, mesh = [[x_i, y_i, z_i],...],
+        if mesh_type == 'mixed', mesh = [[psi_i, y_i],...]
+        Other inputs:
+         - cp: ControlPoints object with dihedral/twist/etc information
+         - inverse: False: from intermediate to physical
+                    True: from physical to intermediate
     '''
-
-    if options['mesh_type'] == 'uniform':
+    if options == {} or options['mesh_type'] == 'uniform':
         mesh, dimensions = uniform_mesh_generator(mesh)
     else:
         if options['mesh_type'] == 'parameterized':
@@ -454,10 +478,7 @@ def process_mesh(mesh, cp=ControlPoints(), origin=[0, 0, 0],
 
 
 if __name__ == '__main__':
-    # from mpl_toolkits.mplot3d import Axes3D
-    # import matplotlib.pyplot as plt
-    # from matplotlib import cm
-
+    directory = './examples/'
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # Inputs
 
@@ -483,49 +504,47 @@ if __name__ == '__main__':
     # Using CST_object
     wing_upper = CST_Object(B={'upper': [Au, Au]}, cp=cp)
     wing_upper.calculate_surface((20, 20))
-    wing_upper.generate_vtk('upper')
+    wing_upper.generate_vtk(directory+'upper')
 
     wing_lower = CST_Object(B={'lower': [Al, Al]}, cp=cp)
     wing_lower.calculate_surface((20, 20))
-    wing_lower.generate_vtk('lower')
+    wing_lower.generate_vtk(directory+'lower')
 
     # Just for plotting
     output = {'upper': wing_upper.mesh_surface,
               'lower': wing_lower.mesh_surface}
 
     # Dump CST data for curve fitting
-    pickle.dump(output, open("CST_example.p", "wb"))
-    # Inverse problem
-    # eta = 0.5
-    # psi_list = []
-    # eta_list = []
-    # zeta_list = []
-    # for zeta in np.linspace(0,0.03, 10):
-    # [psi, eta, zeta] = inverse_problem(coordinates ={'eta':eta, 'zeta':zeta},
-    # B = {'upper':[Au,Au]},
-    # cp=cp)
+    pickle.dump(output, open(directory + "CST_example.p", "wb"))
 
-    # psi_list.append(psi)
-    # eta_list.append(eta)
-    # zeta_list.append(zeta)
+    # Edges
+    eta = np.resize(np.linspace(0, 1, 20), [20, 1])
 
-    # Plotting
-    # fig = plt.figure()
-    # ax = fig.gca(projection='3d')
-    # # ax.scatter(psi_list,  zeta_list, eta_list)
-    # for surface in output:
-    # x,y,z = output[surface].T
-    # ax.scatter(x, z, y, cmap=plt.get_cmap('jet'),
-    # linewidth=0, antialiased=False)
-    # ax.set_zlim(0, 4)
-    # plt.xlabel('x')
-    # plt.ylabel('z')
+    mesh = np.hstack([np.zeros([20, 1]), eta])
 
-    # fig2 = plt.figure()
-    # ax = fig2.add_subplot(111)
-    # for surface in output:
-    # x,y,z = output[surface].T
-    # ax.scatter(x, z)
-    # plt.xlabel('x')
-    # plt.ylabel('z')
-    # plt.show()
+    LE = wing_upper.calculate_surface(mesh, return_output=True,
+                                      mesh_type='parameterized')
+    mesh = np.hstack([np.ones([20, 1]), eta])
+
+    TE = wing_upper.calculate_surface(mesh, return_output=True,
+                                      mesh_type='parameterized')
+
+    from mpl_toolkits.mplot3d import Axes3D
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    def np_plot(data, color, plot_type='scatter'):
+        x, y, z = data.T
+        if plot_type == 'scatter':
+            ax.scatter(x, y, z, c=color)
+        elif plot_type == 'plot':
+            ax.plot(x, y, z, c=color)
+
+    np_plot(LE, 'r', 'plot')
+    np_plot(TE, 'r', 'plot')
+    np_plot(wing_lower.mesh_surface, 'b')
+    np_plot(wing_upper.mesh_surface, 'b')
+    plt.show()
+    pickle.dump([LE, TE], open(directory + "edges.p", "wb"))
