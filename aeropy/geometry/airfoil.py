@@ -517,11 +517,14 @@ def find_edges(x, y):
     '''Defining chord as the greatest distance from the trailing edge,
        find the leading edge'''
        
+    x = list(x)
+    y = list(y)
     # The Trailing edge will always be the point with greatest x for small angles
     TE_x = max(x)
     TE_index = x.index(TE_x)
     TE_y = y[TE_index]
-    
+    print(x)
+    print(TE_x, TE_y)
     chord = 0
     LE_index = 0
     
@@ -536,8 +539,9 @@ def find_edges(x, y):
             {'x':x[TE_index], 'y':y[TE_index]},
             theta, chord)
      
-def rotate(upper, lower, origin, theta, unit_theta = 'deg', 
-           move_to_origin = False, chord = 1.):
+def rotate(upper, lower = {'x': [], 'y': []}, origin = {'x':0, 'y':0},
+            theta=None, unit_theta = 'rad', move_to_origin = False,
+            chord = None):
     """
     :param upper: dictionary with keys x and y, each a list
     
@@ -552,6 +556,11 @@ def rotate(upper, lower, origin, theta, unit_theta = 'deg',
     :param chord: will normalize results by this chors
     output: rotated_upper, rotated_lower
     """
+    # Calculate angle based on trailing edge if angle not defined
+    if theta == None:
+        origin, TE, theta, chord = find_edges(upper['x'], upper['y'])
+        print('theta', theta)
+        # theta = - theta
     output = []
     
     #For trigonometric relations in numpy, theta must be in radians

@@ -13,48 +13,6 @@ from aeropy.geometry.wing import Rotation_euler_vector
 from aeropy.CST_3D.module import CST_3D, dimensionalize, ControlPoints
 
 
-def process_data(upper, lower, LE, TE):
-    '''Displace and normalize all data and LE and TE. Only necessary if not
-       processed at filehandling/stl_processing'''
-    # For x
-    norm = max(np.absolute(lower['y']))
-    min_x = min(lower['x'])
-    upper['x'] = (upper['x'] - min(upper['x']))/norm
-    lower['x'] = (lower['x'] - min_x)/norm
-    LE['x'] = (LE['x'] - min_x)/norm
-    TE['x'] = (TE['x'] - min_x)/norm
-
-    # For y
-    upper['y'] = -1*np.array(upper['y'])/norm
-    lower['y'] = -1*np.array(lower['y'])/norm
-    LE['y'] = - np.array(LE['y'])/norm
-    TE['y'] = - np.array(TE['y'])/norm
-
-    # For z
-    index_min = np.where(upper['x'] == min(upper['x']))[0][0]
-    min_z = upper['z'][index_min]
-    upper['z'] = (upper['z'] - upper['z'][index_min])/norm
-    LE['z'] = (LE['z'] - min_z)/norm
-    TE['z'] = (TE['z'] - min_z)/norm
-
-    # Sort x, y, and z sort data
-    [y_LE, x_LE, z_LE] = zip(*sorted(zip(LE['y'], LE['x'], LE['z'])))
-    [y_TE, x_TE, z_TE] = zip(*sorted(zip(TE['y'], TE['x'], TE['z'])))
-
-    # Correction to get 1.00000001= 1.0
-    y_LE = list(y_LE)
-    y_LE[-1] = 1.0
-    y_LE = np.array(y_LE)
-    y_TE = list(y_TE)
-    y_TE[-1] = 1.0
-    y_TE = np.array(y_TE)
-
-    Raw_LE = {'x': x_LE, 'y': y_LE, 'z': z_LE}
-    Raw_TE = {'x': x_TE, 'y': y_TE, 'z': z_TE}
-
-    return upper, lower, Raw_LE, Raw_TE
-
-
 def find_ControlPoints(cp, Raw_LE, Raw_TE,
                        solver='gradient'):
     '''
@@ -267,7 +225,7 @@ if __name__ == '__main__':
     np_plot(Raw_TE, 'r')
     np_plot(Data_wing, 'b')
     np_plot(Data_nondimensional, 'k')
-    # np_plot(Data_CST, 'm')
+    np_plot(Data_CST, 'm')
     np_plot(LE_model, 'g', 'plot')
     np_plot(TE_model, 'g', 'plot')
 
