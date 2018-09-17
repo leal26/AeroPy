@@ -231,7 +231,8 @@ def calculate_arc_length(psi_initial, psi_final, A_j, deltaz, c_j):
 def fitting_shape_coefficients(filename, bounds='Default', n=5,
                                return_data=False, return_error=False,
                                optimize_deltaz=False, solver='gradient',
-                               deltaz=None, objective='hausdorf'):
+                               deltaz=None, objective='hausdorf',
+                               surface='both'):
     """Fit shape parameters to given data points
         Inputs:
         - filename: name of the file where the original data is
@@ -244,49 +245,51 @@ def fitting_shape_coefficients(filename, bounds='Default', n=5,
 
     from optimization_tools.hausdorff_distance import hausdorff_distance_2D
 
-    def shape_difference(inputs, optimize_deltaz=False):
+    def shape_difference(inputs, optimize_deltaz=False, surface=surface):
+        # Define deltaz
         if optimize_deltaz is True or optimize_deltaz == [True]:
+            deltasz = inputs[-1]/2.
+        else:
+            deltasz = deltaz/2.
+
+        # Calculate upper and lower surface
+        if surface == 'both':
             y_u = CST(upper['x'], 1, deltasz=inputs[-1]/2.,
                       Au=list(inputs[:n+1]))
             y_l = CST(lower['x'], 1, deltasz=inputs[-1]/2.,
                       Al=list(inputs[n+1:-1]))
-        else:
-            y_u = CST(upper['x'], 1, deltasz=deltaz/2., Au=list(inputs[:n+1]))
-            y_l = CST(lower['x'], 1, deltasz=deltaz/2., Al=list(inputs[n+1:]))
+        elif surface == 'upper':
+            y_u = CST(upper['x'], 1, deltasz=inputs[-1]/2.,
+                      Au=list(inputs[:n+1]))
+        elif surface == 'lower':
+            y_l = CST(lower['x'], 1, deltasz=inputs[-1]/2.,
+                      Al=list(inputs[:n+1]))
+
         # Vector to be compared with
-        a_u = {'x': upper['x'], 'y': y_u}
-        a_l = {'x': lower['x'], 'y': y_l}
-        # print(hausdorff_distance_2D(a_u, upper) + hausdorff_distance_2D(a_l, lower))
+        error = 0
+        if surface == 'upper' or surface == 'both':
+            a_u = {'x': upper['x'], 'y': y_u}
+            if objective == 'hausdorf':
+                error += hausdorff_distance_2D(a_u, upper)
+            elif objective == 'squared_mean':
+                error += np.mean((np.array(a_u['x'])-np.array(upper['x']))**2 +
+                                 (np.array(a_u['y'])-np.array(upper['y']))**2)
+
+        if surface == 'lower' or surface == 'both':
+            a_l = {'x': lower['x'], 'y': y_l}
+            if objective == 'hausdorf':
+                error += hausdorff_distance_2D(a_l, lower)
+            elif objective == 'squared_mean':
+                error += np.mean((np.array(a_l['x'])-np.array(lower['x']))**2 +
+                                 (np.array(a_l['y'])-np.array(lower['y']))**2)
+
         # plt.figure()
         # plt.scatter(a_u['x'], a_u['y'], c='k')
         # plt.scatter(a_l['x'], a_l['y'], c='b')
         # plt.scatter(upper['x'], upper['y'], c='r')
         # plt.scatter(lower['x'], lower['y'], c='g')
         # plt.show()
-        if objective == 'hausdorf':
-            return hausdorff_distance_2D(a_u, upper) + \
-                hausdorff_distance_2D(a_l, lower)
-        elif objective == 'squared_mean':
-            return np.mean((np.array(a_u['x']) - np.array(upper['x']))**2 +
-                           (np.array(a_u['y']) - np.array(upper['y']))**2) + np.mean((np.array(a_l['x']) - np.array(lower['x']))**2 + (np.array(a_l['y']) - np.array(lower['y']))**2)
-
-    # def shape_difference_upper(inputs, optimize_deltaz = False):
-        # if optimize_deltaz == True:
-        # y = CST(x, 1, deltasz = inputs[-1]/2., Au = list(inputs[:-1]))
-        # else:
-        # y = CST(x, 1, deltasz = inputs[-1]/2., Au = list(inputs))
-        # # Vector to be compared with
-        # b = {'x': x, 'y': y}
-        # return hausdorff_distance_2D(a, b)
-
-    # def shape_difference_lower(inputs, optimize_deltaz = False):
-        # if optimize_deltaz == True:
-        # y = CST(x, 1, deltasz = inputs[-1]/2.,  Al = list(inputs[:-1]))
-        # else:
-        # y = CST(x, 1, deltasz = deltaz/2.,  Al = list(inputs))
-        # # Vector to be compared with
-        # b = {'x': x, 'y': y}
-        # return hausdorff_distance_2D(a, b)
+        return error
 
     def separate_upper_lower(data):
         for key in data:
@@ -308,6 +311,26 @@ def fitting_shape_coefficients(filename, bounds='Default', n=5,
         # lower = {'x': x[i:],
         #          'y': y[i:]}
         return upper, lower
+
+    def _determine_bounds_x0(n, optimize_deltaz, bounds):
+        if bounds == 'Default':
+            upper_bounds = [[0, 1]] + [[-1., 1.]]*n
+            lower_bounds = [[0, 1]] + [[-1., 1.]]*n
+
+        if optimize_deltaz:
+            if surface == 'both':
+                bounds = upper_bounds + lower_bounds + [[0, 0.1]]
+                x0 = (n+1)*[0., ] + (n+1)*[0., ] + [0.]
+            elif surface == 'upper':
+                bounds = upper_bounds + [[0, 0.1]]
+                x0 = (n+1)*[0., ] + [0.]
+            elif surface == 'lower':
+                bounds = lower_bounds + [[0, 0.1]]
+                x0 = (n+1)*[0., ] + [0.]
+        else:
+            bounds = upper_bounds + lower_bounds
+            x0 = (n+1)*[0., ] + (n+1)*[0., ]
+        return x0, bounds
 
     # Order of Bernstein polynomial
     if bounds != 'Default':
@@ -358,58 +381,70 @@ def fitting_shape_coefficients(filename, bounds='Default', n=5,
         processed_data['y'].append(z[i]/chord)
     data = processed_data
 
-    # ==============================================================================
-    # Optimizing shape
-    # ==============================================================================
     # Determining default bounds
-    if bounds == 'Default':
-        upper_bounds = [[0, 1]] + [[-1., 1.]]*n
-        lower_bounds = [[0, 1]] + [[-1., 1.]]*n
+    x0, bounds = _determine_bounds_x0(n, optimize_deltaz, bounds)
 
-    if optimize_deltaz:
-        bounds = upper_bounds + lower_bounds + [[0, 0.1]]
-        x0 = (n+1)*[0., ] + (n+1)*[0., ] + [0.]
-    else:
-        bounds = upper_bounds + lower_bounds
-        x0 = (n+1)*[0., ] + (n+1)*[0., ]
-        if deltaz is None:
-            deltaz = (data['y'][0] - data['y'][-1])
+    if not optimize_deltaz and deltaz is None:
+        deltaz = (data['y'][0] - data['y'][-1])
 
-    upper, lower = separate_upper_lower(data)
-    # a = data
-    # x = data['x']
+    if surface == 'both':
+        upper, lower = separate_upper_lower(data)
+    elif surface == 'upper':
+        upper = data
+    elif surface == 'lower':
+        lower = data
+
+    # Calculate original error
+    error0 = shape_difference(x0, optimize_deltaz=optimize_deltaz,
+                              surface=surface)
+
+    def f(x):
+        return shape_difference(x, optimize_deltaz=optimize_deltaz,
+                                surface=surface)/error0
+    # Optimize
     if solver == 'differential_evolution':
-        result = differential_evolution(shape_difference, bounds,
-                                        disp=True, popsize=10,
-                                        args=[optimize_deltaz])
+
+        result = differential_evolution(f, bounds,
+                                        disp=True, popsize=10)
         x = result.x
         f = result.fun
     elif solver == 'gradient':
 
-        solution = minimize(shape_difference, x0, bounds=bounds,
+        solution = minimize(f, x0, bounds=bounds,
                             options={'maxfun': 30000, 'eps': 1e-02})
         x = solution['x']
         f = solution['fun']
     print('order %i  done' % n)
 
-    Au = list(x[:n+1])
-    if optimize_deltaz:
-        Al = list(x[n+1:-1])
-        deltaz = x[-1]
-    else:
-        Al = list(x[n+1:])
+    # Unpackage data
+    if surface == 'both' or surface == 'upper':
+        Au = list(x[:n+1])
+    if surface == 'both':
+        if optimize_deltaz:
+            Al = list(x[n+1:-1])
+            deltaz = x[-1]
+        else:
+            Al = list(x[n+1:])
+    elif surface == 'lower':
+        Al = list(x[:n+1])
 
     # Return Al, Au, and others
+    to_return = []
     if return_data:
-        return data, deltaz, Al, Au
-    elif return_error:
-        return f, deltaz, Al, Au
-    else:
-        return deltaz, Al, Au
+        to_return.append(data)
+    if return_error:
+        to_return.append(f)
+    to_return.append(deltaz)
+    if surface == 'lower' or surface == 'both':
+        to_return.append(Al)
+    elif surface == 'upper' or surface == 'both':
+        to_return.append(Au)
+    print(to_return)
+    return to_return
 
 
 def shape_parameter_study(filename, n=5, solver='gradient', deltaz=None,
-                          objective='hausdorf'):
+                          objective='hausdorf', surface='both'):
     """Analyze the shape difference for different Bernstein order
        polynomials.
        - filename: name of dataset to compare with
@@ -422,13 +457,27 @@ def shape_parameter_study(filename, n=5, solver='gradient', deltaz=None,
         optimize_deltaz = False
     Data = {'error': [], 'Al': [], 'Au': [], 'order': [], 'deltaz': []}
     for i in range(1, n+1):
-        error, deltaz, Al, Au = fitting_shape_coefficients(
-            filename, n=i, return_error=True, optimize_deltaz=optimize_deltaz,
-            solver=solver, deltaz=deltaz, objective=objective)
+        if surface == 'both':
+            error, deltaz, Al, Au = fitting_shape_coefficients(
+                filename, n=i, return_error=True,
+                optimize_deltaz=optimize_deltaz, solver=solver, deltaz=deltaz,
+                objective=objective, surface=surface)
+        elif surface == 'lower':
+            error, deltaz, Al = fitting_shape_coefficients(
+                filename, n=i, return_error=True,
+                optimize_deltaz=optimize_deltaz, solver=solver, deltaz=deltaz,
+                objective=objective, surface=surface)
+        elif surface == 'upper':
+            error, deltaz, Au = fitting_shape_coefficients(
+                filename, n=i, return_error=True,
+                optimize_deltaz=optimize_deltaz, solver=solver, deltaz=deltaz,
+                objective=objective, surface=surface)
         print(error)
         Data['error'].append(error)
-        Data['Al'].append(Al)
-        Data['Au'].append(Au)
+        if surface == 'both' or surface == 'lower':
+            Data['Al'].append(Al)
+        if surface == 'both' or surface == 'upper':
+            Data['Au'].append(Au)
         Data['deltaz'].append(deltaz)
         Data['order'].append(i)
 
@@ -547,268 +596,41 @@ def calculate_average_camber(Au, Al, delta_xi):
 if __name__ == '__main__':
     import matplotlib.cm as cm
     import matplotlib.pyplot as plt
-#
-#     c_L = 1.  # in meters
-#     deltaz = 0.002  # in meters
-#
-#     Au_C = [0.4, 0.2]
-#     Au_L = [0.4, 0.2]
-#
-#     Al_C = [0.4, 0.2]
-#     Al_L = [0.4, 0.2]
-#
-#     c_C = calculate_c_baseline(c_L, Au_C, Au_L, deltaz)
-#     print("Solution:      ", c_C)
-#
-#     psi_i = 0.4
-#     print(calculate_psi_goal(psi_i, Au_C, Au_L, deltaz, c_C, c_L))
-#
-#     # Plot for several testing calculat_c_baseline
-#     x = np.linspace(0., 1., 6)
-#
-#     print(calculate_spar_distance(psi_i, Au_C, Au_L, Al_L, deltaz, c_L))
-#     c = []
-#     for x_i in x:
-#         Au_C[0] = x_i
-#         c_i = calculate_c_baseline(c_L, Au_C, Au_L, deltaz)
-#         c.append(c_i)
-#     plt.plot(x, c)
-#     plt.xlabel('$A_{u_0}^C$', fontsize=14)
-#     plt.ylabel('$c^C$', fontsize=14)
-#     plt.grid()
-#     plt.show()
-#
-#     # Plot airfoils for different Au
-#     plt.figure()
-#     psi = np.linspace(0, 1, 500)
-#     i = 0
-#     for c_i in c:
-#         Au_C[0] = x[i]
-#         y = CST(psi, 1, [deltaz/2., deltaz/2.], Au_C, Al_C)
-#         x_plot = np.linspace(0, c_i, 500)
-#         plt.plot(x_plot, c_i*y['u'], label='$A_{u_0}$ = %.1f' % x[i])
-#         y_psi = CST(psi_i, 1, [deltaz/2., deltaz/2.], Au_C, Al_C)
-#         i += 1
-#     plt.xlabel(r'$\psi^C$', fontsize=14)
-#     plt.ylabel(r'$\xi^C$', fontsize=14)
-#     plt.legend()
-#     plt.gca().set_aspect('equal', adjustable='box')
-#     plt.grid()
-#     plt.show()
-#
-#     # Plot for several testing calculat_psi_goal
-#     plt.figure()
-#     x = np.linspace(0., 1., 6)
-#     psi_goal_list = []
-#     for x_i in x:
-#         Au_C[0] = x_i
-#         c_C = calculate_c_baseline(c_L, Au_C, Au_L, deltaz)
-#         psi_goal_i = calculate_psi_goal(psi_i, Au_C, Au_L, deltaz, c_C, c_L)
-#         psi_goal_list.append(psi_goal_i)
-#     plt.plot(x, psi_goal_list)
-#     plt.xlabel('$A_{u_0}^C$', fontsize=14)
-#     plt.ylabel('$\psi_i^L$', fontsize=14)
-#     plt.grid()
-#     plt.show()
-#     # Ploting psi_goal at the landing airfoil for different Au0 for cruise
-#     plt.figure()
-#
-#     psi_plot = np.linspace(0, 1, 500)
-#     y = CST(psi_plot, 1, [deltaz/2., deltaz/2.], Au_L, Al_L)
-#     max_y = max(y['u'])
-#     plt.plot(psi_plot, y['u'])
-#
-#     y = CST(psi_goal_list, 1, [deltaz/2., deltaz/2.], Au_L, Al_L)
-#     colors = iter(cm.rainbow(np.linspace(0, 1, len(psi_goal_list))))
-#     for i in range(len(psi_goal_list)):
-#         plt.scatter(psi_goal_list[i], y['u'][i], color=next(
-#             colors), label='$A_{u_0}^C$ = %.1f' % x[i])
-#     plt.vlines(psi_i, 0, max_y, 'r')
-#     plt.xlabel('$\psi^L$', fontsize=14)
-#     plt.ylabel(r'$\xi^L$', fontsize=14)
-#     plt.legend()
-#     plt.show()
-#
-#     # Plot cos(beta) several Au0
-#     plt.figure()
-#     x = np.linspace(0., 1., 6)
-#     cbeta_list = []
-#     for x_i in x:
-#         Au_C[0] = x_i
-#         cbeta_i = calculate_cbeta(psi_i, Au_C, deltaz/c_C)
-#         cbeta_list.append(cbeta_i)
-#         print(Au_C, cbeta_i)
-#
-#     plt.plot(x, cbeta_list)
-#     plt.xlabel('$A_{u_0}^C$', fontsize=20)
-#     plt.ylabel(r'cos($\beta$)', fontsize=20)
-#     plt.grid()
-#     plt.show()
-#
-# #    # Plot spar vector in landing and cruise configuration
-#     print('Plot spar vector in landing and cruise configuration')
-#     x_landing = np.linspace(0, c_L, 500)
-#     plt.figure()
-#     colors = iter(cm.rainbow(np.linspace(0, 1, len(x))))
-#     for x_i in x:
-#         color_i = next(colors)
-#         Au_C[0] = x_i
-#         # Calculate cruise chord
-#         c_C = calculate_c_baseline(c_L, Au_C, Au_L, deltaz)
-#         x_cruise = np.linspace(0, c_C, 500)
-#         # Plot cruise airfoil
-#         y = CST(x_cruise, c_C, [deltaz/2., deltaz/2.], Au_C, Al_C)
-#         plt.plot(x_cruise, y['u'], c=color_i, label='$A_{u_0}$ = %.2f' % x_i)
-#         plt.plot(x_cruise, y['l'], c=color_i)
-#         y = CST(psi_i*c_C, c_C, [deltaz/2., deltaz/2.], Au_C, Al_C)
-#         plt.plot([psi_i*c_C, psi_i*c_C], [y['l'], y['u']], c=color_i)
-#     plt.legend()
-#     plt.xlabel('$\psi^L$', fontsize=14)
-#     plt.ylabel(r'$\xi^L$', fontsize=14)
-#     plt.gca().set_aspect('equal', adjustable='box')
-#     plt.grid()
-#     plt.show()
-#
-#     plt.figure()
-#     colors = iter(cm.rainbow(np.linspace(0, 1, len(x))))
-#     for x_i in x:
-#         Au_C[0] = x_i
-#         # Calculate cruise chord
-#         c_C = calculate_c_baseline(c_L, Au_C, Au_L, deltaz/c_L)
-#         # Calculate psi at landing
-#         psi_goal_i = calculate_psi_goal(psi_i, Au_C, Au_L, deltaz, c_C, c_L)
-#         # Calculate xi at landing
-#         temp = CST(psi_goal_i*c_L, c_L, [deltaz/2., deltaz/2.], Au_L, Al_L)
-#         y_goal_i = temp['u']
-#         # Plot landing airfoil
-#         y = CST(x_landing, c_L, [deltaz/2., deltaz/2.], Au_L, Al_L)
-#         plt.plot(x_landing, y['u'], 'b', x_landing, y['l'], 'b')
-#
-#         # calculate spar direction
-#         s = calculate_spar_direction(psi_i, Au_C, Au_L, deltaz, c_L)
-#         # calculate spar length
-#         spar_l = calculate_spar_distance(psi_i, Au_C, Au_L, Al_L, deltaz, c_L)
-#         print(s, s[0]**2 + s[1]**2)
-#         color = next(colors)
-#         plt.scatter([psi_goal_i*c_L], [y_goal_i], c=color)
-#         plt.plot([psi_goal_i*c_L, psi_goal_i*c_L - spar_l*s[0]],
-#                  [y_goal_i, y_goal_i - spar_l*s[1]], c=color,
-#                  label='$A_{u_0}$ = %.2f' % x_i)
-#     plt.legend(loc=1)
-#     plt.xlabel('$\psi^L$', fontsize=14)
-#     plt.ylabel(r'$\xi^L$', fontsize=14)
-#     plt.gca().set_aspect('equal', adjustable='box')
-#     plt.grid()
-#     plt.show()
-#
-# # ==============================================================================
-# #     #Plot to check if spars are the same if same airfoil
-# # ==============================================================================
-#     plt.figure()
-#     Au_C = [0.2, 0.2]
-#     Au_L = [0.2, 0.2]
-#
-#     Al_C = [0.2, 0.2]
-#     Al_L = [0.2, 0.2]
-#
-#     c_C = calculate_c_baseline(c_L, Au_C, Au_L, deltaz)
-#
-#     # Plot cruise airfoil
-#     x = np.linspace(0, c_C, 200)
-#     y = CST(x, c_C, deltasz=[deltaz/2., deltaz/2.], Al=Al_C, Au=Au_C)
-#     plt.plot(x, y['u'], 'b', x, y['l'], 'b', label='landing')
-#     y = CST(psi_i*c_C, c_C, [deltaz/2., deltaz/2.], Au=Au_C, Al=Al_C)
-#     plt.plot([psi_i*c_C, psi_i*c_C], [y['l'], y['u']], 'b')
-#
-#     print('cruise spar y', y)
-#
-#     # Plot cruise spars
-#     x = np.linspace(0, c_L, 200)
-#     y = CST(x, c_L, deltasz=[deltaz/2., deltaz/2.], Al=Al_L, Au=Au_L)
-#     plt.plot(x, y['u'], 'r', x, y['l'], 'r', label='cruise')
-#
-#     # Find properties of landing spars
-#     # Calculate psi at landing
-#     psi_goal_i = calculate_psi_goal(psi_i, Au_C, Au_L, deltaz, c_C, c_L)
-#     x_goal_i = psi_goal_i*c_L
-#     # Calculate xi at landing
-#     temp = CST(x_goal_i, c_L, [deltaz/2., deltaz/2.], Au=Au_L, Al=Al_L)
-#     y_goal_i = temp['u']
-#     # calculate spar direction
-#     s = calculate_spar_direction(psi_i, Au_C, Au_L, deltaz, c_L)
-#     spar_l = calculate_spar_distance(psi_i, Au_C, Au_L, Al_L, deltaz, c_L)
-#     plt.plot([x_goal_i, x_goal_i - spar_l*s[0]],
-#              [y_goal_i, y_goal_i - spar_l*s[1]], c='r')
-#     print('landing spar y', [y_goal_i, y_goal_i - spar_l*s[1]])
-#     plt.legend()
-#     plt.show()
+
 # ==============================================================================
 #   Tests for curve fitting
 # ==============================================================================
     # plt.figure()
-    filename = '../filehandling/25D_files/airfoil_68.txt'
-    output = fitting_shape_coefficients(filename, n=5, optimize_deltaz=False,
+    filename = '../filehandling/examples/SCFCoordinates.txt'
+    surface = 'lower'
+    output = fitting_shape_coefficients(filename, n=8, optimize_deltaz=False,
                                         return_error=True, deltaz=0,
-                                        solver='gradient',
-                                        objective='squared_mean')
-    error, fitted_deltaz, fitted_Al, fitted_Au = output
-    print(error)
-    print(fitted_Al)
-    print(fitted_Au)
+                                        solver='differential_evolution',
+                                        objective='squared_mean',
+                                        surface=surface)
+    if surface == 'both':
+        error, fitted_deltaz, fitted_Al, fitted_Au = output
+        print(error)
+        print(fitted_Al)
+        print(fitted_Au)
+    elif surface == 'lower':
+        error, fitted_deltaz, fitted_Al = output
+
     data = output_reader(filename, separator='\t', header=['x', 'z'])
     plt.scatter(data['x'], data['z'], c='r')
     x = np.linspace(0, 1, 100)
-    y_u = CST(x, 1, deltasz=0, Au=fitted_Au)
+    # y_u = CST(x, 1, deltasz=0, Au=fitted_Au)
     y_l = CST(x, 1, deltasz=0, Al=fitted_Al)
-    plt.plot(x, y_u, 'b')
+    # plt.plot(x, y_u, 'b')
     plt.plot(x, y_l, 'b')
     plt.show()
-    # filename = 'sampled_airfoil_data.csv'
-    # plt.figure()
-    # # error, fitted_deltaz, fitted_Al, fitted_Au = fitting_shape_coefficients(filename, n=1,
-    # # optimize_deltaz = True, return_error = True)
-    # # print error, fitted_Al, fitted_Au, fitted_deltaz
-    # fitted_Au = [0.28112944407629581, 0.19487054006845383,
-    #              0.42397361498813563, 0.13538750382907982,
-    #              0.3399920533480057, 0.2118532593111192]
-    # fitted_Al = [0.1897357530709628, -0.25258128225279725,
-    #              0.086871096306674597, -0.55958630302132484,
-    #              0.0064412971620611478, -0.24295645929089565]
-    # fitted_deltaz = 0.0092804245707460483
-    # data = output_reader(filename, separator = ', ', header = ['x', 'y'])
-    # # Rotating airfoil
-    # x_TE = (data['x'][0] + data['x'][-1])/2.
-    # y_TE = (data['y'][0] + data['y'][-1])/2.
-
-    # theta_TE = math.atan(-y_TE/x_TE)
-
-    # # position trailing edge at the x-axis
-    # processed_data = {'x':[], 'y':[]}
-    # for i in range(len(data['x'])):
-    # x = data['x'][i]
-    # y = data['y'][i]
-    # c_theta = math.cos(theta_TE)
-    # s_theta = math.sin(theta_TE)
-    # x_rotated = c_theta*x - s_theta*y
-    # y_rotated = s_theta*x + c_theta*y
-    # processed_data['x'].append(x_rotated)
-    # processed_data['y'].append(y_rotated)
-    # data = processed_data
-
-    # # plt.scatter(data['x'], data['y'])
-    # x = np.linspace(0, 1, 200)
-    # y = CST(x, 1, deltasz= [fitted_deltaz/2., fitted_deltaz/2.],
-    #         Al = fitted_Al, Au = fitted_Au)
-    # plt.plot(x, y['u'], x, y['l'])
-    # plt.scatter(data['x'], data['y'])
-    # plt.show()
 
 # ==============================================================================
 #   Shape parameter study
 # ==============================================================================
     n = 8
     Data = shape_parameter_study(filename, n=n, solver='gradient', deltaz=0,
-                                 objective='squared_mean')
+                                 objective='squared_mean', surface='lower')
     plt.figure()
     x = np.linspace(2, 2*n, n)
     plt.plot(x, Data['error'])

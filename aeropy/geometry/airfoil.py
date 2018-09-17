@@ -13,7 +13,8 @@ from __future__ import print_function
 import math
 import numpy as np
 
-def create_x(c, n = 230, distribution = 'linear'):
+
+def create_x(c, n=230, distribution='linear'):
     """ Create set of points along the chord befitting for Xfoil. The x
     output is conviniently ordered from TE to LE.
 
@@ -23,9 +24,9 @@ def create_x(c, n = 230, distribution = 'linear'):
            find the values of x. Polar uses a delta theta to find values
            of theta that are then used in a circle equation to find the
            x points. Usuallly good for airfoils.
-    
+
     :rtype: x: numpy.array of values of x
-    
+
     Because Xfoil it is not efficient or sometimes possible to create a
     uniform distribution of points because the front part of the
     airfoil requires a big amount of points to create a smooth surface
@@ -63,201 +64,207 @@ def create_x(c, n = 230, distribution = 'linear'):
         max_point = c/4.
         limit = max_point + 0.05*c
         nose_tip = 0.003*c
-    
+
         # Amount of points for each part (this distribution is empirical)
         N_tip = 10*n/230
         N_middle = 180*n/230
         N_endbody = 40*n/230
-    
+
         x_endbody = np.linspace(c, limit, N_endbody)
         x_middle = np.linspace(limit, nose_tip, N_middle)
         x_tip = np.linspace(nose_tip, 0, N_tip)
-    
+
         # Organizing the x lists in a unique list without repeating any
         # numbers
         x2 = np.append(x_middle, np.delete(x_tip, 0))
         x = np.append(x_endbody, np.delete(x2, 0))
-        
+
     elif distribution == 'polar':
         r = c/2.
         x0 = r
-        theta = np.linspace(0, math.pi,n)
-        
+        theta = np.linspace(0, math.pi, n)
+
         x = x0 + r*np.cos(theta)
     return x
 
-#===========================================================================
+# ===========================================================================
 # The following functions are related to creating the airfoil outer mold
-#===========================================================================
+# ===========================================================================
+
+
 def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1., deltasLE=None):
     """
     Based on the paper "Fundamental" Parametric Geometry Representations for
-    Aircraft Component Shapes" from Brenda M. Kulfan and John E. Bussoletti. 
-    The code uses a 1st order Bernstein Polynomial for the "Class Function" / 
+    Aircraft Component Shapes" from Brenda M. Kulfan and John E. Bussoletti.
+    The code uses a 1st order Bernstein Polynomial for the "Class Function" /
     "Shape Function" airfoil representation.
-    
+
     The degree of polynomial is dependant on how many values there are for the
     coefficients. The algorithm is able to use Bernstein Polynomials for any
     order automatically. The algorithm is also able to analyze only the top or
     lower surface if desired. It will recognize by the inputs given. i.e.:
     for CST(x=.2,c=1.,deltasx=.2,Au=.7), there is only one value for Au, so it
-    is a Bernstein polynomial of 1st order for the upper surface. By ommiting 
+    is a Bernstein polynomial of 1st order for the upper surface. By ommiting
     Al the code will only input and return the upper surface.
-    
+
     Although the code is flexible, the inputs need to be coesive. len(deltasz)
-    must be equal to the number of surfaces. Au and Al need to have the same 
-    length if a full analysis is being realized.    
-    
+    must be equal to the number of surfaces. Au and Al need to have the same
+    length if a full analysis is being realized.
+
     The inputs are:
 
         - x:list or numpy. array of points along the chord, from TE and the LE,
           or vice-versa. The code works both ways.
-          
+
         - c: chord
-    
+
         - deltasz: list of thicknesses on the TE. In case the upper and lower
-          surface are being analyzed, the first element in the list is related 
-          to the upper surface and the second to the lower surface. There are 
-          two because the CST method treats the airfoil surfaces as two 
+          surface are being analyzed, the first element in the list is related
+          to the upper surface and the second to the lower surface. There are
+          two because the CST method treats the airfoil surfaces as two
           different surfaces (upper and lower)
-        
-        - Au: list/float of Au coefficients, which are design parameters. If 
-          None,the surface is not analyzed. len(Au) equals  
-        
-        - Al: list/float of Al coefficients, which are design parameters. If 
+
+        - Au: list/float of Au coefficients, which are design parameters. If
+          None,the surface is not analyzed. len(Au) equals
+
+        - Al: list/float of Al coefficients, which are design parameters. If
           None,the surface is not analyzed. len(Al) equals
-          
+
         - deltasLE: leading edge thickness in case it is necessary
-         
+
     The outputs are:
         - y:
-          - for a full analysis: disctionary with keys 'u' and 'l' each with 
+          - for a full analysis: disctionary with keys 'u' and 'l' each with
             a list of the y positions for a surface.
           - for a half analysis: a list with the list of the y postions of the
             the desired surface
-        
+
     Created on Sun Jan 19 16:36:55 2014
-    
+
     Updated on Mon May 19 18:13:26 2014
 
     @author: Pedro Leal
     """
-    
+
     # Bersntein Polynomial
-    def K(r,n):
-        K=math.factorial(n)/(math.factorial(r)*math.factorial(n-r))
+    def K(r, n):
+        K = math.factorial(n)/(math.factorial(r)*math.factorial(n-r))
         return K
-    
-    # Shape Function   
-    def S(r,n,psi):
-        S=K(r,n)*(psi**r)*(1.-psi)**(n-r)
+
+    # Shape Function
+    def S(r, n, psi):
+        S = K(r, n)*(psi**r)*(1.-psi)**(n-r)
         return S
-    
-    # Class Function    
-    def C(N1,N2,psi):
-        C=((psi)**N1)*((1.-psi)**N2)
+
+    # Class Function
+    def C(N1, N2, psi):
+        C = ((psi)**N1)*((1.-psi)**N2)
         return C
-    
-    if type(x)==list:
-        x=np.array(x)
+
+    if type(x) == list:
+        x = np.array(x)
     # Adimensionalizing
-    psi=x/c;    
-    
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    psi = x/c
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #                           Class Function
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # The Coefficients for an airfoil with a rounded leading edge and a sharp
     # trailing edge are N1=0.5 and N2=1.0.
-    C=C(N1,N2,psi);
-    
-    #==========================================================================
+    C = C(N1, N2, psi)
+
+    # ==========================================================================
     #                   Defining the working surfaces
-    #==========================================================================
-    deltaz={}
-    deltaLE={}
-    eta={}
-    y={}
-    Shape={}
-    
+    # ==========================================================================
+    deltaz = {}
+    deltaLE = {}
+    eta = {}
+    y = {}
+    Shape = {}
+
     if Al is not None and Au is not None:
-        deltaz['u']=deltasz[0]
-        deltaz['l']=deltasz[1]
+        deltaz['u'] = deltasz[0]
+        deltaz['l'] = deltasz[1]
         if deltasLE != None:
-            deltaLE['u']=deltasLE[0]
-            deltaLE['l']=deltasLE[1]
-        if len(Au)!=len(Al):
+            deltaLE['u'] = deltasLE[0]
+            deltaLE['l'] = deltasLE[1]
+        if len(Au) != len(Al):
             raise Exception("Au and Al need to have the same dimensions")
-        elif len(deltasz)!=2:
-            raise Exception("If both surfaces are being analyzed, two values for deltasz are needed")
-        
+        elif len(deltasz) != 2:
+            raise Exception(
+                "If both surfaces are being analyzed, two values for deltasz are needed")
+
     elif Au is not None and Al is None:
-        if type(deltasz)==list:
-            if len(deltaz['u'])!=1:
-                raise Exception("If only one surface is being analyzed, one value for deltasz is needed")
+        if type(deltasz) == list:
+            if len(deltaz['u']) != 1:
+                raise Exception(
+                    "If only one surface is being analyzed, one value for deltasz is needed")
             else:
-                deltaz['u']=float(deltasz)
+                deltaz['u'] = float(deltasz)
                 if deltasLE != None:
                     deltaLE['u'] = float(deltasLE[0])
         else:
-            deltaz['u']=deltasz
+            deltaz['u'] = deltasz
             if deltasLE != None:
-                deltaLE['u'] = deltasLE      
+                deltaLE['u'] = deltasLE
     elif Al is not None and Au is None:
-        if type(deltasz)==list:
-            if (deltaz['l'])!=1:
-                raise Exception("If only one surface is being analyzed, one value for deltasz is needed")
+        if type(deltasz) == list:
+            if (deltaz['l']) != 1:
+                raise Exception(
+                    "If only one surface is being analyzed, one value for deltasz is needed")
             else:
-                deltaz['l']=float(deltasz)
+                deltaz['l'] = float(deltasz)
                 if deltasLE != None:
                     deltaLE['l'] = float(deltasLE)
         else:
-            deltaz['l']=deltasz
+            deltaz['l'] = deltasz
             if deltasLE != None:
                 deltaLE['l'] = deltasLE
     else:
         raise Exception("Au or Al need to have at least one value")
     # In case leading edge thickness is not used, just make it zero and not use it
     if deltasLE == None:
-        deltaLE = {'u':0, 'l':0}
-    A={'u':Au,'l':Al}
-    for surface in ['u','l']:
+        deltaLE = {'u': 0, 'l': 0}
+    A = {'u': Au, 'l': Al}
+    for surface in ['u', 'l']:
         if A[surface] is not None:
-            
-            if type(A[surface])==int or type(A[surface])==float:
-                A[surface]=[A[surface]]
+
+            if type(A[surface]) == int or type(A[surface]) == float:
+                A[surface] = [A[surface]]
             # the degree of the Bernstein polynomial is given by the number of
             # coefficients
-            n=len(A[surface])-1
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            n = len(A[surface])-1
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #                           Shape Function
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
-            Shape[surface]=0    
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            Shape[surface] = 0
             for i in range(len(A[surface])):
-#                print A
-#                print S(i,n,psi)
-                if surface=='l':
-                    Shape[surface]-=A[surface][i]*S(i,n,psi)
+                #                print A
+                #                print S(i,n,psi)
+                if surface == 'l':
+                    Shape[surface] -= A[surface][i]*S(i, n, psi)
                 else:
-                    Shape[surface]+=A[surface][i]*S(i,n,psi)
-    
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    Shape[surface] += A[surface][i]*S(i, n, psi)
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #                           Airfoil Shape (eta=z/c)
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~        
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # Airfoil Shape (eta=z/c)
-            if surface=='l':
-                eta[surface]= C*Shape[surface]-psi*deltaz[surface]/c - (1.-psi)*deltaLE[surface]/c;
+            if surface == 'l':
+                eta[surface] = C*Shape[surface]-psi*deltaz[surface]/c - (1.-psi)*deltaLE[surface]/c
             else:
-                eta[surface]= C*Shape[surface]+psi*deltaz[surface]/c + (1.-psi)*deltaLE[surface]/c;  
+                eta[surface] = C*Shape[surface]+psi*deltaz[surface]/c + (1.-psi)*deltaLE[surface]/c
             # Giving back the dimensions
-            y[surface]=c*eta[surface]
-    if Al is not None and Au is not None:     
+            y[surface] = c*eta[surface]
+    if Al is not None and Au is not None:
         return y
     elif Au is not None:
         return y['u']
     else:
         return y['l']
 
-def Naca00XX(c, t, x_list, TE_t = False, return_dict = 'y', for_xfoil = True):
+
+def Naca00XX(c, t, x_list, TE_t=False, return_dict='y', for_xfoil=True):
     """
     Generates a simetric NACA airfoil.
     Inputs:
@@ -269,18 +276,18 @@ def Naca00XX(c, t, x_list, TE_t = False, return_dict = 'y', for_xfoil = True):
                  thickness for a NACA airfoil. Otherwise it is the given value.
     :param return_dict: return dictionary y('y') or x and y ('xy')
     Returns dictionary y coordinates with keys 'u'pper and 'l'ower
-    
-    The Naca function can be found in: https://en.wikipedia.org/wiki/NACA_airfoil  
+
+    The Naca function can be found in: https://en.wikipedia.org/wiki/NACA_airfoil
 
     Created on Wed Feb 03 12:50:52 2016
-    
+
     @author: Endryws and Pedro Leal
     """
     y_upper = []
     y_lower = []
     if type(x_list) == list:
         for x in x_list:
-            xc= x/c # Is just for increase speed and facilitate future changes.
+            xc = x/c  # Is just for increase speed and facilitate future changes.
             a1 = 5*t*c
             t1 = 0.2969*(math.sqrt(xc))
             t2 = -0.1260*xc
@@ -292,11 +299,11 @@ def Naca00XX(c, t, x_list, TE_t = False, return_dict = 'y', for_xfoil = True):
                 t5 = (TE_t/(10*t) - 0.1036)*(xc**4)
             y = (a1*(t1+t2+t3+t4+t5))
             y_upper.append(y)
-            y_lower.append(y*(-1)) # is just for pick the y axis
-                                           # negative numbers
+            y_lower.append(y*(-1))  # is just for pick the y axis
+            # negative numbers
     elif type(x_list) == dict:
         for x in x_list['u']:
-            xc= x/c # Is just for increase speed and facilitate future changes.
+            xc = x/c  # Is just for increase speed and facilitate future changes.
             a1 = 5*t*c
             t1 = 0.2969*(math.sqrt(xc))
             t2 = -0.1260*xc
@@ -310,7 +317,7 @@ def Naca00XX(c, t, x_list, TE_t = False, return_dict = 'y', for_xfoil = True):
             y_upper.append(y)
 
         for x in x_list['l']:
-            xc= x/c # Is just for increase speed and facilitate future changes.
+            xc = x/c  # Is just for increase speed and facilitate future changes.
             a1 = 5*t*c
             t1 = 0.2969*(math.sqrt(xc))
             t2 = -0.1260*xc
@@ -321,38 +328,39 @@ def Naca00XX(c, t, x_list, TE_t = False, return_dict = 'y', for_xfoil = True):
             else:
                 t5 = (TE_t/(10*t) - 0.1036)*(xc**4)
             y = (a1*(t1+t2+t3+t4+t5))
-            y_lower.append(y*(-1)) # is just for pick the y axis
-                                           # negative numbers
+            y_lower.append(y*(-1))  # is just for pick the y axis
+            # negative numbers
     if len(x_list) == 1:
         y = {'u': y_upper[0],
-             'l': y_lower[0]}        
+             'l': y_lower[0]}
     else:
         if for_xfoil:
             y = {'u': y_upper[:-1],
-                 'l':y_lower[-2::-1]}
+                 'l': y_lower[-2::-1]}
         else:
             y = {'u': y_upper,
-                 'l':y_lower}
+                 'l': y_lower}
 
     if return_dict == 'y':
         return y
-        
+
     elif return_dict == 'xy':
         if type(x_list) == list:
             if for_xfoil:
-                x = {'u':x_list[:-1],
-                    'l':x_list[-2::-1]}
+                x = {'u': x_list[:-1],
+                     'l': x_list[-2::-1]}
             else:
-                x = {'u':x_list,
-                     'l':x_list}                
+                x = {'u': x_list,
+                     'l': x_list}
             return x, y
         elif type(x_list) == dict:
             return x_list, y
 
+
 def NACA_four_digit(chord, t, p, m):
 
     # Mean line coordinates
-    x_fwd = np.linspace(0,p*chord)
+    x_fwd = np.linspace(0, p*chord)
     x_aft = np.linspace(p*chord, chord)
 
     y_fwd = (m/p**2)*(2*p*(x/chord)-(x/chord)**2)
@@ -379,17 +387,18 @@ def NACA_four_digit(chord, t, p, m):
                'y': np.append(y_fwd - yt_fwd*np.cos(theta),
                               y_aft - yt_aft*np.cos(theta))}
     return y_upper, y_lower
-#==============================================================================
+# ==============================================================================
 # The following function are related to the use of plain flaps
-#==============================================================================
-    
+# ==============================================================================
+
+
 def find_hinge(x_hinge, upper, lower):
     """From the points of upper and lower surface find the y coordinate of
     the hinge at x_hinge
-    
+
     :param x_hinge: float x-coordinate of the hinge
     :param upper: dictionary with keys x and y, coordiantes of upper surface
-    :param lower: dictionary with keys x and y, coordiantes of lower surface    
+    :param lower: dictionary with keys x and y, coordiantes of lower surface
     """
     def find_closest(data, x_hinge, fwd, aft):
         """ Find the points afterwards(aft) and forwards(fwd) that are closest
@@ -398,8 +407,8 @@ def find_hinge(x_hinge, upper, lower):
             xi = data['x'][i]
             yi = data['y'][i]
             error = abs(xi - x_hinge)
-    
-            #If equal just save and break it
+
+            # If equal just save and break it
             if x_hinge == xi:
                 aft['x'] = xi
                 aft['y'] = yi
@@ -408,69 +417,69 @@ def find_hinge(x_hinge, upper, lower):
                 fwd['y'] = yi
                 fwd['error'] = error
                 break
-            
+
             if xi > x_hinge and error < aft['error']:
                 aft['x'] = xi
                 aft['y'] = yi
                 aft['error'] = error
-    
+
             if xi < x_hinge and error < fwd['error']:
                 fwd['x'] = xi
                 fwd['y'] = yi
                 fwd['error'] = error
         return fwd, aft
-        
-    #Find y hinge
+
+    # Find y hinge
     upper_fwd = {'x': 9e9, 'y': 9e9, 'error': 9e9}
     upper_aft = {'x': 9e9, 'y': 9e9, 'error': 9e9}
     lower_fwd = {'x': 9e9, 'y': 9e9, 'error': 9e9}
     lower_aft = {'x': 9e9, 'y': 9e9, 'error': 9e9}
     hinge = {'x': x_hinge, 'y': 9e9}
-    
+
     upper_fwd, upper_aft = find_closest(upper, x_hinge, upper_fwd, upper_aft)
-    lower_fwd, lower_aft = find_closest(lower, x_hinge, lower_fwd, lower_aft) 
-    
-    #Interpolate
-    hinge['y_upper'] =  upper_fwd['y'] + (
-                        hinge['x'] - upper_fwd['x'])*(
-                        upper_aft['y'] - upper_fwd['y'])/(
-                        upper_aft['x'] - upper_fwd['x'])
-    
-    hinge['y_lower'] =  lower_fwd['y'] + (
-                        hinge['x'] - lower_fwd['x'])*(
-                        lower_aft['y'] - lower_fwd['y'])/(
-                        lower_aft['x'] - lower_fwd['x'])
-    hinge['y']  = (hinge['y_upper'] + hinge['y_lower'])/2.
+    lower_fwd, lower_aft = find_closest(lower, x_hinge, lower_fwd, lower_aft)
+
+    # Interpolate
+    hinge['y_upper'] = upper_fwd['y'] + (
+        hinge['x'] - upper_fwd['x'])*(
+        upper_aft['y'] - upper_fwd['y'])/(
+        upper_aft['x'] - upper_fwd['x'])
+
+    hinge['y_lower'] = lower_fwd['y'] + (
+        hinge['x'] - lower_fwd['x'])*(
+        lower_aft['y'] - lower_fwd['y'])/(
+        lower_aft['x'] - lower_fwd['x'])
+    hinge['y'] = (hinge['y_upper'] + hinge['y_lower'])/2.
 
     return hinge
 
 
-def find_flap(data, hinge, extra_points = None):
+def find_flap(data, hinge, extra_points=None):
     """Create the static airfoil and flap dictionaries containing the outer
     mold coordinates of both. Because it is necessary to have an intersection
     between the static lower surface and the flap lower surface, it is
-    sometimes interesting to have an extra poin in the static surface to 
+    sometimes interesting to have an extra poin in the static surface to
     garantee the intersection.
-    
+
     :param data: dictionary with x and y cooridnates of the whole outer mold
-    
+
     :param hinge: dictionary with x and y coordinates of hinge. Can be found
                   via find_hinge.
-                  
+
     :param extra_points: include extra points to surface, extending it more
                          than it will actually be (usefull for intersecting
                          lines). Avaialble options: 'lower', 'upper' and None"""
-    #Generate empty dictionaries which will store final data.
-    flap_data = {'x':[], 'y':[]}
-    static_data = {'x':[], 'y':[]}
-    
+    # Generate empty dictionaries which will store final data.
+    flap_data = {'x': [], 'y': []}
+    static_data = {'x': [], 'y': []}
+
     type = None
-    
+
     for i in range(len(data['x'])):
         xi = data['x'][i]
         yi = data['y'][i]
-    #Because of the way that xfoil works, the upper list will always
-    #begin from the trailing edge    
+    # Because of the way that xfoil works, the upper list will always
+    # begin from the trailing edge
         if xi > hinge['x']:
             if type == None:
                 type = 'upper'
@@ -481,7 +490,7 @@ def find_flap(data, hinge, extra_points = None):
                 static_data['y'].append(hinge['y_' + type])
                 # this will make the at the hinge to be included only once
                 type = 'upper'
-                #If the extra point is unecessary in the lower
+                # If the extra point is unecessary in the lower
                 if extra_points == 'lower':
                     static_data['x'].append(data['x'][i+1])
                     static_data['y'].append(data['y'][i+1])
@@ -489,14 +498,14 @@ def find_flap(data, hinge, extra_points = None):
                     static_data['y'].append(data['y'][i+2])
             flap_data['x'].append(xi)
             flap_data['y'].append(yi)
-            
-    #Because of the way that xfoil works, the lower list will always
-    #begin from the  leading edge  
+
+    # Because of the way that xfoil works, the lower list will always
+    # begin from the  leading edge
         else:
             if type == None:
                 type = 'lower'
             elif type == 'upper':
-                #If the extra point is unecessary in the upper
+                # If the extra point is unecessary in the upper
                 if extra_points == 'upper' and len(static_data['x']) == 0:
                     static_data['x'].append(data['x'][i-2])
                     static_data['y'].append(data['y'][i-2])
@@ -508,15 +517,16 @@ def find_flap(data, hinge, extra_points = None):
                 static_data['y'].append(hinge['y_' + type])
                 # this will make the at the hinge to be included only once
                 type = 'lower'
-                
+
             static_data['x'].append(xi)
-            static_data['y'].append(yi)   
+            static_data['y'].append(yi)
     return static_data, flap_data
+
 
 def find_edges(x, y):
     '''Defining chord as the greatest distance from the trailing edge,
        find the leading edge'''
-       
+
     x = list(x)
     y = list(y)
     # The Trailing edge will always be the point with greatest x for small angles
@@ -527,7 +537,7 @@ def find_edges(x, y):
     print(TE_x, TE_y)
     chord = 0
     LE_index = 0
-    
+
     for i in range(len(x)):
         distance = math.sqrt((x[i]-TE_x)**2+(y[i]-TE_y)**2)
         if distance > chord:
@@ -535,24 +545,25 @@ def find_edges(x, y):
             chord = distance
     theta = math.atan2(y[TE_index] - y[LE_index],
                        x[TE_index] - x[LE_index])
-    return ({'x':x[LE_index], 'y':y[LE_index]},
-            {'x':x[TE_index], 'y':y[TE_index]},
+    return ({'x': x[LE_index], 'y': y[LE_index]},
+            {'x': x[TE_index], 'y': y[TE_index]},
             theta, chord)
-     
-def rotate(upper, lower = {'x': [], 'y': []}, origin = {'x':0, 'y':0},
-            theta=None, unit_theta = 'rad', move_to_origin = False,
-            chord = None):
+
+
+def rotate(upper, lower={'x': [], 'y': []}, origin={'x': 0, 'y': 0},
+           theta=None, unit_theta='rad', move_to_origin=False,
+           chord=None):
     """
     :param upper: dictionary with keys x and y, each a list
-    
+
     :param lower: dictionary with heys x and y, each a list
-    
+
     :param origin: dictionary with keys x and y, each a float
-    
+
     :param theta: float representing angle in degrees clock-wise
-    
+
     :param move_to_origin: if true, will establish origin as (0,0)
-    
+
     :param chord: will normalize results by this chors
     output: rotated_upper, rotated_lower
     """
@@ -562,17 +573,17 @@ def rotate(upper, lower = {'x': [], 'y': []}, origin = {'x':0, 'y':0},
         print('theta', theta)
         # theta = - theta
     output = []
-    
-    #For trigonometric relations in numpy, theta must be in radians
+
+    # For trigonometric relations in numpy, theta must be in radians
     if unit_theta == 'deg':
         theta = theta * np.pi/180.
     # Rotation transformation Matrix
 
     T = [[np.cos(theta), np.sin(theta)],
-        [-np.sin(theta), np.cos(theta)]]
+         [-np.sin(theta), np.cos(theta)]]
 
     for coordinates in [upper, lower]:
-        rotated_coordinates = {'x':[], 'y':[]}
+        rotated_coordinates = {'x': [], 'y': []}
         for i in range(len(coordinates['x'])):
             # The rotation must take place with the center of rotation
             # as the origin
@@ -584,7 +595,7 @@ def rotate(upper, lower = {'x': [], 'y': []}, origin = {'x':0, 'y':0},
             # Store and add back the values of the origin
             if move_to_origin:
                 rotated_coordinates['x'].append(rot_x)
-                rotated_coordinates['y'].append(rot_y)            
+                rotated_coordinates['y'].append(rot_y)
             else:
                 rotated_coordinates['x'].append(rot_x + origin['x'])
                 rotated_coordinates['y'].append(rot_y + origin['y'])
@@ -601,18 +612,19 @@ def rotate(upper, lower = {'x': [], 'y': []}, origin = {'x':0, 'y':0},
     else:
         return output[0], output[1]
 
-def clean(upper_static, upper_flap, lower_static, lower_flap, hinge, 
-          deflection, N = None, return_flap_i = True,
-          unit_deflection = 'rad'):
+
+def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
+          deflection, N=None, return_flap_i=True,
+          unit_deflection='rad'):
     """
     Function to remove intersecting lines and to round transition
     on upper surface.
-    
+
     :param N: number of points on smooth transition. If not defined, the
-             gap distance is taken in to consideration to define the 
+             gap distance is taken in to consideration to define the
              number of points inserted. If gap is to small, just created
              a node in the middle
-    
+
     :param return_flap_i: one of the returns is a list with the indexes
                           at which the upper flap surface ends and that
                           the lower flap surface begins.
@@ -622,11 +634,11 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
     if unit_deflection == 'deg':
         deflection = deflection * np.pi/180.
     if deflection > 0.:
-        #The lower surface has a non-smooth transiton so we only have to
+        # The lower surface has a non-smooth transiton so we only have to
         # clean the intersecting lines
         intersection = intersect_curves(lower_static['x'], lower_static['y'],
-                                       lower_flap['x'], lower_flap['y'],
-                                       input_type = 'list')
+                                        lower_flap['x'], lower_flap['y'],
+                                        input_type='list')
         try:
             intersection_x = intersection[0][0]
             intersection_y = intersection[1][0]
@@ -634,63 +646,63 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
             import matplotlib.pyplot as plt
             plt.scatter(lower_static['x'], lower_static['y'], c='b')
             plt.scatter(lower_flap['x'], lower_flap['y'], c='r')
-            raise Exception('Lower surfaces are not intersecting') 
-        
-        closest_x = min(lower_flap['x'], key=lambda x:abs(x-intersection_x))
+            raise Exception('Lower surfaces are not intersecting')
+
+        closest_x = min(lower_flap['x'], key=lambda x: abs(x-intersection_x))
         closest_i = lower_flap['x'].index(closest_x)
         for i in range(len(lower_flap['x'])):
             # From the plots, every point of the flap before the intersection
             # needs to be elimnated.
             if i <= closest_i:
-                if ( i == closest_i and closest_x < intersection_x) or i != closest_i:
+                if (i == closest_i and closest_x < intersection_x) or i != closest_i:
                     lower_flap['x'][i] = None
                     lower_flap['y'][i] = None
 
-        closest_x = min(lower_static['x'], key=lambda x:abs(x-intersection_x))
+        closest_x = min(lower_static['x'], key=lambda x: abs(x-intersection_x))
         closest_i = lower_static['x'].index(closest_x)
         for i in range(len(lower_static['x'])):
             # From the plots, every point of the flap before the intersection
             # needs to be elimnated.
             if i >= closest_i:
-                if ( i == closest_i and closest_x > intersection_x) or i != closest_i:
+                if (i == closest_i and closest_x > intersection_x) or i != closest_i:
                     lower_static['x'][i] = None
                     lower_static['y'][i] = None
-        
-        #Eliminatting the None vectors
+
+        # Eliminatting the None vectors
         lower_flap['x'] = filter(None, lower_flap['x'])
         lower_flap['y'] = filter(None, lower_flap['y'])
         lower_static['x'] = filter(None, lower_static['x'])
         lower_static['y'] = filter(None, lower_static['y'])
-    
+
         # add intersection points
         lower_static['x'].append(intersection_x)
         lower_static['y'].append(intersection_y)
-          
+
         R = hinge['y_upper'] - hinge['y']
-        
+
         upper_smooth = {}
         upper_smooth['x'] = []
         upper_smooth['y'] = []
-        
-        #If N is not N, use an adaptive version to it
+
+        # If N is not N, use an adaptive version to it
         chord = min(lower_flap['x']) - min(lower_static['x'])
-        #Minimum step for between nodes at the joint
+        # Minimum step for between nodes at the joint
         N_step = 0.002/chord
         if N == None:
             distance = R*deflection
             if distance <= N_step:
-                N = 0 #Space too small, just connect points
+                N = 0  # Space too small, just connect points
             else:
                 N = int(math.floor(distance/N_step))
 
         # Need to create points connecting upper part in circle (part of plain flap
         # exposed during flight). The points created are only for the new surface
-        #, the connecting points with the other surface have already been 
+        # , the connecting points with the other surface have already been
         # created. If N == 0, substitute connecting nodes for an intermediate
-        #node
-        
+        # node
+
         if N == 0:
-            for key in ['x','y']:
+            for key in ['x', 'y']:
                 upper_flap[key] = upper_flap[key][:-1]
                 upper_static[key] = upper_static[key][1:]
             upper_smooth['x'].append(hinge['x'] + R*np.sin(deflection/2.))
@@ -702,26 +714,26 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
                 upper_smooth['y'].append(hinge['y'] + R*np.cos(theta))
 
         # Assembling all together
-        
-        modified_airfoil = {'x':[], 'y':[]}
 
-        for key in ['x','y']:
+        modified_airfoil = {'x': [], 'y': []}
+
+        for key in ['x', 'y']:
             modified_airfoil[key] = upper_flap[key] + upper_smooth[key] + \
-                                    upper_static[key] + lower_static[key] + \
-                                    lower_flap[key]
+                upper_static[key] + lower_static[key] + \
+                lower_flap[key]
         if return_flap_i == True:
             i = [len(upper_flap[key]) + len(upper_smooth[key]),
-                 len(upper_flap[key]) + len(upper_smooth[key]) + \
+                 len(upper_flap[key]) + len(upper_smooth[key]) +
                  len(upper_static[key]) + len(lower_static[key])]
             return modified_airfoil, i
         else:
             return modified_airfoil
     elif deflection < 0.:
-        #The upper surface has a non-smooth transiton so we only have to
+        # The upper surface has a non-smooth transiton so we only have to
         # clean the intersecting lines
-        intersection= intersect_curves(upper_static['x'], upper_static['y'],
-                                       upper_flap['x'], upper_flap['y'],
-                                       input_type = 'list')
+        intersection = intersect_curves(upper_static['x'], upper_static['y'],
+                                        upper_flap['x'], upper_flap['y'],
+                                        input_type='list')
         try:
             intersection_x = intersection[0][0]
             intersection_y = intersection[1][0]
@@ -731,65 +743,65 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
             plt.scatter(upper_flap['x'], upper_flap['y'], c='r')
             raise Exception('Upper surfaces are not intersecting')
 
-        closest_x = min(upper_flap['x'], key=lambda x:abs(x-intersection_x))
+        closest_x = min(upper_flap['x'], key=lambda x: abs(x-intersection_x))
         closest_i = upper_flap['x'].index(closest_x)
         for i in range(len(upper_flap['x'])):
             # From the plots, every point of the flap before the intersection
             # needs to be elimnated.
             if i >= closest_i:
-                if ( i == closest_i and closest_x < intersection_x) or i != closest_i:
+                if (i == closest_i and closest_x < intersection_x) or i != closest_i:
                     upper_flap['x'][i] = None
                     upper_flap['y'][i] = None
 
-        closest_x = min(upper_static['x'], key=lambda x:abs(x-intersection_x))
+        closest_x = min(upper_static['x'], key=lambda x: abs(x-intersection_x))
         closest_i = upper_static['x'].index(closest_x)
         for i in range(len(upper_static['x'])):
             # From the plots, every point of the flap before the intersection
             # needs to be elimnated.
             if i <= closest_i:
-                if ( i == closest_i and closest_x > intersection_x) or i != closest_i:
+                if (i == closest_i and closest_x > intersection_x) or i != closest_i:
                     upper_static['x'][i] = None
                     upper_static['y'][i] = None
-        
-        #Eliminatting the None vectors
+
+        # Eliminatting the None vectors
         upper_flap['x'] = filter(None, upper_flap['x'])
         upper_flap['y'] = filter(None, upper_flap['y'])
         upper_static['x'] = filter(None, upper_static['x'])
         upper_static['y'] = filter(None, upper_static['y'])
-    
+
         # add intersection points
         upper_static['x'] = [intersection_x] + upper_static['x']
         upper_static['y'] = [intersection_y] + upper_static['y']
-          
+
         R = hinge['y_upper'] - hinge['y']
-        
+
         lower_smooth = {}
         lower_smooth['x'] = []
         lower_smooth['y'] = []
-        
-        #If N is not N, use an adaptive version to it
+
+        # If N is not N, use an adaptive version to it
         chord = min(lower_flap['x']) - min(lower_static['x'])
-        #Minimum step for between nodes at the joint
+        # Minimum step for between nodes at the joint
         N_step = 0.002/chord
         if N == None:
             distance = - R*deflection
             if distance <= N_step:
-                N = 0 #Space too small, just connect points
+                N = 0  # Space too small, just connect points
             else:
                 N = int(math.floor(distance/N_step))
         # Need to create points connecting lower part in circle (part of plain flap
         # exposed during flight). The points created are only for the new surface
-        #, the connecting points with the other surface have already been 
+        # , the connecting points with the other surface have already been
         # created. If N == 0, substitute connecting nodes for an intermediate
-        #node
+        # node
 
         if N == 0:
-            for key in ['x','y']:
+            for key in ['x', 'y']:
                 lower_flap[key] = lower_flap[key][1:]
                 lower_static[key] = lower_static[key][:-1]
             lower_smooth['x'].append(hinge['x'] + R*np.sin(deflection/2.))
             lower_smooth['y'].append(hinge['y'] - R*np.cos(deflection/2.))
- 
+
         if N != 0:
             for i in range(N):
                 theta = -((i+1)/(N+1.)) * deflection
@@ -797,55 +809,56 @@ def clean(upper_static, upper_flap, lower_static, lower_flap, hinge,
                 lower_smooth['y'].append(hinge['y'] - R*np.cos(theta))
 
         # Assembling all together
-        
-        modified_airfoil = {'x':[], 'y':[]}
-        for key in ['x','y']:
+
+        modified_airfoil = {'x': [], 'y': []}
+        for key in ['x', 'y']:
             modified_airfoil[key] = upper_flap[key] + upper_static[key] + \
-                                    lower_static[key] + lower_smooth[key] +\
-                                    lower_flap[key]
+                lower_static[key] + lower_smooth[key] +\
+                lower_flap[key]
         if return_flap_i == True:
             i = [len(upper_flap[key]) - 1,
-                 len(upper_flap[key]) + len(upper_static[key]) + \
+                 len(upper_flap[key]) + len(upper_static[key]) +
                  len(lower_static[key])]
             return modified_airfoil, i
         else:
             return modified_airfoil
-    #If deflection equal to zero, just create flap
-    elif deflection == 0.:              
+    # If deflection equal to zero, just create flap
+    elif deflection == 0.:
         # add intersection points
         upper_static['x'] = upper_static['x'][1:]
         upper_static['y'] = upper_static['y'][1:]
         lower_static['x'] = lower_static['x'][:-1]
         lower_static['y'] = lower_static['y'][:-1]
-        
-        modified_airfoil = {'x':[], 'y':[]}
-        for key in ['x','y']:
+
+        modified_airfoil = {'x': [], 'y': []}
+        for key in ['x', 'y']:
             modified_airfoil[key] = upper_flap[key] + upper_static[key] + \
-                                    lower_static[key] + lower_flap[key]
+                lower_static[key] + lower_flap[key]
         if return_flap_i == True:
             i = [len(upper_flap[key]),
-                 len(upper_flap[key]) + len(upper_static[key]) + \
+                 len(upper_flap[key]) + len(upper_static[key]) +
                  len(lower_static[key])]
             return modified_airfoil, i
         else:
-            return modified_airfoil 
+            return modified_airfoil
 
-def intersect_curves(x1, y1, x2, y2, input_type = 'list', 
-                     skip_TE_LE = True):
+
+def intersect_curves(x1, y1, x2, y2, input_type='list',
+                     skip_TE_LE=True):
     """
     Find all intersections betweens curves 1 and 2
     :param x1: x data vector for curve 1
     :param y1: y data vector for curve 1
     :param x2: x data vector for curve 1
     :param y2: y data vector for curve 2
-    
+
     :returns tuple with all intersections.
-    
+
     source: http://stackoverflow.com/questions/24549247/
     how-to-compute-which-way-data-points-continue-beyond
     -an-intersection
     """
-    #convert inputs to numpy arrays
+    # convert inputs to numpy arrays
     if input_type == 'list':
         x1 = np.array(x1)
         x2 = np.array(x2)
@@ -863,15 +876,16 @@ def intersect_curves(x1, y1, x2, y2, input_type = 'list',
     ys2 = np.vstack((y2[:-1], y2[1:]))
 
     # test if bounding-boxes of segments overlap
-    mix1 = np.tile(np.amin(xs1, axis=0), (N2-1,1))
-    max1 = np.tile(np.amax(xs1, axis=0), (N2-1,1))
-    miy1 = np.tile(np.amin(ys1, axis=0), (N2-1,1))
-    may1 = np.tile(np.amax(ys1, axis=0), (N2-1,1))
-    mix2 = np.transpose(np.tile(np.amin(xs2, axis=0), (N1-1,1)))
-    max2 = np.transpose(np.tile(np.amax(xs2, axis=0), (N1-1,1)))
-    miy2 = np.transpose(np.tile(np.amin(ys2, axis=0), (N1-1,1)))
-    may2 = np.transpose(np.tile(np.amax(ys2, axis=0), (N1-1,1)))
-    idx = np.where((mix2 <= max1) & (max2 >= mix1) & (miy2 <= may1) & (may2 >= miy1)) # overlapping segment combinations
+    mix1 = np.tile(np.amin(xs1, axis=0), (N2-1, 1))
+    max1 = np.tile(np.amax(xs1, axis=0), (N2-1, 1))
+    miy1 = np.tile(np.amin(ys1, axis=0), (N2-1, 1))
+    may1 = np.tile(np.amax(ys1, axis=0), (N2-1, 1))
+    mix2 = np.transpose(np.tile(np.amin(xs2, axis=0), (N1-1, 1)))
+    max2 = np.transpose(np.tile(np.amax(xs2, axis=0), (N1-1, 1)))
+    miy2 = np.transpose(np.tile(np.amin(ys2, axis=0), (N1-1, 1)))
+    may2 = np.transpose(np.tile(np.amax(ys2, axis=0), (N1-1, 1)))
+    idx = np.where((mix2 <= max1) & (max2 >= mix1) & (miy2 <= may1) &
+                   (may2 >= miy1))  # overlapping segment combinations
 
     # going through all the possible segments
     x0 = []
@@ -883,7 +897,7 @@ def intersect_curves(x1, y1, x2, y2, input_type = 'list',
         xb = xs2[:, i]
         yb = ys2[:, i]
         # ax=b, prepare matrices a and b
-        a = np.array([[xa[1] - xa[0], xb[0] - xb[1]], [ya[1] - ya[0], yb[0]- yb[1]]])
+        a = np.array([[xa[1] - xa[0], xb[0] - xb[1]], [ya[1] - ya[0], yb[0] - yb[1]]])
         b = np.array([xb[0] - xa[0], yb[0] - ya[0]])
         r, residuals, rank, s = np.linalg.lstsq(a, b)
         # if this is not a
@@ -916,21 +930,22 @@ def intersect_curves(x1, y1, x2, y2, input_type = 'list',
                 y0.append(ya[0] + r[0] * (ya[1] - ya[0]))
     # filter points close to leading edge and trailing edges
     if skip_TE_LE:
-        tol=1e-4
+        tol = 1e-4
         try:
-            x0, y0 = zip(*[(i, j) for i, j in zip(x0, y0) if i < tol and i>1-tol])
+            x0, y0 = zip(*[(i, j) for i, j in zip(x0, y0) if i < tol and i > 1-tol])
         except:
             x0 = []
             y0 = []
 
     return (x0, y0)
 
-def separate_upper_lower(x, y, Cp = None, i_separator=None):
+
+def separate_upper_lower(x, y, Cp=None, i_separator=None):
     """Return dictionaries with upper and lower keys with respective
     coordiantes. It is assumed the leading edge is frontmost point at
     alpha=0"""
-    #TODO: when using list generated by xfoil, there are two points for
-    #the leading edge
+    # TODO: when using list generated by xfoil, there are two points for
+    # the leading edge
     def separate(variable_list, i_separator):
         if type(i_separator) == int:
             variable_dictionary = {'upper': variable_list[0:i_separator+1],
@@ -938,11 +953,11 @@ def separate_upper_lower(x, y, Cp = None, i_separator=None):
         elif type(i_separator) == list:
             i_upper = i_separator[0]
             i_lower = i_separator[1]
-            
+
             variable_dictionary = {'upper': variable_list[0:i_upper],
                                    'lower': variable_list[i_lower:]}
         return variable_dictionary
-    #If i is not defined, separate upper and lower surface from the
+    # If i is not defined, separate upper and lower surface from the
     # leading edge
     if i_separator == None:
         i_separator = x.index(min(x))
@@ -956,21 +971,22 @@ def separate_upper_lower(x, y, Cp = None, i_separator=None):
         y = separate(y, i_separator)
         Cp = separate(Cp, i_separator)
         return x, y, Cp
-            
-def find_deflection(x_hinge, upper_cruise, lower_cruise, 
-                    type = 'Match trailing edge', alpha=0, Reynolds = 0, 
+
+
+def find_deflection(x_hinge, upper_cruise, lower_cruise,
+                    type='Match trailing edge', alpha=0, Reynolds=0,
                     **kwargs):
     """
     Function to calculate the flap deflection.
-    
+
     Required inputs:
     :param x_hinge
     :param upper_cruise
     :param lower_cruise
     :param type: can be:
-                - 'Match trailing edge': will find the deflection where the 
+                - 'Match trailing edge': will find the deflection where the
                 baseline's trailing edge matches that of the objective, i.e.
-                match the the trailing edge of a traditional flap with a 
+                match the the trailing edge of a traditional flap with a
                 morphing conitunous flap.
                 - 'Same Cl': will find deflection where Cl of flapped airfoil
                 is equal to the the objective airfoil.
@@ -980,24 +996,24 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
     :param y_TE_objective
     :param x_TE_baseline
     :param y_TE_baseline
-    
+
     kwrgs arguments for 'Same Cl':
     :param Cl_objective
 
     kwrgs arguments for 'Same Cd':
     :param Cd_objective
-    
+
     kwrgs arguments for 'Range of deflection'
     :param max_deflection
-    
+
     Optional arguments:
     :param alpha
     :param Reynolds
     """
     import xfoil_module as xf
 
-    airfoil = 'flapped_airfoil'  
-    
+    airfoil = 'flapped_airfoil'
+
     if type == 'Match trailing edge':
         x_TE_objective = kwargs['x_TE_objective']
         y_TE_objective = kwargs['y_TE_objective']
@@ -1008,39 +1024,40 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
     elif type == 'Same Cd':
         Cd_objective = kwargs['Cd_objective']
     elif type == 'Range of deflection':
-        max_deflection = kwargs['max_deflection']    
+        max_deflection = kwargs['max_deflection']
         init_deflection = kwargs['init_deflection']
-        step = kwargs['step']    
+        step = kwargs['step']
     hinge = find_hinge(x_hinge, upper_cruise, lower_cruise)
 
     upper_static, upper_flap = find_flap(upper_cruise, hinge)
     lower_static, lower_flap = find_flap(lower_cruise, hinge)
-    
-    #==============================================================================
-    #  Find Deflection      
-    #==============================================================================
+
+    # ==============================================================================
+    #  Find Deflection
+    # ==============================================================================
     if type == 'Match trailing edge':
-        #Calculate deflection angle in radians
-        deflection = np.arctan2(hinge['y'] - y_TE_objective, x_TE_objective - hinge['x']) - np.arctan2(hinge['y'] - y_TE_baseline, x_TE_baseline - hinge['x'])
+        # Calculate deflection angle in radians
+        deflection = np.arctan2(hinge['y'] - y_TE_objective, x_TE_objective - hinge['x']) - \
+            np.arctan2(hinge['y'] - y_TE_baseline, x_TE_baseline - hinge['x'])
         # Convet to degrees
         deflection = deflection*180./np.pi
-    
+
         upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
-        
-        flapped_airfoil = clean(upper_static, upper_rotated, lower_static, 
-                                lower_rotated, hinge, deflection, N = 5)
-    
-        xf.create_input(airfoil, 'Type 3', airfoil = flapped_airfoil)
-                                    
-        xf.call(airfoil, alfas = alpha, Reynolds = Reynolds, iteration=100, GDES = True,
+
+        flapped_airfoil = clean(upper_static, upper_rotated, lower_static,
+                                lower_rotated, hinge, deflection, N=5)
+
+        xf.create_input(airfoil, 'Type 3', airfoil=flapped_airfoil)
+
+        xf.call(airfoil, alfas=alpha, Reynolds=Reynolds, iteration=100, GDES=True,
                 output='Polar')
         filename = xf.file_name(airfoil, alpha, output='Polar')
         Data = xf.output_reader(filename, output='Polar')
-        
-        #Rename to make more convenient
+
+        # Rename to make more convenient
         Cd = Data['CD']
         Cl = Data['CL']
-        
+
     elif type == 'Same Cl':
         current_Cl = 0
         current_Cd = 0
@@ -1049,7 +1066,7 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
         history = []
         # Rough search
         step = 2.
-        while current_Cl < Cl_objective and deflection < 90.:# Convet to degrees
+        while current_Cl < Cl_objective and deflection < 90.:  # Convet to degrees
             previous_Cl = current_Cl
             previous_Cd = current_Cd
             previous_deflection = deflection
@@ -1057,45 +1074,45 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
             deflection = deflection + step
             print(deflection)
             upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
-            
-            flapped_airfoil = clean(upper_static, upper_rotated, lower_static, 
-                                    lower_rotated, hinge, deflection, N = 5)
-        
-            xf.create_input(airfoil, 'Type 3', airfoil = flapped_airfoil)
-                                        
-            xf.call(airfoil, alfas = alpha, Reynolds = Reynolds, iteration=100, GDES = True,
+
+            flapped_airfoil = clean(upper_static, upper_rotated, lower_static,
+                                    lower_rotated, hinge, deflection, N=5)
+
+            xf.create_input(airfoil, 'Type 3', airfoil=flapped_airfoil)
+
+            xf.call(airfoil, alfas=alpha, Reynolds=Reynolds, iteration=100, GDES=True,
                     output='Polar')
             filename = xf.file_name(airfoil, alpha, output='Polar')
             Data = xf.output_reader(filename, output='Polar')
-            
-            #Rename to make more convenient
+
+            # Rename to make more convenient
             current_Cd = Data['CD'][0]
             current_Cl = Data['CL'][0]
 
-        for i in range(1,6):
+        for i in range(1, 6):
             # Fine search
             step = 0.5**i
             current_Cl = previous_Cl
-            while current_Cl < Cl_objective and deflection < 90.:# Convet to degrees
+            while current_Cl < Cl_objective and deflection < 90.:  # Convet to degrees
                 previous_Cl = current_Cl
                 previous_Cd = current_Cd
                 previous_deflection = deflection
                 history.append([previous_deflection, previous_Cl, previous_Cd])
                 deflection = deflection + step
-            
+
                 upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
                 previous_flapped_airfoil = flapped_airfoil
-                flapped_airfoil = clean(upper_static, upper_rotated, lower_static, 
-                                        lower_rotated, hinge, deflection, N = 5)
-            
-                xf.create_input(airfoil, 'Type 3', airfoil = flapped_airfoil)
-                                            
-                xf.call(airfoil, alfas = alpha, Reynolds = Reynolds, iteration=100, GDES = True,
+                flapped_airfoil = clean(upper_static, upper_rotated, lower_static,
+                                        lower_rotated, hinge, deflection, N=5)
+
+                xf.create_input(airfoil, 'Type 3', airfoil=flapped_airfoil)
+
+                xf.call(airfoil, alfas=alpha, Reynolds=Reynolds, iteration=100, GDES=True,
                         output='Polar')
                 filename = xf.file_name(airfoil, alpha, output='Polar')
                 Data = xf.output_reader(filename, output='Polar')
-                
-                #Rename to make more convenient
+
+                # Rename to make more convenient
                 current_Cd = Data['CD'][0]
                 current_Cl = Data['CL'][0]
             print(current_Cl, deflection)
@@ -1108,7 +1125,7 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
         history = []
         # Rough search
         step = 2.
-        while current_Cd < Cd_objective and deflection < 90.:# Convet to degrees
+        while current_Cd < Cd_objective and deflection < 90.:  # Convet to degrees
             previous_Cl = current_Cl
             previous_Cd = current_Cd
             previous_deflection = deflection
@@ -1116,45 +1133,45 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
             deflection = deflection + step
             print(deflection)
             upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
-            
-            flapped_airfoil = clean(upper_static, upper_rotated, lower_static, 
-                                    lower_rotated, hinge, deflection, N = 5)
-        
-            xf.create_input(airfoil, 'Type 3', airfoil = flapped_airfoil)
-                                        
-            xf.call(airfoil, alfas = alpha, Reynolds = Reynolds, iteration=100, GDES = True,
+
+            flapped_airfoil = clean(upper_static, upper_rotated, lower_static,
+                                    lower_rotated, hinge, deflection, N=5)
+
+            xf.create_input(airfoil, 'Type 3', airfoil=flapped_airfoil)
+
+            xf.call(airfoil, alfas=alpha, Reynolds=Reynolds, iteration=100, GDES=True,
                     output='Polar')
             filename = xf.file_name(airfoil, alpha, output='Polar')
             Data = xf.output_reader(filename, output='Polar')
-            
-            #Rename to make more convenient
+
+            # Rename to make more convenient
             current_Cd = Data['CD'][0]
             current_Cl = Data['CL'][0]
 
-        for i in range(1,6):
+        for i in range(1, 6):
             # Fine search
             step = 0.5**i
             current_Cd = previous_Cd
-            while current_Cd < Cd_objective or deflection < 90.:# Convet to degrees
+            while current_Cd < Cd_objective or deflection < 90.:  # Convet to degrees
                 previous_Cl = current_Cl
                 previous_Cd = current_Cd
                 previous_deflection = deflection
                 history.append([previous_deflection, previous_Cl, previous_Cd])
                 deflection = deflection + step
-            
+
                 upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
                 previous_flapped_airfoil = flapped_airfoil
-                flapped_airfoil = clean(upper_static, upper_rotated, lower_static, 
-                                        lower_rotated, hinge, deflection, N = 5)
-            
-                xf.create_input(airfoil, 'Type 3', airfoil = flapped_airfoil)
-                                            
-                xf.call(airfoil, alfas = alpha, Reynolds = Reynolds, iteration=1000, GDES = True,
+                flapped_airfoil = clean(upper_static, upper_rotated, lower_static,
+                                        lower_rotated, hinge, deflection, N=5)
+
+                xf.create_input(airfoil, 'Type 3', airfoil=flapped_airfoil)
+
+                xf.call(airfoil, alfas=alpha, Reynolds=Reynolds, iteration=1000, GDES=True,
                         output='Polar')
                 filename = xf.file_name(airfoil, alpha, output='Polar')
                 Data = xf.output_reader(filename, output='Polar')
-                
-                #Rename to make more convenient
+
+                # Rename to make more convenient
                 print(deflection)
                 current_Cd = Data['CD'][0]
                 current_Cl = Data['CL'][0]
@@ -1165,15 +1182,15 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
         Cd = previous_Cd
         Cl = previous_Cl
         flapped_airfoil = previous_flapped_airfoil
-        
+
     elif type == 'Range of deflection':
         current_Cl = 0
         current_Cd = 0
         previous_Cl = 0
         deflection = init_deflection
-        history = {'CD':[], 'CL':[], 'deflection':[]}
+        history = {'CD': [], 'CL': [], 'deflection': []}
         # Rough search
-        while deflection < max_deflection:# Convet to degrees
+        while deflection < max_deflection:  # Convet to degrees
             previous_Cl = current_Cl
             previous_Cd = current_Cd
             previous_deflection = deflection
@@ -1181,18 +1198,18 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
             deflection = deflection + step
             print(deflection)
             upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
-            
-            flapped_airfoil = clean(upper_static, upper_rotated, lower_static, 
-                                    lower_rotated, hinge, deflection, N = 5)
-        
-            xf.create_input(airfoil, 'Type 3', airfoil = flapped_airfoil)
-                                        
-            xf.call(airfoil, alfas = alpha, Reynolds = Reynolds, iteration=300, GDES = True,
+
+            flapped_airfoil = clean(upper_static, upper_rotated, lower_static,
+                                    lower_rotated, hinge, deflection, N=5)
+
+            xf.create_input(airfoil, 'Type 3', airfoil=flapped_airfoil)
+
+            xf.call(airfoil, alfas=alpha, Reynolds=Reynolds, iteration=300, GDES=True,
                     output='Polar')
             filename = xf.file_name(airfoil, alpha, output='Polar')
             Data = xf.output_reader(filename, output='Polar')
-            
-            #Rename to make more convenient
+
+            # Rename to make more convenient
             print(deflection)
             current_Cd = Data['CD'][0]
             current_Cl = Data['CL'][0]
@@ -1203,15 +1220,16 @@ def find_deflection(x_hinge, upper_cruise, lower_cruise,
         return history
     return deflection, Cd, Cl, flapped_airfoil
 
-def offset_point(x, y, rho, output_format = 'separate'):
+
+def offset_point(x, y, rho, output_format='separate'):
     """Function to calculate offset curve for a line given by points x and y
-    with a distance rho. If output_format = 'separate', the output are 
+    with a distance rho. If output_format = 'separate', the output are
     two list x and y, if 'together, it outputs a unique set with where
     each component is  apari of x and y.'"""
     if type(x) == np.array and type(y) == np.array:
         x_offset = x + rho*y/np.sqrt(x*x + y*y)
         y_offset = y - rho*x/np.sqrt(x*x + y*y)
-    
+
     if type(x) == list and type(y) == list:
         x_offset = []
         y_offset = []
@@ -1222,43 +1240,42 @@ def offset_point(x, y, rho, output_format = 'separate'):
                 y_offset.append(y[i] - rho*x[i]/np.sqrt(x[i]**2 + y[i]**2))
             except ZeroDivisionError:
                 continue
-    #TODO: include option of eliminating lines that intersect
-        
+    # TODO: include option of eliminating lines that intersect
+
     if output_format == 'together':
         return zip(x_offset, y_offset)
-    if output_format == 'separate': 
+    if output_format == 'separate':
         return x_offset, y_offset
 
-def fitting_shape_coefficients(data, order, translate=True, rotate=True, 
-                               mirror=True, filter_size = 10, deltaz = 0,
-                               N1 = None, N2 = None, 
-                               solver = 'differential_evolution',
-                               error = 'eucledian'):
-    '''Fit shape coefficient to 2D geometry. Assumes data is sorted from 
+
+def fitting_shape_coefficients(data, order, translate=True, rotate=True,
+                               mirror=True, filter_size=10, deltaz=0,
+                               N1=None, N2=None,
+                               solver='differential_evolution',
+                               error='eucledian'):
+    '''Fit shape coefficient to 2D geometry. Assumes data is sorted from
       TE to LE along upper surface and back to TE along lower surface.
       Can calculate leading edge for a simple case where upper surface
       is all positive.
 
     :param data: dictionary with x and y keys.
-    
+
     :param order: order of the CST equations.
     '''
     from scipy.optimize import differential_evolution
     from optimization_tools import hausdorff_distance_2D, eucledian_shape_difference
     from scipy.optimize import minimize
 
-
-    def total_shape_difference(inputs, error_type = 'eucledian'):
-        #TODO: update this so that there is an argument upper and lower
-        #from raw data
+    def total_shape_difference(inputs, error_type='eucledian'):
+        # TODO: update this so that there is an argument upper and lower
+        # from raw data
         Au = inputs[:order+1]
         Al = inputs[order+1:2*order+2]
 
-        
         if find_class:
             N1 = inputs[-2]
             N2 = inputs[-1]
-            
+
         else:
             N1 = 0.5
             N2 = 1.0
@@ -1272,15 +1289,15 @@ def fitting_shape_coefficients(data, order, translate=True, rotate=True,
     def shape_difference_upper(inputs, raw_upper, error):
         shape_coefficients = inputs[:order+1]
         if find_class:
-            y = CST(raw_upper['x'], 1, deltasz = deltaz/2., Au=shape_coefficients,
-                    N1 = inputs[-2], N2 = inputs[-1])
+            y = CST(raw_upper['x'], 1, deltasz=deltaz/2., Au=shape_coefficients,
+                    N1=inputs[-2], N2=inputs[-1])
         else:
-            y = CST(raw_upper['x'], 1, deltasz = deltaz/2., Au=shape_coefficients)
+            y = CST(raw_upper['x'], 1, deltasz=deltaz/2., Au=shape_coefficients)
         a = raw_upper
         b = {'x': raw_upper['x'], 'y': y}
 
         if error == 'eucledian':
-            d = eucledian_shape_difference(a,b)
+            d = eucledian_shape_difference(a, b)
         else:
             d = hausdorff_distance_2D(a, b)
 
@@ -1290,15 +1307,15 @@ def fitting_shape_coefficients(data, order, translate=True, rotate=True,
         shape_coefficients = inputs[order+1:2*order+2]
 
         if find_class:
-            y = CST(raw_lower['x'], 1, deltasz = deltaz/2., Al=shape_coefficients,
-                    N1 = inputs[-2], N2 = inputs[-1])
+            y = CST(raw_lower['x'], 1, deltasz=deltaz/2., Al=shape_coefficients,
+                    N1=inputs[-2], N2=inputs[-1])
         else:
-            y = CST(raw_lower['x'], 1, deltasz = deltaz/2., Al=shape_coefficients,)
+            y = CST(raw_lower['x'], 1, deltasz=deltaz/2., Al=shape_coefficients,)
 
         a = raw_lower
         b = {'x': raw_lower['x'], 'y': y}
         if error == 'eucledian':
-            d = eucledian_shape_difference(a,b)
+            d = eucledian_shape_difference(a, b)
         else:
             d = hausdorff_distance_2D(a, b)
         return d
@@ -1315,7 +1332,7 @@ def fitting_shape_coefficients(data, order, translate=True, rotate=True,
 
     def processing_data():
 
-        processed_data = {'x':[], 'y':[]}
+        processed_data = {'x': [], 'y': []}
         min_x = min(data['x'])
         chord = max(data['x']) - min(data['x'])
 
@@ -1327,7 +1344,7 @@ def fitting_shape_coefficients(data, order, translate=True, rotate=True,
 
         # Mirroring data
         if mirror:
-            processed_data = {'x':[], 'y':[]}
+            processed_data = {'x': [], 'y': []}
             for i in range(len(data['x'])):
                 processed_data['x'].append(.5 - (data['x'][i] - .5))
                 processed_data['y'].append(data['y'][i])
@@ -1355,7 +1372,7 @@ def fitting_shape_coefficients(data, order, translate=True, rotate=True,
             theta_TE = math.atan(-y_TE/x_TE)
 
             # position trailing edge at the x-axis
-            processed_data = {'x':[], 'y':[]}
+            processed_data = {'x': [], 'y': []}
             for i in range(len(data['x'])):
                 x = data['x'][i]
                 y = data['y'][i]
@@ -1369,12 +1386,12 @@ def fitting_shape_coefficients(data, order, translate=True, rotate=True,
 
         # Reduce number of points
         if filter_size != 1:
-            processed_data = {'x':[], 'y':[]}
+            processed_data = {'x': [], 'y': []}
             for i in range(len(data['x'])):
                 for key in data.keys():
-                    if i%filter_size == 0:
+                    if i % filter_size == 0:
                         processed_data[key].append(data[key][i])
-                    elif i == len(data['x']) -1:
+                    elif i == len(data['x']) - 1:
                         processed_data[key].append(data[key][i])
             data = processed_data
 
@@ -1387,15 +1404,15 @@ def fitting_shape_coefficients(data, order, translate=True, rotate=True,
         return upper, lower
 
     def find_values(order, solver):
-        bounds = [[0., 1.]] + order*[[0. , 1.],]+ [[0., 1.]] + order*[[-1., 1.],]
-        
-        # If N1 and N2 are not defined the default values for a subsonic airfoil are 
+        bounds = [[0., 1.]] + order*[[0., 1.], ] + [[0., 1.]] + order*[[-1., 1.], ]
+
+        # If N1 and N2 are not defined the default values for a subsonic airfoil are
         # used. N1 and N2 are the same for upper and lower.
         if find_class:
-            bounds += [[0., 1.],[0., 1.]]
+            bounds += [[0., 1.], [0., 1.]]
         if solver == 'differential_evolution':
             result = differential_evolution(total_shape_difference, bounds,
-                                                  disp=True, popsize = 40)
+                                            disp=True, popsize=40)
             Au = result.x[:order+1]
             Al = result.x[order+1:2*order+2]
             if find_class:
@@ -1407,10 +1424,10 @@ def fitting_shape_coefficients(data, order, translate=True, rotate=True,
             error = solution.fun
 
         if solver == 'gradient':
-            x0 = (2*order+2)*[0.05,]
+            x0 = (2*order+2)*[0.05, ]
             if find_class:
                 x0 += [0.5, 1.0]
-            solution = minimize(total_shape_difference, x0, bounds = bounds)
+            solution = minimize(total_shape_difference, x0, bounds=bounds)
             # print solution
 
             Au = solution['x'][:order+1]
@@ -1430,14 +1447,14 @@ def fitting_shape_coefficients(data, order, translate=True, rotate=True,
         lower = data[1]
     else:
         [upper, lower] = processing_data()
-    
+
     if N1 is None and N2 is None:
         find_class = True
     # print total_shape_difference([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     # BREAK
-    #==============================================================================
+    # ==============================================================================
     # Optimizing shape
-    #==============================================================================
+    # ==============================================================================
     if type(order) == float or type(order) == int:
         [Au, Al, N1, N2, deltaz, error] = find_values(order, solver)
     else:
@@ -1454,55 +1471,55 @@ def fitting_shape_coefficients(data, order, translate=True, rotate=True,
             Au.append(Au_i)
             Al.append(Al_i)
             N1.append(N1_i)
-            N2.append(N2_i) 
+            N2.append(N2_i)
             error.append(error_i)
     return Au, Al, N1, N2, deltaz, error
 
-if __name__ == '__main__':  
-    
+
+if __name__ == '__main__':
+
     import aeropy.xfoil_module as xf
     import aeropy.aero_module as ar
     import matlplotlib.pyplot as plt
     alpha = 0.
 
     NACA_four_digit(1., 0.03, 0.374, 0.00865)
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # First step: generate original airfoil
     airfoil = "naca0012"
     xf.call(airfoil, output='Coordinates')
     filename = xf.file_name(airfoil, output='Coordinates')
-    Data = xf.output_reader(filename, output='Coordinates', header = ['x','y'])
+    Data = xf.output_reader(filename, output='Coordinates', header=['x', 'y'])
 
-    #Second step: generate flapped airfoil
-    
+    # Second step: generate flapped airfoil
+
     x, y = separate_upper_lower(Data['x'], Data['y'])
-    
+
     upper = {'x': x['upper'], 'y': y['upper']}
     lower = {'x': x['lower'], 'y': y['lower']}
-    
- 
+
     x_hinge = 0.75
     hinge = find_hinge(x_hinge, upper, lower)
-    
-    upper_static, upper_flap = find_flap(upper, hinge)
-    lower_static, lower_flap = find_flap(lower, hinge, extra_points = 'lower')
-    
-    deflection = -10.
-    
-    upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
-    
-    flapped_airfoil, i_separator = clean(upper_static, upper_rotated, lower_static, 
-                            lower_rotated, hinge, deflection, return_flap_i = True,
-                            unit_deflection = 'deg')
 
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #Third step: get new values of pressure coefficient
-    xf.create_input(x = flapped_airfoil['x'], y_u = flapped_airfoil['y'],
-                    filename = 'flapped', different_x_upper_lower = True)
-    Data = xf.find_pressure_coefficients('flapped', alpha, NACA = False)
-    
-    x, y, Cp = separate_upper_lower(x = Data['x'], y = Data['y'], 
-                                    Cp = Data['Cp'], i_separator = i_separator)
-    Cm = ar.calculate_moment_coefficient(x, y, Cp, alpha = alpha, c = 1., 
-                                         x_ref = x_hinge, y_ref = 0.)
+    upper_static, upper_flap = find_flap(upper, hinge)
+    lower_static, lower_flap = find_flap(lower, hinge, extra_points='lower')
+
+    deflection = -10.
+
+    upper_rotated, lower_rotated = rotate(upper_flap, lower_flap, hinge, deflection)
+
+    flapped_airfoil, i_separator = clean(upper_static, upper_rotated, lower_static,
+                                         lower_rotated, hinge, deflection, return_flap_i=True,
+                                         unit_deflection='deg')
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Third step: get new values of pressure coefficient
+    xf.create_input(x=flapped_airfoil['x'], y_u=flapped_airfoil['y'],
+                    filename='flapped', different_x_upper_lower=True)
+    Data = xf.find_pressure_coefficients('flapped', alpha, NACA=False)
+
+    x, y, Cp = separate_upper_lower(x=Data['x'], y=Data['y'],
+                                    Cp=Data['Cp'], i_separator=i_separator)
+    Cm = ar.calculate_moment_coefficient(x, y, Cp, alpha=alpha, c=1.,
+                                         x_ref=x_hinge, y_ref=0.)
     print(Cm)
