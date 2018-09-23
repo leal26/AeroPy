@@ -1,52 +1,47 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>2. Xfoil Module Documentation &mdash; AeroPy 0.0.2 documentation</title>
-    
+    <title>1. Xfoil Module Documentation &#8212; AeroPy 0.0.3 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '0.0.2',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="AeroPy 0.0.2 documentation" href="index.html" />
-    <link rel="next" title="3. Aerodynamic Module Documentation" href="aero_module.html" />
-    <link rel="prev" title="1. AeroPy Documentation" href="main_module.html" />
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="2. Aerodynamic Module Documentation" href="aero_module.html" />
+    <link rel="prev" title="Welcome to AeroPy’s, an easy to use aerodynamic tool" href="index.html" />
    
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body role="document">  
+  </head><body>
+  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
   <div class="section" id="xfoil-module-documentation">
-<h1>2. Xfoil Module Documentation<a class="headerlink" href="#xfoil-module-documentation" title="Permalink to this headline">¶</a></h1>
+<h1>1. Xfoil Module Documentation<a class="headerlink" href="#xfoil-module-documentation" title="Permalink to this headline">¶</a></h1>
 <p>The functions herein defined are purposely made for use with Xfoil.</p>
 <div class="section" id="core-function">
-<h2>2.1. Core Function<a class="headerlink" href="#core-function" title="Permalink to this headline">¶</a></h2>
+<h2>1.1. Core Function<a class="headerlink" href="#core-function" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
-<dt id="xfoil_module.call">
-<code class="descclassname">xfoil_module.</code><code class="descname">call</code><span class="sig-paren">(</span><em>airfoil</em>, <em>alfas='none'</em>, <em>output='Cp'</em>, <em>Reynolds=0</em>, <em>Mach=0</em>, <em>plots=False</em>, <em>NACA=False</em>, <em>GDES=False</em>, <em>iteration=10</em>, <em>flap=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xfoil_module.html#call"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_module.call" title="Permalink to this definition">¶</a></dt>
+<dt id="aeropy.xfoil_module.call">
+<code class="descclassname">aeropy.xfoil_module.</code><code class="descname">call</code><span class="sig-paren">(</span><em>airfoil</em>, <em>alfas='none'</em>, <em>output='Cp'</em>, <em>Reynolds=0</em>, <em>Mach=0</em>, <em>plots=False</em>, <em>NACA=True</em>, <em>GDES=False</em>, <em>iteration=10</em>, <em>flap=None</em>, <em>PANE=False</em>, <em>NORM=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aeropy/xfoil_module.html#call"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aeropy.xfoil_module.call" title="Permalink to this definition">¶</a></dt>
 <dd><p>Call xfoil through Python.</p>
 <p>The input variables are:</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -54,12 +49,12 @@
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>airfoil</strong> &#8211; if NACA is false, airfoil is the name of the plain
+<li><strong>airfoil</strong> – if NACA is false, airfoil is the name of the plain
 filewhere the airfoil geometry is stored (variable airfoil).
 If NACA is True, airfoil is the naca series of the airfoil
 (i.e.: naca2244). By default NACA is False.</li>
-<li><strong>alfas</strong> &#8211; list/array/float/int of angles of attack.</li>
-<li><strong>output</strong> &#8211; <dl class="docutils">
+<li><strong>alfas</strong> – list/array/float/int of angles of attack.</li>
+<li><strong>output</strong> – <dl class="docutils">
 <dt>defines the kind of output desired from xfoil.  There</dt>
 <dd>are four posssible choices (by default, Cp is chosen):</dd>
 </dl>
@@ -87,32 +82,40 @@ If NACA is True, airfoil is the naca series of the airfoil
 <li>Coordinates: returns the coordinates of a NACA airfoil.</li>
 </ul>
 </li>
-<li><strong>Reynolds</strong> &#8211; Reynolds number in case the simulation is for a
+<li><strong>Reynolds</strong> – Reynolds number in case the simulation is for a
 viscous flow. In case not informed, the code will assume
 inviscid.</li>
-<li><strong>Mach</strong> &#8211; Mach number in case the simulation has to take in
+<li><strong>Mach</strong> – Mach number in case the simulation has to take in
 account compressibility effects through the Prandtl-Glauert
 correlation. If not informed, the code will not use the
 correction. For logical reasons, if Mach is informed a
 Reynolds number different from zero must also be informed.</li>
-<li><strong>plots</strong> &#8211; the code is able to save in a .ps file all the plots
+<li><strong>plots</strong> – the code is able to save in a .ps file all the plots
 of Cp vs.alfa. By default, this option is deactivated.</li>
-<li><strong>NACA</strong> &#8211; Boolean variable that defines if the code imports an
+<li><strong>NACA</strong> – Boolean variable that defines if the code imports an
 airfoil from a file or generates a NACA airfoil.</li>
-<li><strong>GDES</strong> &#8211; XFOIL function that improves the airfoil shape in case
+<li><strong>GDES</strong> – XFOIL function that improves the airfoil shape in case
 the selected points do not provide a good shape. The CADD
 function is also used. For more information about these
 functions, use the XFOIL manual.</li>
-<li><strong>iteration</strong> &#8211; changes how many times XFOIL will try to make the
+<li><strong>iteration</strong> – changes how many times XFOIL will try to make the
 results converge. Speciallt important for viscous flows</li>
-<li><strong>flap</strong> &#8211; determines if there is a flap. In case there is the 
-expected input is [x_hinge, y_hinge, deflection(angles)]. 
-y_hinge is determined to be exactly in the middle between the 
+<li><strong>flap</strong> – determines if there is a flap. In case there is the
+expected input is [x_hinge, y_hinge, deflection(angles)].
+y_hinge is determined to be exactly in the middle between the
 upper and lower surfaces.</li>
+<li><strong>PANE</strong> – if there are more than 495 surface points, the paneling
+method will not be used. Need to use the PANE subroutine to
+solve this. It will find the best points that represent the
+geometry (only 160 of them).</li>
+<li><strong>NORM</strong> – For good results using the panel method, Xfoil
+requires normalized coordinates, so this option should
+always be True.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dictionary with outputs relevant to the specific output type</p>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dictionary with outputs relevant to the specific output type.
+Usually x,y coordinates will be normalized.</p>
 </td>
 </tr>
 </tbody>
@@ -122,23 +125,24 @@ multiple angles of attack rather than multiple runs, each with a
 single angle of attack.</p>
 <p>Created on Sun Mar  9 14:58:25 2014</p>
 <p>Last update Fr Jul 13 15:38:40 2015</p>
-<p>&#64;author: Pedro Leal (Based on Hakan Tiftikci&#8217;s code)</p>
+<p>&#64;author: Pedro Leal (Based on Hakan Tiftikci’s code)</p>
 </dd></dl>
 
 </div>
-<div class="section" id="module-xfoil_module">
-<span id="auxiliary-functions"></span><h2>2.2. Auxiliary Functions<a class="headerlink" href="#module-xfoil_module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-aeropy.xfoil_module">
+<span id="auxiliary-functions"></span><h2>1.2. Auxiliary Functions<a class="headerlink" href="#module-aeropy.xfoil_module" title="Permalink to this headline">¶</a></h2>
+<p>XFOIL Python interface.</p>
 <dl class="function">
-<dt id="xfoil_module.alfa_for_file">
-<code class="descclassname">xfoil_module.</code><code class="descname">alfa_for_file</code><span class="sig-paren">(</span><em>alfa</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xfoil_module.html#alfa_for_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_module.alfa_for_file" title="Permalink to this definition">¶</a></dt>
-<dd><p>Generate standard name for angles. This is mainly used by the
-file_name function.</p>
+<dt id="aeropy.xfoil_module.alfa_for_file">
+<code class="descclassname">aeropy.xfoil_module.</code><code class="descname">alfa_for_file</code><span class="sig-paren">(</span><em>alfa</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aeropy/xfoil_module.html#alfa_for_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aeropy.xfoil_module.alfa_for_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate standard name for angles.</p>
+<p>This is mainly used by the file_name function.</p>
 <p>&#64;author: Pedro Leal</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="xfoil_module.create_input">
-<code class="descclassname">xfoil_module.</code><code class="descname">create_input</code><span class="sig-paren">(</span><em>x</em>, <em>y_u</em>, <em>y_l</em>, <em>filename</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xfoil_module.html#create_input"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_module.create_input" title="Permalink to this definition">¶</a></dt>
+<dt id="aeropy.xfoil_module.create_input">
+<code class="descclassname">aeropy.xfoil_module.</code><code class="descname">create_input</code><span class="sig-paren">(</span><em>x</em>, <em>y_u</em>, <em>y_l=None</em>, <em>filename='test'</em>, <em>different_x_upper_lower=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aeropy/xfoil_module.html#create_input"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aeropy.xfoil_module.create_input" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a plain file that XFOIL can read.</p>
 <p>XFOIL only reads file from the TE to the LE from the upper part
 first and then from the LE to the TE through the pressure surface.</p>
@@ -147,7 +151,8 @@ first and then from the LE to the TE through the pressure surface.</p>
 <dd><ul class="first last simple">
 <li>x: list of coordinates along the chord</li>
 <li>y_u: list of coordinates normal to the chord for the upper
-surface</li>
+surface. If y_l is not defined it is the y vector of the whole
+upper surface,</li>
 <li>y_l: list of coordinates normal to the chord for the lower
 surface</li>
 <li>file_name: label used for the file created</li>
@@ -159,67 +164,20 @@ surface</li>
 </dd></dl>
 
 <dl class="function">
-<dt id="xfoil_module.create_x">
-<code class="descclassname">xfoil_module.</code><code class="descname">create_x</code><span class="sig-paren">(</span><em>c</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xfoil_module.html#create_x"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_module.create_x" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create set of points along the chord befitting for Xfoil. The x
-output is conviniently ordered from TE to LE.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>c</strong> &#8211; float value for the chord.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">x: numpy.array of values of x</td>
-</tr>
-</tbody>
-</table>
-<p>Because Xfoil it is not efficient or sometimes possible to create a
-uniform distribution of points because the front part of the
-airfoil requires a big amount of points to create a smooth surface
-representing the round leading edge. However there is a maximum of
-points that Xfoil will accept, therefore there is a need to
-overcome this obstacle. This was done by dividing the airfoil in
-to 3 parts.</p>
-<ul class="simple">
-<li>tip: correpondent to 0 to .3% of the chord length, it is the
-most densily populated part of the airfoil to compensate the
-wide variation of slopes</li>
-<li>middle: correpondent to .3% to 30% of the chord length (
-Shortly above a quarter of the chord length). The second most
-densily populated and the segment with the most amount of
-points. Represents the round section of the airfoil except
-for the tip. Such an amount of points is necessary because it
-is where most of the lift is generated.</li>
-<li>endbody: correspondent to 30% to 100% of the chord length.
-The less densily populated section. Such unrefined mesh is
-possible because of the simplistic geometry of endbody&#8217;s
-airfoil, just straight lines.</li>
-</ul>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">create_x</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
-<span class="go">    array([  1.00000000e+00,   9.82051282e-01,   9.64102564e-01,</span>
-<span class="go">    ...</span>
-<span class="go">    6.66666667e-04,   3.33333333e-04,   0.00000000e+00])</span>
-</pre></div>
-</div>
-<p>Created on Thu Feb 27 2014
-&#64;author: Pedro Leal</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="xfoil_module.file_name">
-<code class="descclassname">xfoil_module.</code><code class="descname">file_name</code><span class="sig-paren">(</span><em>airfoil</em>, <em>alfas='none'</em>, <em>output='Cp'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xfoil_module.html#file_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_module.file_name" title="Permalink to this definition">¶</a></dt>
+<dt id="aeropy.xfoil_module.file_name">
+<code class="descclassname">aeropy.xfoil_module.</code><code class="descname">file_name</code><span class="sig-paren">(</span><em>airfoil</em>, <em>alfas='none'</em>, <em>output='Cp'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aeropy/xfoil_module.html#file_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aeropy.xfoil_module.file_name" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create standard name for the files generated by XFOIL.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>airfoil</strong> &#8211; the name of the plain file where the airfoil
+<li><strong>airfoil</strong> – the name of the plain file where the airfoil
 geometry is stored (variable airfoil).</li>
-<li><strong>alfas</strong> &#8211; list/array/float/int of a single angle of attack for
+<li><strong>alfas</strong> – list/array/float/int of a single angle of attack for
 Cp and Dump, but the whole list for a Polar. Only the initial
 and the final values are used</li>
-<li><strong>output</strong> &#8211; <p>defines the kind of output desired from xfoil. There
+<li><strong>output</strong> – <p>defines the kind of output desired from xfoil. There
 are three posssible choices:</p>
 <ul>
 <li><dl class="first docutils">
@@ -251,7 +209,7 @@ are three posssible choices:</p>
 <ul>
 <li><dl class="first docutils">
 <dt>for Cp and Dump: output_airfoil_alfa</dt>
-<dd><div class="first last highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">file_name</span><span class="p">(</span><span class="s">&#39;naca2244&#39;</span><span class="p">,</span> <span class="n">alfas</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Cp&#39;</span><span class="p">)</span>
+<dd><div class="first last highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">file_name</span><span class="p">(</span><span class="s1">&#39;naca2244&#39;</span><span class="p">,</span> <span class="n">alfas</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s1">&#39;Cp&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">Cp_naca2244_0200</span>
 </pre></div>
 </div>
@@ -260,7 +218,7 @@ are three posssible choices:</p>
 </li>
 <li><dl class="first docutils">
 <dt>for Polar: Polar_airfoil_alfa_i_alfa_f</dt>
-<dd><div class="first last highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">file_name</span><span class="p">(</span><span class="s">&#39;naca2244&#39;</span><span class="p">,</span> <span class="n">alfas</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">],</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Polar&#39;</span><span class="p">)</span>
+<dd><div class="first last highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">file_name</span><span class="p">(</span><span class="s1">&#39;naca2244&#39;</span><span class="p">,</span> <span class="n">alfas</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">],</span> <span class="n">output</span><span class="o">=</span><span class="s1">&#39;Polar&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">Polar_naca2244_n0200_0200</span>
 </pre></div>
 </div>
@@ -269,7 +227,7 @@ are three posssible choices:</p>
 </li>
 <li><dl class="first docutils">
 <dt>for Alpha_L_0: Alpha_L_0_airfoil</dt>
-<dd><div class="first last highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">file_name</span><span class="p">(</span><span class="s">&#39;naca2244&#39;</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s">&#39;Alpha_L_0&#39;</span><span class="p">)</span>
+<dd><div class="first last highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">file_name</span><span class="p">(</span><span class="s1">&#39;naca2244&#39;</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s1">&#39;Alpha_L_0&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">Alpha_L_0_naca2244</span>
 </pre></div>
 </div>
@@ -287,36 +245,66 @@ are three posssible choices:</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="xfoil_module.find_pressure_coefficients">
-<code class="descclassname">xfoil_module.</code><code class="descname">find_pressure_coefficients</code><span class="sig-paren">(</span><em>airfoil</em>, <em>alpha</em>, <em>Reynolds=0</em>, <em>iteration=10</em>, <em>NACA=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xfoil_module.html#find_pressure_coefficients"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_module.find_pressure_coefficients" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate the pressure coefficients of an airfoil</p>
+<dt id="aeropy.xfoil_module.find_pressure_coefficients">
+<code class="descclassname">aeropy.xfoil_module.</code><code class="descname">find_pressure_coefficients</code><span class="sig-paren">(</span><em>airfoil</em>, <em>alpha</em>, <em>Reynolds=0</em>, <em>iteration=10</em>, <em>NACA=True</em>, <em>use_previous=False</em>, <em>chord=1.0</em>, <em>PANE=False</em>, <em>delete=False</em>, <em>GDES=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aeropy/xfoil_module.html#find_pressure_coefficients"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aeropy.xfoil_module.find_pressure_coefficients" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the pressure coefficients of an airfoil.</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="xfoil_module.output_reader">
-<code class="descclassname">xfoil_module.</code><code class="descname">output_reader</code><span class="sig-paren">(</span><em>filename</em>, <em>separator='\t'</em>, <em>output=None</em>, <em>rows_to_skip=0</em>, <em>header=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xfoil_module.html#output_reader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_module.output_reader" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function that opens files of any kind. Able to skip rows and
-read headers if necessary.</p>
+<dt id="aeropy.xfoil_module.output_reader">
+<code class="descclassname">aeropy.xfoil_module.</code><code class="descname">output_reader</code><span class="sig-paren">(</span><em>filename</em>, <em>separator='\t'</em>, <em>output=None</em>, <em>rows_to_skip=0</em>, <em>header=0</em>, <em>delete=False</em>, <em>structure=False</em>, <em>type_structure=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aeropy/xfoil_module.html#output_reader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aeropy.xfoil_module.output_reader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that opens files of any kind.</p>
+<p>Able to skip rows and read headers if necessary.</p>
 <dl class="docutils">
 <dt>Inputs:</dt>
-<dd><ul class="first last simple">
-<li>filename: just the name of the file to read.</li>
-<li>separator: Main kind of separator in file. The code will
+<dd><ul class="first last">
+<li><p class="first">filename: just the name of the file to read.</p>
+</li>
+<li><p class="first">separator: Main kind of separator in file. The code will
 replace any variants of this separator for processing. Extra
-components such as end-line, kg m are all eliminated.</li>
-<li>output: defines what the kind of file we are opening to
+components such as end-line, kg m are all eliminated. Separator
+can also be a list of separators to use</p>
+</li>
+<li><p class="first">output: defines what the kind of file we are opening to
 ensure we can skip the right amount of lines. By default it
-is None so it can open any other file.</li>
-<li>rows_to_skip: amount of rows to initialy skip in the file. If
+is None so it can open any other file.</p>
+</li>
+<li><p class="first">rows_to_skip: amount of rows to initialy skip in the file. If
 the output is different then None, for the different types of
 files it is defined as:
 - Polar files = 10
 - Dump files = 0
-- Cp files = 2</li>
-<li>header: The header list will act as the keys of the output
+- Cp files = 2
+- Coordinates = 1</p>
+</li>
+<li><p class="first">header: The header list will act as the keys of the output
 dictionary. For the function to work, a header IS necessary.
 If not specified by the user, the function will assume that
-the header can be found in the file that it is opening.</li>
+the header can be found in the file that it is opening.</p>
+</li>
+<li><p class="first">delete: if True, deletes file read.</p>
+</li>
+<li><p class="first">structure: the file that he is being read has a given structure. For
+a file with the following structure:</p>
+<blockquote>
+<div><p>0
+0 0
+0.0996174 0.00873875
+1
+0.0996174 0.00873875
+0.199258 0.0172063</p>
+</div></blockquote>
+<dl class="docutils">
+<dt>For the case where the header:</dt>
+<dd><p class="first last">&gt;&gt; header = [‘element’, ‘x1’, ‘y1’, ‘x2’, ‘y2’]</p>
+</dd>
+<dt>A possible structure is:</dt>
+<dd><p class="first last">&gt;&gt; structure = [[‘element’], [‘x1’, ‘y1’], [‘x2’, ‘y2’]]</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">type_structure: [‘string’, ‘time’, ‘float’, ‘time’, ‘float’]</p>
+</li>
 </ul>
 </dd>
 <dt>Output:</dt>
@@ -325,14 +313,15 @@ the header can be found in the file that it is opening.</li>
 </ul>
 </dd>
 </dl>
-<p>Created on Thu Mar 14 2014
-&#64;author: Pedro Leal</p>
+<p>Created on Thu Mar 14 2014</p>
+<p>&#64;author: Pedro Leal</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="xfoil_module.prepare_xfoil">
-<code class="descclassname">xfoil_module.</code><code class="descname">prepare_xfoil</code><span class="sig-paren">(</span><em>Coordinates_Upper</em>, <em>Coordinates_Lower</em>, <em>chord</em>, <em>reposition=False</em>, <em>FSI=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xfoil_module.html#prepare_xfoil"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_module.prepare_xfoil" title="Permalink to this definition">¶</a></dt>
-<dd><p>The upper and lower functions will be the points in ordered
+<dt id="aeropy.xfoil_module.prepare_xfoil">
+<code class="descclassname">aeropy.xfoil_module.</code><code class="descname">prepare_xfoil</code><span class="sig-paren">(</span><em>Coordinates_Upper</em>, <em>Coordinates_Lower</em>, <em>chord</em>, <em>reposition=False</em>, <em>FSI=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aeropy/xfoil_module.html#prepare_xfoil"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aeropy.xfoil_module.prepare_xfoil" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare XFOIL airfoil file.</p>
+<p>The upper and lower functions will be the points in ordered
 fashion. Because of the way that XFOIL works the points start at
 the Trailing Edge on the upper surface going trough the Leading
 Edge and returning to the Trailing Edge form the bottom surface.</p>
@@ -340,24 +329,27 @@ Edge and returning to the Trailing Edge form the bottom surface.</p>
 
 </div>
 <div class="section" id="utility-functions">
-<h2>2.3. Utility Functions<a class="headerlink" href="#utility-functions" title="Permalink to this headline">¶</a></h2>
+<h2>1.3. Utility Functions<a class="headerlink" href="#utility-functions" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
-<dt id="xfoil_module.find_coefficients">
-<code class="descclassname">xfoil_module.</code><code class="descname">find_coefficients</code><span class="sig-paren">(</span><em>airfoil</em>, <em>alpha</em>, <em>Reynolds=0</em>, <em>iteration=10</em>, <em>NACA=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xfoil_module.html#find_coefficients"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_module.find_coefficients" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate the lift, drag, moment, friction etc coefficients of an airfoil</p>
+<dt id="aeropy.xfoil_module.find_coefficients">
+<code class="descclassname">aeropy.xfoil_module.</code><code class="descname">find_coefficients</code><span class="sig-paren">(</span><em>airfoil</em>, <em>alpha</em>, <em>Reynolds=0</em>, <em>iteration=10</em>, <em>NACA=True</em>, <em>delete=False</em>, <em>PANE=False</em>, <em>GDES=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aeropy/xfoil_module.html#find_coefficients"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aeropy.xfoil_module.find_coefficients" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the coefficients of an airfoil.</p>
+<p>Includes lift, drag, moment, friction etc coefficients.</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="xfoil_module.find_alpha_L_0">
-<code class="descclassname">xfoil_module.</code><code class="descname">find_alpha_L_0</code><span class="sig-paren">(</span><em>airfoil</em>, <em>Reynolds=0</em>, <em>iteration=10</em>, <em>NACA=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xfoil_module.html#find_alpha_L_0"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_module.find_alpha_L_0" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate the angle of attack where the lift coefficient is equal
-to zero.</p>
+<dt id="aeropy.xfoil_module.find_alpha_L_0">
+<code class="descclassname">aeropy.xfoil_module.</code><code class="descname">find_alpha_L_0</code><span class="sig-paren">(</span><em>airfoil</em>, <em>Reynolds=0</em>, <em>iteration=10</em>, <em>NACA=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aeropy/xfoil_module.html#find_alpha_L_0"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aeropy.xfoil_module.find_alpha_L_0" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find zero lift angle of attack.</p>
+<p>Calculate the angle of attack where the lift coefficient
+is equal to zero.</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="xfoil_module.M_crit">
-<code class="descclassname">xfoil_module.</code><code class="descname">M_crit</code><span class="sig-paren">(</span><em>airfoil</em>, <em>pho</em>, <em>speed_sound</em>, <em>lift</em>, <em>c</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xfoil_module.html#M_crit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#xfoil_module.M_crit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate the Critical Mach. This function was not validated.
+<dt id="aeropy.xfoil_module.M_crit">
+<code class="descclassname">aeropy.xfoil_module.</code><code class="descname">M_crit</code><span class="sig-paren">(</span><em>airfoil</em>, <em>pho</em>, <em>speed_sound</em>, <em>lift</em>, <em>c</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aeropy/xfoil_module.html#M_crit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aeropy.xfoil_module.M_crit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the Critical Mach.</p>
+<p>This function was not validated.
 Therefore use it with caution and please improve it.</p>
 <p>&#64;author: Pedro Leal</p>
 </dd></dl>
@@ -367,6 +359,7 @@ Therefore use it with caution and please improve it.</p>
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -374,42 +367,51 @@ Therefore use it with caution and please improve it.</p>
             <p class="logo"><a href="index.html">
               <img class="logo" src="_static/logo.png" alt="Logo"/>
             </a></p>
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">2. Xfoil Module Documentation</a><ul>
-<li><a class="reference internal" href="#core-function">2.1. Core Function</a></li>
-<li><a class="reference internal" href="#module-xfoil_module">2.2. Auxiliary Functions</a></li>
-<li><a class="reference internal" href="#utility-functions">2.3. Utility Functions</a></li>
+<h1 class="logo"><a href="index.html">AeroPy</a></h1>
+
+
+
+<p class="blurb">An easy to use aerodynamic tool</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=leal26&repo=AeroPy&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">1. Xfoil Module Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="aero_module.html">2. Aerodynamic Module Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="airfoil_module.html">3. Airfoil Module Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">4. Tutorial</a></li>
 </ul>
-</li>
-</ul>
+
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="main_module.html" title="previous chapter">1. AeroPy Documentation</a></li>
-      <li>Next: <a href="aero_module.html" title="next chapter">3. Aerodynamic Module Documentation</a></li>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to AeroPy’s, an easy to use aerodynamic tool</a></li>
+      <li>Next: <a href="aero_module.html" title="next chapter">2. Aerodynamic Module Documentation</a></li>
   </ul></li>
 </ul>
 </div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="_sources/xfoil_module.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -420,11 +422,11 @@ Therefore use it with caution and please improve it.</p>
       &copy;2015, Pedro Leal.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.11</a>
       
       |
-      <a href="_sources/xfoil_module.txt"
+      <a href="_sources/xfoil_module.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

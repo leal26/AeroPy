@@ -1,68 +1,71 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>Welcome to AeroPy’s, an easy to use aerodynamic tool &mdash; AeroPy 0.0.2 documentation</title>
-    
+    <title>Welcome to AeroPy’s, an easy to use aerodynamic tool &#8212; AeroPy 0.0.3 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '0.0.2',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="AeroPy 0.0.2 documentation" href="#" />
-    <link rel="next" title="1. AeroPy Documentation" href="main_module.html" />
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="1. Xfoil Module Documentation" href="xfoil_module.html" />
    
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body role="document">  
+  </head><body>
+  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
   <div class="section" id="welcome-to-aeropy-s-an-easy-to-use-aerodynamic-tool">
-<h1>Welcome to AeroPy&#8217;s, an easy to use aerodynamic tool<a class="headerlink" href="#welcome-to-aeropy-s-an-easy-to-use-aerodynamic-tool" title="Permalink to this headline">¶</a></h1>
+<h1>Welcome to AeroPy’s, an easy to use aerodynamic tool<a class="headerlink" href="#welcome-to-aeropy-s-an-easy-to-use-aerodynamic-tool" title="Permalink to this headline">¶</a></h1>
 <p>AeroPy is an library for calculating aerodynamic properties. The main feature of
-this library is the Python interface with XFOIL. The main objective of this library is to be able
-to use XFOIL via Python iteratively in a total of 4 lines total (one line for most uses).
+this library is the Python interface with XFOIL. The main objective of this library is to
+use XFOIL via Python iteratively in a total of 4 lines total (one line for most uses).
 Through this interface coupling with other softwares (Abaqus, Ansys, etc) is possible
-and iterative processes (optimization, design sensitivity) are possible.
+and iterative processes (optimization, design sensitivity) are also possible.
 For a thorough explanation please check the documentation and the tutorials.</p>
+<div class="section" id="aerodynamic-tools">
+<h2>Aerodynamic tools<a class="headerlink" href="#aerodynamic-tools" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>xfoil_module: contains all the functions relating to XFOIL.</li>
+<li>aero_module: contains all functions related to aerodynamics, but not related to XFOIL.</li>
+<li>filehandling: constains functions to read and output in several formats</li>
+</ul>
+</div>
+<div class="section" id="geometric-tools">
+<h2>Geometric tools<a class="headerlink" href="#geometric-tools" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>geometry: tools to generate and modify airfoils</li>
+<li>2D_CST: contains libraries to develop 2D shapes using the Class/Shape Transformation equations</li>
+<li>3D_CST: contains libraries to develop 2D shapes using the Class/Shape Transformation equations</li>
+<li>morphing: functions to generate structurally consistent morphed configurations</li>
+</ul>
 <p>Contents:</p>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="main_module.html">1. AeroPy Documentation</a><ul class="simple">
+<li class="toctree-l1"><a class="reference internal" href="xfoil_module.html">1. Xfoil Module Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="aero_module.html">2. Aerodynamic Module Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="airfoil_module.html">3. Airfoil Module Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">4. Tutorial</a></li>
 </ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="xfoil_module.html">2. Xfoil Module Documentation</a><ul class="simple">
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="aero_module.html">3. Aerodynamic Module Documentation</a><ul class="simple">
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="airfoil_module.html">4. Airfoil Module Documentation</a><ul class="simple">
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial.html">5. Tutorial</a></li>
-</ul>
+</div>
 </div>
 </div>
 <div class="section" id="to-do">
@@ -86,31 +89,32 @@ I am <em>strongly</em> recommending the following collaborations:</p>
 <div class="section" id="indices-and-tables">
 <h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li><a class="reference internal" href="genindex.html"><span>Index</span></a></li>
-<li><a class="reference internal" href="py-modindex.html"><span>Module Index</span></a></li>
-<li><a class="reference internal" href="search.html"><span>Search Page</span></a></li>
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
 </ul>
 </div>
 <div class="section" id="examples">
 <h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
 <p>A simple example demonstrating how to use AeroPy to calculate lift, drag and
 moment coefficients for a NACA0012 airfoil at angle of attack of 12 degrees.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">AeroPy</span> <span class="kn">import</span> <span class="n">find_coefficients</span>
-<span class="n">find_coefficients</span><span class="p">(</span><span class="n">airfoil</span><span class="o">=</span><span class="s">&#39;naca0012&#39;</span><span class="n">alpha</span><span class="o">=</span><span class="mf">12.</span><span class="p">)</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="p">{</span><span class="s">&#39;CM&#39;</span><span class="p">:</span> <span class="mf">0.0134</span><span class="p">,</span> <span class="s">&#39;CL&#39;</span><span class="p">:</span> <span class="mf">1.2453</span><span class="p">,</span> <span class="s">&#39;Top_Xtr&#39;</span><span class="p">:</span> <span class="mf">0.0194</span><span class="p">,</span> <span class="s">&#39;CD&#39;</span><span class="p">:</span> <span class="mf">0.01934</span><span class="p">,</span> <span class="s">&#39;CDp&#39;</span><span class="p">:</span> <span class="mf">0.01379</span><span class="p">,</span> <span class="s">&#39;alpha&#39;</span><span class="p">:</span> <span class="mf">12.0</span><span class="p">,</span> <span class="s">&#39;Bot_Xtr&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">}</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">aeropy.xfoil_module</span> <span class="kn">import</span> <span class="n">find_coefficients</span>
+<span class="n">find_coefficients</span><span class="p">(</span><span class="n">airfoil</span><span class="o">=</span><span class="s1">&#39;naca0012&#39;</span><span class="n">alpha</span><span class="o">=</span><span class="mf">12.</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="p">{</span><span class="s1">&#39;CM&#39;</span><span class="p">:</span> <span class="mf">0.0134</span><span class="p">,</span> <span class="s1">&#39;CL&#39;</span><span class="p">:</span> <span class="mf">1.2453</span><span class="p">,</span> <span class="s1">&#39;Top_Xtr&#39;</span><span class="p">:</span> <span class="mf">0.0194</span><span class="p">,</span> <span class="s1">&#39;CD&#39;</span><span class="p">:</span> <span class="mf">0.01934</span><span class="p">,</span> <span class="s1">&#39;CDp&#39;</span><span class="p">:</span> <span class="mf">0.01379</span><span class="p">,</span> <span class="s1">&#39;alpha&#39;</span><span class="p">:</span> <span class="mf">12.0</span><span class="p">,</span> <span class="s1">&#39;Bot_Xtr&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">}</span>
 </pre></div>
 </div>
 <p>Another example showing how to use AeroPy to calculate pressure coefficients for a
 NACA0012 in viscous flow at Reynolds = 10000000 and angle of attack of 12 degrees</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">AeroPy</span> <span class="kn">import</span> <span class="n">find_pressure_coefficients</span>
-<span class="n">find_pressure_coefficients</span><span class="p">(</span><span class="n">airfoil</span><span class="o">=</span><span class="s">&#39;naca0012&#39;</span><span class="p">,</span> <span class="n">Reynolds</span> <span class="o">=</span> <span class="mf">1e6</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">12.</span><span class="p">,</span><span class="n">NACA</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="s">&#39;y&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.00126</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.00126</span><span class="p">],</span> <span class="s">&#39;x&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="s">&#39;Cp&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.41501</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.41501</span><span class="p">]}</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">aeropy.xfoil_module</span> <span class="kn">import</span> <span class="n">find_pressure_coefficients</span>
+<span class="n">find_pressure_coefficients</span><span class="p">(</span><span class="n">airfoil</span><span class="o">=</span><span class="s1">&#39;naca0012&#39;</span><span class="p">,</span> <span class="n">Reynolds</span> <span class="o">=</span> <span class="mf">1e6</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">12.</span><span class="p">,</span><span class="n">NACA</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.00126</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.00126</span><span class="p">],</span> <span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="s1">&#39;Cp&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.41501</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mf">0.41501</span><span class="p">]}</span>
 </pre></div>
 </div>
 </div>
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -118,40 +122,50 @@ NACA0012 in viscous flow at Reynolds = 10000000 and angle of attack of 12 degree
             <p class="logo"><a href="#">
               <img class="logo" src="_static/logo.png" alt="Logo"/>
             </a></p>
-  <h3><a href="#">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">Welcome to AeroPy&#8217;s, an easy to use aerodynamic tool</a></li>
-<li><a class="reference internal" href="#to-do">To Do</a></li>
-<li><a class="reference internal" href="#recommended-collaborations">Recommended Collaborations</a></li>
-<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
-<li><a class="reference internal" href="#examples">Examples</a></li>
+<h1 class="logo"><a href="#">AeroPy</a></h1>
+
+
+
+<p class="blurb">An easy to use aerodynamic tool</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=leal26&repo=AeroPy&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="xfoil_module.html">1. Xfoil Module Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="aero_module.html">2. Aerodynamic Module Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="airfoil_module.html">3. Airfoil Module Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">4. Tutorial</a></li>
 </ul>
+
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="#">Documentation overview</a><ul>
-      <li>Next: <a href="main_module.html" title="next chapter">1. AeroPy Documentation</a></li>
+      <li>Next: <a href="xfoil_module.html" title="next chapter">1. Xfoil Module Documentation</a></li>
   </ul></li>
 </ul>
 </div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="_sources/index.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -162,11 +176,11 @@ NACA0012 in viscous flow at Reynolds = 10000000 and angle of attack of 12 degree
       &copy;2015, Pedro Leal.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.11</a>
       
       |
-      <a href="_sources/index.txt"
+      <a href="_sources/index.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

@@ -30,12 +30,12 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0,  # noqa C901
            filewhere the airfoil geometry is stored (variable airfoil).
            If NACA is True, airfoil is the naca series of the airfoil
            (i.e.: naca2244). By default NACA is False.
-
+    
     :param alfas: list/array/float/int of angles of attack.
-
+    
     :param output: defines the kind of output desired from xfoil.  There
            are four posssible choices (by default, Cp is chosen):
-
+    
           - Cp: generates files with Pressure coefficients for
                 desired alfas.
           - Dump: generates file with Velocity along surface, Delta
@@ -45,7 +45,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0,  # noqa C901
           - Alfa_L_0: generates a file with the value of the angle
                       of attack that lift is equal to zero.
           - Coordinates: returns the coordinates of a NACA airfoil.
-
+    
     :param Reynolds: Reynolds number in case the simulation is for a
           viscous flow. In case not informed, the code will assume
           inviscid.
@@ -600,6 +600,7 @@ def output_reader(filename, separator='\t', output=None,  # noqa C901
         - Dictionary with all the header values as keys
 
     Created on Thu Mar 14 2014
+    
     @author: Pedro Leal
     """
     if header != 0:
