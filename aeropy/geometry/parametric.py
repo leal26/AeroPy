@@ -1,98 +1,129 @@
 import math
 import numpy as np
-from scipy import integrate
+from scipy import integrate, optimize
 
 
 class poly():
     """class for a polynomial function
     """
 
-    def __init__(self, a=[-math.sqrt(3)/3, math.sqrt(3)/3]):
+    def __init__(self, a=[0, -math.sqrt(3)/3, math.sqrt(3)/3, 0]):
         self.a = a
 
-    def z2(self, z1):
+    def z2(self, z1, diff=None, a=None):
         """ z2 (checked)"""
-        return(self.a[0]*z1**3 + self.a[1]*z1**2)
-
-    def z2z1(self, z1):
-        """ dz2 / dz1 (checked)"""
-        return(3*self.a[0]*z1**2 + 2*self.a[1]*z1)
-
-    def z2z11(self, z1):
-        """ d^2z2 / dz1^2 (checked)"""
-        return(6*self.a[0]*z1 + 2*self.a[1])
+        if a is None:
+            a = self.a
+        if diff is None:
+            return(a[0]*z1**3 + a[1]*z1**2 + a[2]*z1 + a[3])
+        elif diff == 'z1':
+            return(3*a[0]*z1**2 + 2*a[1]*z1 + a[2])
+        elif diff == 'z11':
+            return(6*a[0]*z1 + 2*a[1])
+        elif diff == 'x1':
+            return(self.z2(z1, 'z1')*self.z1(z1, 'x1'))
+        elif diff == 'x11':
+            return(self.z2(z1, 'z11')*(self.z1(z1, 'x1'))**2 +
+                   self.z2(z1, 'z1')*self.z1(z1, 'x11'))
 
     def inflection_points(self):
         return([-self.a[1]/(3*self.a[0])])
 
-    def x1z1(self, z1):
+    def x1(self, z1, diff=None):
         """ dx1/ dz1 (checked)"""
-        return(np.sqrt(1+(self.z2z1(z1))**2))
+        if diff is None:
+            output = []
+            try:
+                for z_final in z1:
+                    output_i, err = integrate.quad(lambda x: self.x1(x, 'z1'),
+                                                   0, z_final)
+                    output.append(output_i)
+                output = np.array(output)
+            except(TypeError):
+                output, err = integrate.quad(lambda x: self.x1(x, 'z1'), 0, z1)
+            return(output)
+        elif diff == 'z1':
+            return(np.sqrt(1+(self.z2(z1, 'z1'))**2))
+        elif diff == 'z11':
+            return(self.z1(z1, 'x1')*self.z2(z1, 'z1')*self.z2(z1, 'z11'))
 
-    def z1x1(self, z1):
-        """ dx1 / dz1 (checked)"""
-        return(1.0/self.x1z1(z1))
+    def z1(self, input, diff=None):
+        """ dx1 / dz1 (all checked). For calculating z1 from x1, there is not
+           a numerical solution, but I can minimize the residual."""
+        if diff is None:
+            output = []
+            for x_final in input:
+                def _residual(x):
+                    return abs(x_final - self.x1(x))
+                output_i = optimize.newton(_residual, x_final)
+                output.append(output_i)
+            output = np.array(output)
+            return(output)
+        if diff == 'x1':
+            return(1.0/self.x1(input, 'z1'))
+        elif diff == 'x11':
+            return(-self.z1(input, 'x1')**4*self.z2(input, 'z1') *
+                   self.z2(input, 'z11'))
 
-    def z2x1(self, z1):
-        """ dx2 / dx1 (checked)"""
-        return(self.z2z1(z1)*self.z1x1(z1))
-
-    def z2x11(self, z1):
-        """ d^2z2 / dx1^2 """
-        return(self.z2z11(z1)*(self.z1x1(z1))**2 +
-               self.z2z1(z1)*self.z1x11(z1))
-
-    def x1z11(self, z1):
-        """ d^2x1 / dz1^2 """
-        return(self.z1x1(z1)*self.z2z1(z1)*self.z2z11(z1))
-
-    def z1x11(self, z1):
-        """ d^2z1 / dz1^2 """
-        return(-self.z1x1(z1)**4*self.z2z1(z1)*self.z2z11(z1))
-
-    def x1(self, z_final):
-        """ d^2z2 / dz1^2 (checked)"""
-        output, err = integrate.quad(self.x1z1, 0, z_final)
-        return(output)
-
-    def g1(self, z1, normalize=True):
+    def tangent(self, z1, normalize=False):
         """Tangent vector r (checked)"""
         try:
-            output = np.array([1, self.z2z1(z1)])
+            output = self.z1(z1, 'x1')*np.array([np.ones(len(z1)),
+                                                 self.z2(z1, 'z1')])
+
         except(ValueError):
-            output = np.array([np.ones(len(z1)), self.z2z1(z1)])
+            output = self.z1(z1, 'x1')*np.array([1, self.z2(z1, 'z1')])
         if normalize:
-            output = output*self.z1x1(z1)
+            output = output*self.z1(z1, 'x1')
         return(output)
 
-    def g2(self, z1, diff=False, normalize=True):
+    def normal(self, z1, diff=None, normalize=False):
         """Normal vector (checked)"""
-        if diff:
+        if diff is None:
             try:
-                output = np.array([- self.z2z11(z1), np.zeros(len(z1))])
+                output = self.z1(z1, 'x1')*np.array([- self.z2(z1, 'z1'),
+                                                     np.ones(len(z1))])
             except(TypeError):
-                output = np.array([- self.z2z11(z1), 0])
-        else:
+                output = self.z1(z1, 'x1')*np.array([- self.z2(z1, 'z1'), 1])
+        elif diff == 'z1':
             try:
-                output = np.array([- self.z2z1(z1), np.ones(len(z1))])
+                output = self.z1(z1, 'x1')*np.array([- self.z2(z1, 'z1'),
+                                                     np.zeros(len(z1))])
             except(TypeError):
-                output = np.array([- self.z2z1(z1), 1])
+                output = self.z1(z1, 'x1')*np.array([- self.z2(z1, 'z11'), 0])
+        elif diff == 'x1':
+            output = self.z1(z1, 'x1')*self.x1(z1, 'z1')*self.normal(z1) + \
+                self.z1(z1, 'x1')*self.normal(z1, 'z1')
+
         if normalize:
-            return(output*self.z1x1(z1))
+            return(output*self.z1(z1, 'x1'))
         else:
             return(output)
 
     def neutral_line(self, z1):
         """ Position along neutral line"""
-        return(np.array([z1, self.a[0]*z1**3 + self.a[1]*z1**2]))
+        return(np.array([z1, self.z2(z1)]))
 
-    def r(self, z1, x2):
+    def r(self, input, x2=0, normalize=False, diff=None, input_type='z1'):
         """ Position anywhere along shell considering shell thickness """
-        return(self.neutral_line(z1) + x2*self.g2(z1))
+        if input_type == 'z1':
+            z1 = input
+        elif input_type == 'x1':
+            z1 = self.z1(input)
 
-    def rx1(self, z1, normalize=True):
-        """ Position anywhere along shell considering shell thickness """
-        output = np.array([self.z1x1(z1), self.z2x1(z1)])
+        if diff is None:
+            output = self.neutral_line(z1) + x2*self.g(2, z1)
+        elif diff == 'x1':
+            output = np.array([self.z1(z1, 'x1'), self.z2(z1, 'x1')])
+        elif diff == 'x11':
+            output = np.array([self.z1(z1, 'x11'), self.z2(z1, 'x11')])
+        elif type(diff) == list:
+            a = self.a.copy()
+            for i in range(len(diff)):
+                if diff[i] == 0:
+                    a[i] = 0.0
+            print(a)
+            output = np.array([z1, self.z2(z1, a=a)])
         if normalize:
             output = output.T
             for i in range(len(output)):
@@ -100,23 +131,50 @@ class poly():
             output = output.T
         return(output)
 
-    def rx11(self, z1, normalize=True):
-        """ Position anywhere along shell considering shell thickness """
-        output = np.array([self.z1x11(z1), self.z2x11(z1)])
-        if normalize:
-            output = output.T
-            for i in range(len(output)):
-                output[i] /= np.linalg.norm(output[i])
-            output = output.T
+    def g(self, i, z1, x2=0, diff=None):
+        """Tangent vector r (checked)"""
+        if i == 1:
+            g_i = self.tangent(z1) + x2*self.normal(z1, diff='x1')
+        elif i == 2:
+            g_i = self.normal(z1)
+        if diff is None:
+            return(g_i)
+        elif diff == 'x1':
+            return
+
+    def gij(self, i, j, z1, x2=0, diff=None, covariant=True, orthogonal=True):
+
+        if diff is None:
+            gi = self.g(i, z1, x2)
+            gj = self.g(j, z1, x2)
+            output = []
+            for n in range(len(z1)):
+                output.append(gi[0][n]*gj[0][n] +
+                              gi[1][n]*gj[1][n])
+
+            output = np.array(output)
+        elif diff == 'x1':
+            if i == 2 and j == 2:
+                output = self.normal(z1, 'x1')
+        elif diff == 'x2':
+            if i == 1 and j == 1:
+                dn = self.normal(z1, 'x1')
+                t = self.tangent(z1)
+                output = []
+                for k in range(len(z1)):
+                    output_nn = 2*x2*(dn[0][k]*dn[0][k] + dn[1][k]*dn[1][k])
+                    output_tn = 2*(t[0][k]*dn[0][k] + t[1][k]*dn[1][k])
+                    output.append(output_nn + output_tn)
+            output = np.array(output)
+        if not covariant and orthogonal:
+            output = 1/output
         return(output)
 
-    def g11(self, z1, x2=0):
-        g1 = self.g1(z1)
-        return(np.inner(g1, g1))
-
-    def g22(self, z1):
-        g2 = self.g2(z1)
-        return(np.inner(g2, g2))
+    def christoffel(self, z1, x2, order='second'):
+        if order == 'second':
+            output = self.gij(1, 2, z1, x2,
+                              covariant=False)*.5*self.gij(1, 1, z1, x2, 'x2')
+        return(output)
 
 
 class frame():
@@ -137,8 +195,6 @@ class frame():
         z1 = self.z1_default(z1)
         T = self.T(z1)
         alpha = self.alpha(z1)
-        # print('here')
-        # print(alpha)
 
         M1 = self.M1(z1=z1, alpha=alpha)
         M2 = self.M2(z1=z1, alpha=alpha)
@@ -166,14 +222,7 @@ class frame():
         if alpha is None:
             alpha = self.alpha(z1)
         if self.frame == 'Bishop':
-            # print(self.N(z1))
-            # print(self.B(z1))
-            print(np.cos(alpha))
-            print(np.sin(alpha))
             new = np.cos(alpha)*self.N(z1) - np.sin(alpha)*self.B(z1)
-            print('new')
-            print(new)
-            print(self.N(z1))
             return(np.cos(alpha)*self.N(z1) -
                    np.sin(alpha)*self.B(z1))
 
