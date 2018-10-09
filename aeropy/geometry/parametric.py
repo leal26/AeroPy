@@ -7,19 +7,22 @@ class poly():
     """class for a polynomial function
     """
 
-    def __init__(self, a=[0, -math.sqrt(3)/3, math.sqrt(3)/3, 0]):
+    def __init__(self, a=[0, -math.sqrt(3)/3, math.sqrt(3)/3, 0], scaling=1):
         self.a = a
+        self.scaling = scaling
 
     def z2(self, z1, diff=None, a=None):
         """ z2 (checked)"""
         if a is None:
             a = self.a
         if diff is None:
-            return(a[0]*z1**3 + a[1]*z1**2 + a[2]*z1 + a[3])
+            return(self.scaling*(a[0]*z1**3 + a[1]*z1**2 + a[2]*z1 + a[3]))
         elif diff == 'z1':
-            return(3*a[0]*z1**2 + 2*a[1]*z1 + a[2])
+            return(self.scaling*(3*a[0]*z1**2 + 2*a[1]*z1 + a[2]))
         elif diff == 'z11':
-            return(6*a[0]*z1 + 2*a[1])
+            return(self.scaling*(6*a[0]*z1 + 2*a[1]))
+        elif diff == 'z111':
+            return(self.scaling*(6*a[0]))
         elif diff == 'x1':
             return(self.z2(z1, 'z1')*self.z1(z1, 'x1'))
         elif diff == 'x11':
@@ -56,7 +59,7 @@ class poly():
                 def _residual(x):
                     return abs(x_final - self.x1(x))
                 output_i = optimize.newton(_residual, x_final)
-                output.append(output_i)
+                output.append(self.scaling*output_i)
             output = np.array(output)
             return(output)
         if diff == 'x1':
@@ -64,20 +67,35 @@ class poly():
         elif diff == 'x11':
             return(-self.z1(input, 'x1')**4*self.z2(input, 'z1') *
                    self.z2(input, 'z11'))
+        elif diff == 'x111':
+            return(-4*self.z1(input, 'x1')**3*self.z1(input, 'x11') *
+                   self.z2(input, 'z1') * self.z2(input, 'z11') -
+                   self.z1(input, 'x1')**5*(self.z2(input, 'z11')**2 -
+                                            self.z2(input, 'z1') *
+                                            self.z2(input, 'z111')))
 
-    def tangent(self, z1, normalize=False):
+    def tangent(self, z1, diff=None):
         """Tangent vector r (checked)"""
-        try:
-            output = self.z1(z1, 'x1')*np.array([np.ones(len(z1)),
-                                                 self.z2(z1, 'z1')])
+        if diff is None:
+            try:
+                output = self.z1(z1, 'x1')*np.array([np.ones(len(z1)),
+                                                     self.z2(z1, 'z1')])
 
-        except(ValueError):
-            output = self.z1(z1, 'x1')*np.array([1, self.z2(z1, 'z1')])
-        if normalize:
-            output = output*self.z1(z1, 'x1')
+            except(ValueError):
+                output = self.z1(z1, 'x1')*np.array([1, self.z2(z1, 'z1')])
+        elif diff == 'x1':
+            try:
+                output = self.z1(z1, 'x1')**2*np.array([np.zeros(len(z1)),
+                                                        self.z2(z1, 'z11')])
+                output += self.z1(z1, 'x11')*np.array([np.ones(len(z1)),
+                                                       self.z2(z1, 'z1')])
+            except(ValueError):
+                output = self.z1(z1, 'x1')**2*np.array([0, self.z2(z1, 'z11')])
+                output += self.z1(z1, 'x11')*np.array([1, self.z2(z1, 'z1')])
+
         return(output)
 
-    def normal(self, z1, diff=None, normalize=False):
+    def normal(self, z1, diff=None):
         """Normal vector (checked)"""
         if diff is None:
             try:
@@ -92,13 +110,17 @@ class poly():
             except(TypeError):
                 output = self.z1(z1, 'x1')*np.array([- self.z2(z1, 'z11'), 0])
         elif diff == 'x1':
-            output = self.z1(z1, 'x1')*self.x1(z1, 'z1')*self.normal(z1) + \
-                self.z1(z1, 'x1')*self.normal(z1, 'z1')
-
-        if normalize:
-            return(output*self.z1(z1, 'x1'))
-        else:
-            return(output)
+            output = self.z1(z1, 'x11')*np.array([- self.z2(z1, 'z1'),
+                                                  np.ones(len(z1))])
+            output += self.z1(z1, 'x1')*self.normal(z1, 'z1')
+        elif diff == 'x11':
+            output = self.z1(z1, 'x111')*np.array([- self.z2(z1, 'z1'),
+                                                   np.ones(len(z1))])
+            output += self.z1(z1, 'x11')*np.array([- self.z2(z1, 'z11'),
+                                                   np.zeros(len(z1))])
+            output += self.z1(z1, 'x11')*self.normal(z1, 'z1')
+            output += self.z1(z1, 'x1')**2*self.normal(z1, 'z1')
+        return(output)
 
     def neutral_line(self, z1):
         """ Position along neutral line"""
@@ -114,15 +136,14 @@ class poly():
         if diff is None:
             output = self.neutral_line(z1) + x2*self.g(2, z1)
         elif diff == 'x1':
-            output = np.array([self.z1(z1, 'x1'), self.z2(z1, 'x1')])
-        elif diff == 'x11':
-            output = np.array([self.z1(z1, 'x11'), self.z2(z1, 'x11')])
+            output = self.g(1, z1, x2)
+        elif diff == 'x2':
+            output = self.g(2, z1, x2)
         elif type(diff) == list:
             a = self.a.copy()
             for i in range(len(diff)):
                 if diff[i] == 0:
                     a[i] = 0.0
-            print(a)
             output = np.array([z1, self.z2(z1, a=a)])
         if normalize:
             output = output.T
@@ -143,6 +164,10 @@ class poly():
             return
 
     def gij(self, i, j, z1, x2=0, diff=None, covariant=True, orthogonal=True):
+        def dot(a, b):
+            a_1, a_2 = a
+            b_1, b_2 = b
+            return(a_1*b_1 + a_2*b_2)
 
         if diff is None:
             gi = self.g(i, z1, x2)
@@ -153,27 +178,50 @@ class poly():
                               gi[1][n]*gj[1][n])
 
             output = np.array(output)
+
         elif diff == 'x1':
-            if i == 2 and j == 2:
-                output = self.normal(z1, 'x1')
-        elif diff == 'x2':
+            # Calculating basic vectors
+            t = self.tangent(z1)
+            dt = self.tangent(z1, 'x1')
+            n = self.normal(z1)
+            dn = self.normal(z1, 'x1')
+            ddn = self.normal(z1, 'x11')
+            # calculate g
             if i == 1 and j == 1:
-                dn = self.normal(z1, 'x1')
-                t = self.tangent(z1)
-                output = []
-                for k in range(len(z1)):
-                    output_nn = 2*x2*(dn[0][k]*dn[0][k] + dn[1][k]*dn[1][k])
-                    output_tn = 2*(t[0][k]*dn[0][k] + t[1][k]*dn[1][k])
-                    output.append(output_nn + output_tn)
-            output = np.array(output)
+                output = 2*dot(t, dt) + 2*x2*(dot(dt, dn) + dot(t, ddn)) + \
+                    2*x2**2*dot(dn, ddn)
+            if (i == 1 and j == 2) or (i == 2 and j == 1):
+                output = x2*(dot(dn, dn) + dot(n, ddn))
+            if i == 2 and j == 2:
+                output = 2*dot(n, dn)
+        elif diff == 'x2':
+            # Calculating basic vectors
+            t = self.tangent(z1)
+            n = self.normal(z1)
+            dn = self.normal(z1, 'x1')
+            # calculate g
+            if i == 1 and j == 1:
+                output = 2*dot(t, dn) + 2*x2**2*dot(dn, dn)
+            if (i == 1 and j == 2) or (i == 2 and j == 1):
+                output = dot(dn, n)
+            if i == 2 and j == 2:
+                output = np.zeros(len(z1))
         if not covariant and orthogonal:
-            output = 1/output
+            if i == j:
+                output = 1/output
+            else:
+                output = 0.0
         return(output)
 
-    def christoffel(self, z1, x2, order='second'):
+    def christoffel(self, i, k, l, z1, x2, order='second'):
         if order == 'second':
-            output = self.gij(1, 2, z1, x2,
-                              covariant=False)*.5*self.gij(1, 1, z1, x2, 'x2')
+            output = np.zeros(len(z1))
+            for m in range(1, 3):
+                gim = self.gij(i, m, z1, x2, covariant=False)
+                gmk_l = self.gij(m, k, z1, x2, diff='x%i' % (l))
+                gml_k = self.gij(m, l, z1, x2, diff='x%i' % (k))
+                gkl_m = self.gij(k, l, z1, x2, diff='x%i' % (m))
+                output += .5*gim*(gmk_l + gml_k + gkl_m)
         return(output)
 
 

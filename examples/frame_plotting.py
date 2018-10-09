@@ -9,7 +9,7 @@ import numpy as np
 curve = poly()
 z1 = np.linspace(0, 1)
 z2 = curve.z2(z1)
-print(curve.a)
+
 colors = ['r', 'g', 'k', 'b', 'm']
 plt.figure()
 plt.plot(z1, z2, label='geometry')
