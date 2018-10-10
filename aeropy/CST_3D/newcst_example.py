@@ -1,5 +1,6 @@
 import aeropy.CST_3D as cst
 from aeropy.filehandling.vtk import generate_surface
+import panairwrapper.mesh_tools as meshtools
 
 import numpy as np
 import matplotlib.pyplot as plt
