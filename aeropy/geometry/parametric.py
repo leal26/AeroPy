@@ -7,22 +7,24 @@ class poly():
     """class for a polynomial function
     """
 
-    def __init__(self, a=[0, -math.sqrt(3)/3, math.sqrt(3)/3, 0], scaling=1):
+    def __init__(self, a=[0, -math.sqrt(3)/3, math.sqrt(3)/3, 0], alpha=1,
+                 config='parent'):
         self.a = a
-        self.scaling = scaling
+        self.alpha = alpha
+        self.config = config
 
     def z2(self, z1, diff=None, a=None):
         """ z2 (checked)"""
         if a is None:
             a = self.a
         if diff is None:
-            return(self.scaling*(a[0]*z1**3 + a[1]*z1**2 + a[2]*z1 + a[3]))
+            return(a[0]*z1**3 + a[1]*z1**2 + a[2]*z1 + a[3])
         elif diff == 'z1':
-            return(self.scaling*(3*a[0]*z1**2 + 2*a[1]*z1 + a[2]))
+            return(3*a[0]*z1**2 + 2*a[1]*z1 + a[2])
         elif diff == 'z11':
-            return(self.scaling*(6*a[0]*z1 + 2*a[1]))
+            return(6*a[0]*z1 + 2*a[1])
         elif diff == 'z111':
-            return(self.scaling*(6*a[0]))
+            return(6*a[0])
         elif diff == 'x1':
             return(self.z2(z1, 'z1')*self.z1(z1, 'x1'))
         elif diff == 'x11':
@@ -59,7 +61,7 @@ class poly():
                 def _residual(x):
                     return abs(x_final - self.x1(x))
                 output_i = optimize.newton(_residual, x_final)
-                output.append(self.scaling*output_i)
+                output.append(output_i)
             output = np.array(output)
             return(output)
         if diff == 'x1':
@@ -126,17 +128,21 @@ class poly():
         """ Position along neutral line"""
         return(np.array([z1, self.z2(z1)]))
 
-    def r(self, input, x2=0, normalize=False, diff=None, input_type='z1'):
+    def r(self, input, x2=0, normalize=False, diff=None, input_type='x1'):
         """ Position anywhere along shell considering shell thickness """
+
         if input_type == 'z1':
             z1 = input
         elif input_type == 'x1':
-            z1 = self.z1(input)
+            if self.config == 'parent':
+                z1 = self.z1(input)
+            elif self.config == 'child':
+                z1 = self.z1(self.alpha*input)
 
         if diff is None:
             output = self.neutral_line(z1) + x2*self.g(2, z1)
         elif diff == 'x1':
-            output = self.g(1, z1, x2)
+            output = self.alpha*self.g(1, z1, x2)
         elif diff == 'x2':
             output = self.g(2, z1, x2)
         elif type(diff) == list:

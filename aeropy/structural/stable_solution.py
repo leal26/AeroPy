@@ -12,9 +12,9 @@ class structure():
         self.poisson = poisson
         self.area = area
 
-    def u(self, input, x2=0, diff=None, input_type='x1'):
-        parent = self.g_p.r(input, x2=x2, input_type=input_type, diff=diff)
-        child = self.g_c.r(input, x2=x2, input_type=input_type, diff=diff)
+    def u(self, input, x2=0, diff=None):
+        parent = self.g_p.r(input, x2=x2, input_type='x1', diff=diff)
+        child = self.g_c.r(input, x2=x2, input_type='x1', diff=diff)
         output = child - parent
         return(output)
 
@@ -38,13 +38,18 @@ class structure():
         # christoffel_122 = self.g_c.christoffel(input, x2)
         return(self.epsilon)
 
-    def stress(self):
-        self.sigma = self.young/(1+self.poisson)*self.epsilon
-        # for main diagonal components
-        const = self.young/(1+self.poisson) * self.poisson/(1 - 2*self.poisson)
-        for i in range(2):
-            for k in range(2):
-                self.sigma[i][i] += const*self.epsilon[k][k]
+    def stress(self, loading_condition='uniaxial'):
+        if loading_condition == 'uniaxial':
+            self.sigma = self.young*self.epsilon
+        elif loading_condition == '3D':
+            self.lame = [self.young*self.poisson/((1+self.poisson) *
+                                                  (1-2*self.poisson)),
+                         self.young/(2*(1+self.poisson))]
+            self.sigma = 2*self.lame[1]*self.epsilon
+            # for main diagonal components
+            for i in range(2):
+                for k in range(2):
+                    self.sigma[i][i] += self.lame[1]*self.epsilon[k][k]
         return(self.sigma)
 
     def strain_energy(self, z1):
