@@ -11,7 +11,7 @@ span = 2.
 eta_cp = [0., 1.]
 chord = [1.5, 0.4]
 sweep = [0., -1.5]
-dihedral = [0., .0]
+dihedral = [0., .1]
 
 # fuselage parameters
 length = 4.
@@ -22,7 +22,8 @@ f_sy_upper = cst.BernstienPolynomial(5, [0.172802, 0.167353, 0.130747,
 f_sy_lower = cst.BernstienPolynomial(5, [0.163339, 0.175407, 0.134176,
                                          0.152834, 0.133240, 0.161677])
 f_etashear = cst.piecewise_linear(eta_cp, sweep)
-f_zetashear = cst.piecewise_linear(eta_cp, dihedral)
+f_zetashear_u = cst.piecewise_linear(eta_cp, np.array(dihedral))
+f_zetashear_l = cst.piecewise_linear(eta_cp, -np.array(dihedral))
 
 wing_upper = cst.CST3D(rotation=(0., 0., 90.),
                        location=(1.5, 0., 0.),
@@ -33,7 +34,7 @@ wing_upper = cst.CST3D(rotation=(0., 0., 90.),
                        sy=f_sy_upper,
                        ny=(1., 1.),
                        etashear=f_etashear,
-                       zetashear=f_zetashear)
+                       zetashear=f_zetashear_u)
 
 wing_lower = cst.CST3D(rotation=(0., 0., 90.),
                        location=(1.5, 0., 0.),
@@ -44,7 +45,7 @@ wing_lower = cst.CST3D(rotation=(0., 0., 90.),
                        sy=f_sy_lower,
                        ny=(1., 1.),
                        etashear=f_etashear,
-                       zetashear=f_zetashear)
+                       zetashear=f_zetashear_l)
 
 # psi_t = 0.5
 # eta_t = 0.5
