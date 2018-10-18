@@ -84,12 +84,15 @@ class structure():
             stored_x_p = self.mesh.x_p
             self.mesh.x_p = input
             self.mesh.mesh_child()
-        parent = self.g_p.r(self.mesh.x_p, self.mesh.x2, input_type='x1',
-                            diff=diff)
-        child = self.g_c.r(self.mesh.x_c, self.mesh.x2, input_type='x1',
-                           diff=diff)
+
+        parent = self.g_p.r(input=self.mesh.x_p, x2=self.mesh.x2,
+                            input_type='x1', diff=diff)
+        child = self.g_c.r(input=self.mesh.x_c, x2=self.mesh.x2,
+                           input_type='x1', diff=diff)
+        # Taking into consideration extension of the beam
+        print('alpha', self.mesh.alpha_x)
         child[0] *= self.mesh.alpha_x
-        child[1] *= self.mesh.alpha_x
+
         output = child - parent
 
         if input is not None:
@@ -99,11 +102,13 @@ class structure():
 
     def uij(self, i, j, diff=None, input_type='x1'):
         '''Indexes here are from 1 to n. So +=1 compared to rest'''
+        # TODO: makes this more optimal(calculating u multiple times)
         ui_j = self.u(diff='x%i' % (j))[i-1]
         ui = self.u()[i-1]
-        print(i, j, ui_j)
+
         for l in range(1, 3):
-            ui_j += self.g_c.christoffel(i, j, l, self.mesh.x_p, self.mesh.x2)*ui
+            ui_j += self.g_c.christoffel(i, j, l, self.mesh.x_p,
+                                         self.mesh.x2)*ui
         return(ui_j)
 
     def strain(self):

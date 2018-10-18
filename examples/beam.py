@@ -1,4 +1,4 @@
-from aeropy.geometry.parametric import poly, frame
+from aeropy.geometry.parametric import poly
 from aeropy.structural.stable_solution import (structure, mesh_1D, properties,
                                                boundary_conditions)
 import matplotlib.pyplot as plt
@@ -14,8 +14,8 @@ analytical_solution = bc.concentrated_load[0][0]/(beam_properties.young *
 
 mesh = mesh_1D(alpha=[1+analytical_solution, 1+analytical_solution],
                alpha_nodes=[0, 1], mesh_n=10)
-curve_parent = poly(coefficients, config='parent')
-curve_child = poly(coefficients, config='child')
+curve_parent = poly(coefficients)
+curve_child = poly(coefficients)
 
 beam = structure(curve_parent, curve_child, mesh, beam_properties, bc)
 strain = beam.strain()
