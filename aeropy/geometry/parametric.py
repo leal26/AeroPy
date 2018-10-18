@@ -7,10 +7,9 @@ class poly():
     """class for a polynomial function
     """
 
-    def __init__(self, a=[0, -math.sqrt(3)/3, math.sqrt(3)/3, 0], alpha=1,
+    def __init__(self, a=[0, -math.sqrt(3)/3, math.sqrt(3)/3, 0],
                  config='parent'):
         self.a = a
-        self.alpha = alpha
         self.config = config
 
     def z2(self, z1, diff=None, a=None):
@@ -34,7 +33,7 @@ class poly():
     def inflection_points(self):
         return([-self.a[1]/(3*self.a[0])])
 
-    def x1(self, z1, diff=None):
+    def x1(self, z1, diff=None, a=None):
         """ dx1/ dz1 (checked)"""
         if diff is None:
             output = []
@@ -48,11 +47,11 @@ class poly():
                 output, err = integrate.quad(lambda x: self.x1(x, 'z1'), 0, z1)
             return(output)
         elif diff == 'z1':
-            return(np.sqrt(1+(self.z2(z1, 'z1'))**2))
+            return(np.sqrt(1+(self.z2(z1, 'z1', a=a))**2))
         elif diff == 'z11':
             return(self.z1(z1, 'x1')*self.z2(z1, 'z1')*self.z2(z1, 'z11'))
 
-    def z1(self, input, diff=None):
+    def z1(self, input, diff=None, a=None):
         """ dx1 / dz1 (all checked). For calculating z1 from x1, there is not
            a numerical solution, but I can minimize the residual."""
         if diff is None:
@@ -65,7 +64,11 @@ class poly():
             output = np.array(output)
             return(output)
         if diff == 'x1':
-            return(1.0/self.x1(input, 'z1'))
+            if a is None:
+                return(1.0/self.x1(input, 'z1'))
+            else:
+                return(- self.z1(input, 'z1')**3*self.z2(input, 'z1') *
+                       self.z2(input, 'z1', a=a))
         elif diff == 'x11':
             return(-self.z1(input, 'x1')**4*self.z2(input, 'z1') *
                    self.z2(input, 'z11'))
@@ -122,40 +125,33 @@ class poly():
                                                    np.zeros(len(z1))])
             output += self.z1(z1, 'x11')*self.normal(z1, 'z1')
             output += self.z1(z1, 'x1')**2*self.normal(z1, 'z1')
+        elif type(diff) == list:
+            output = self.z1(z1, 'x1')*np.array([- self.z2(z1, 'z1', a=diff),
+                                                 np.zeros(len(z1))])
+            output += self.z1(z1, 'x1', a=diff)*np.array([- self.z2(z1, 'z1'),
+                                                          np.ones(len(z1))])
         return(output)
 
-    def neutral_line(self, z1):
+    def neutral_line(self, z1, a=None):
         """ Position along neutral line"""
-        return(np.array([z1, self.z2(z1)]))
+        if a is not None:
+            return(np.array([z1, self.z2(z1, a=a)]))
+        else:
+            return(np.array([z1, self.z2(z1)]))
 
-    def r(self, input, x2=0, normalize=False, diff=None, input_type='x1'):
+    def r(self, input, x2=0, diff=None, input_type='x1'):
         """ Position anywhere along shell considering shell thickness """
 
-        if input_type == 'z1':
-            z1 = input
-        elif input_type == 'x1':
-            if self.config == 'parent':
-                z1 = self.z1(input)
-            elif self.config == 'child':
-                z1 = self.z1(self.alpha*input)
-
+        z1 = self._process_input(input, input_type)
         if diff is None:
             output = self.neutral_line(z1) + x2*self.g(2, z1)
         elif diff == 'x1':
-            output = self.alpha*self.g(1, z1, x2)
+            output = self.g(1, z1, x2)
         elif diff == 'x2':
             output = self.g(2, z1, x2)
         elif type(diff) == list:
-            a = self.a.copy()
-            for i in range(len(diff)):
-                if diff[i] == 0:
-                    a[i] = 0.0
-            output = np.array([z1, self.z2(z1, a=a)])
-        if normalize:
-            output = output.T
-            for i in range(len(output)):
-                output[i] /= np.linalg.norm(output[i])
-            output = output.T
+            output = self.neutral_line(z1, a=diff) + \
+                x2*self.normal(z1, diff=diff)
         return(output)
 
     def g(self, i, z1, x2=0, diff=None):
@@ -229,6 +225,13 @@ class poly():
                 gkl_m = self.gij(k, l, z1, x2, diff='x%i' % (m))
                 output += .5*gim*(gmk_l + gml_k + gkl_m)
         return(output)
+
+    def _process_input(self, input, input_type):
+        if input_type == 'z1':
+            z1 = input
+        elif input_type == 'x1':
+            z1 = self.z1(input)
+        return(z1)
 
 
 class frame():
