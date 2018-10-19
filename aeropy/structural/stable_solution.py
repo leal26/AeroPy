@@ -79,7 +79,13 @@ class structure():
         self.mesh = mesh
         self.properties = properties
 
+        # storage varaibles
+        self.opt_x = []
+        self.opt_f = []
+
     def u(self, input=None, diff=None):
+        # If for a one time run, run for new input and revert back to original
+        # input
         if input is not None:
             stored_x_p = self.mesh.x_p
             self.mesh.x_p = input
@@ -90,7 +96,6 @@ class structure():
         child = self.g_c.r(input=self.mesh.x_c, x2=self.mesh.x2,
                            input_type='x1', diff=diff)
         # Taking into consideration extension of the beam
-        print('alpha', self.mesh.alpha_x)
         child[0] *= self.mesh.alpha_x
 
         output = child - parent
@@ -160,7 +165,7 @@ class structure():
 
     def residual(self, input=None):
         if input is not None:
-            self.mesh.alpha = np.array([input])
+            self.mesh.alpha = 1+np.array(input)
             self.mesh.mesh_child()
             self.strain()
             self.stress()
@@ -168,17 +173,28 @@ class structure():
         return(energy)
 
     def find_stable(self, x0=[0]):
-        res = minimize(self.residual, x0, bounds=((-.1, .1)))
+        def _callback(x):
+            self.opt_x.append(x)
+            self.opt_f.append(self.residual(x))
+        self.opt_x = [x0]
+        self.opt_f = [self.residual(x0)]
+        res = minimize(self.residual, x0, bounds=((-.1, .1),),
+                       callback=_callback)
         return(res.x, res.fun)
 
-    def sweep_geometries(self, strain_list):
+    def sweep_geometries(self, strains, strains_x, reorder=None):
         energy_list = []
         residual_list = []
-        for strain in strain_list:
-            self.mesh.alpha = np.array([1 + strain])
+        n = len(strains)
+        for i in range(n):
+            self.mesh.alpha = 1 + strains[i]
+            self.mesh.alpha_x = strains_x[i]
             self.mesh.mesh_child()
             self.strain()
             self.stress()
             energy_list.append(self.strain_energy())
             residual_list.append(self.residual())
+        if reorder is not None:
+            residual_list = np.resize(residual_list, reorder)
+            energy_list = np.resize(energy_list, reorder)
         return(energy_list, residual_list)
