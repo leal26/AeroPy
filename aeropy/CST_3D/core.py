@@ -58,41 +58,63 @@ class CST3D:
         self.sy = params.get('sy', 1.)
         self.ny = params.get('ny', (0.5, 1.))
         self.XYZ = params.get('XYZ', (1., 1., 1.))
-        self.etashear = params.get('etashear', 0.)
-        self.zetashear = params.get('zetashear', 0.)
+        self.xshear = params.get('xshear', 0.)
+        self.zshear = params.get('zshear', 0.)
+        self.twist = params.get('twist', 0.)
 
     def __call__(self, psi, eta):
         # calculate x, y, and z from the 3D CST equation
-        x_l = self._cst_x(psi)
-        y_l = self._cst_y(psi, eta)
+        x_l = self._cst_x(psi, eta)
+        y_l = self._cst_y(eta)
         z_l = self._cst_z(psi, eta)
 
+        # rotate
+        twist = self._try_f(self.twist, eta)*np.pi/180.
+        x_lr = np.cos(twist)*x_l+np.sin(twist)*z_l
+        z_lr = -np.sin(twist)*x_l+np.cos(twist)*z_l
+
+        # shear
+        x_lrs = x_lr + self._try_f(self.xshear, eta)
+        z_lrs = z_lr + self._try_f(self.zshear, eta)
+
         # rotate from local CST coordinate system to global
-        x_g, y_g, z_g = self._local_to_global(x_l, y_l, z_l)
+        x_g, y_g, z_g = self._local_to_global(x_lrs, y_l, z_lrs)
 
         return x_g, y_g, z_g
         # return x_l, y_l, z_l
 
     def inverse(self, x_g, y_g, z_g):
-        x_l, y_l, z_l = self._global_to_local(x_g, y_g, z_g)
-        psi, eta = self._inverse(x_l, y_l)
+        x_lrs, y_l, z_lrs = self._global_to_local(x_g, y_g, z_g)
+
+        eta = self._inverse_y(y_l)
+
+        # shear
+        x_lr = x_lrs - self._try_f(self.xshear, eta)
+        z_lr = z_lrs - self._try_f(self.zshear, eta)
+
+        # rotate
+        twist = self._try_f(self.twist, eta)*np.pi/180.
+        x_l = np.cos(twist)*x_lr-np.sin(twist)*z_lr
+        z_l = np.sin(twist)*x_lr+np.cos(twist)*z_lr
+
+        psi = self._inverse_x(x_l, eta)
 
         return psi, eta
 
-    def _cst_x(self, psi):
+    def _cst_x(self, psi, eta):
         psi0 = self.ref[0]
         X = self.XYZ[0]
 
-        x = (psi-psi0)*X
+        sc_y = self._try_f(self.sy, eta)*self._cy(eta)
+        x = sc_y*(psi-psi0)*X  # +self._try_f(self.xshear, eta)
 
         return x
 
-    def _cst_y(self, psi, eta):
+    def _cst_y(self, eta):
         eta0 = self.ref[1]
         Y = self.XYZ[1]
 
-        sc_x = self._try_f(self.sx, psi)*self._cx(psi)
-        y = (sc_x*(eta-eta0)+self._try_f(self.etashear, psi))*Y
+        y = (eta-eta0)*Y
 
         return y
 
@@ -100,38 +122,50 @@ class CST3D:
         zeta0 = self.ref[2]
         Z = self.XYZ[2]
 
-        sc_x = self._try_f(self.sx, psi)*self._cx(psi)
-        sc_y = self._try_f(self.sy, eta)*self._cy(psi, eta)
-        z = (sc_x*sc_y-zeta0+self._try_f(self.zetashear, psi))*Z
+        sc_x = self._try_f(self.sx, psi)*self._cx(psi, eta)
+        sc_y = self._try_f(self.sy, eta)*self._cy(eta)
+        z = (sc_x*sc_y-zeta0)*Z  # +self._try_f(self.zshear, eta)
 
         return z
 
-    def _cx(self, psi):
+    def _cx(self, psi, eta):
         # class function in x
-        nx1, nx2 = self.nx
-        c = np.power(psi, nx1)*np.power(1.-psi, nx2)
+        nx1 = self._try_f(self.nx[0], eta)
+        nx2 = self._try_f(self.nx[1], eta)
+        kx = self._k(nx1, nx2)
+        c = kx*np.power(psi, nx1)*np.power(1.-psi, nx2)
 
         return c
 
-    def _cy(self, psi, eta):
+    def _cy(self, eta):
         # class function in y
-        ny1 = self._try_f(self.ny[0], psi)
-        ny2 = self._try_f(self.ny[1], psi)
-
-        c = np.power(eta, ny1)*np.power(1.-eta, ny2)
+        ny1, ny2 = self.ny
+        ky = self._k(ny1, ny2)
+        c = ky*np.power(eta, ny1)*np.power(1.-eta, ny2)
 
         return c
 
-    def _inverse(self, x_l, y_l):
+    def _k(self, N1, N2):
+        # constant that normalizes class function based on
+        # class coefficients
+        k = np.power(N1+N2, N1+N2)/(np.power(N1, N1)*np.power(N2, N2))
+        return k
+
+    def _inverse_y(self, y_l):
+
+        eta = y_l/self.XYZ[1]+self.ref[1]
+
+        return eta
+
+    def _inverse_x(self, x_l, eta):
         psi0, eta0, zeta0 = self.ref
         X, Y, Z = self.XYZ
 
-        psi = x_l/X+psi0
+        sc_y = self._try_f(self.sy, eta)*self._cy(eta)
+        # psi = (x_l-self._try_f(self.xshear, eta))/(sc_y*X)+psi0
+        psi = (x_l)/(sc_y*X)+psi0
 
-        sc_x = self._try_f(self.sx, psi)*self._cx(psi)
-        eta = ((y_l/Y)-self._try_f(self.etashear, psi))/sc_x+eta0
-
-        return psi, eta
+        return psi
 
     def _local_to_global(self, x_l, y_l, z_l):
         q = Euler2Quat(self.rotation)
@@ -167,18 +201,17 @@ class CST3D:
         return fx
 
 
-def intersection(wing, fuselage, eta_w, psi_w0):
-    p_intersect = np.zeros((len(eta_w), 3))
-    for i, eta in enumerate(eta_w):
-        psi = psi_w0
-        x_w, y_w, z_w = 1., 1., 1.,
-        x_f, y_f, z_f = 0., 0., 0.,
-        error = np.sqrt((x_w-x_f)**2+(y_w-y_f)**2+(z_w-z_f)**2)
-        # x_history = []
-        # y_history = []
-        # z_history = []
+def intersection(wing, fuselage, psi_w, eta_w0):
+    x_intersect = np.zeros(len(psi_w))
+    y_intersect = np.zeros(len(psi_w))
+    z_intersect = np.zeros(len(psi_w))
+    for i, psi in enumerate(psi_w):
+        eta = eta_w0
+        # x_w, y_w, z_w = 1., 1., 1.,
+        # x_f, y_f, z_f = 0., 0., 0.,
+        error = 1.  # np.sqrt((x_w-x_f)**2+(y_w-y_f)**2+(z_w-z_f)**2)
         count = 0
-        while np.abs(error) > 1.e-10 and count < 5:
+        while np.abs(error) > 1.e-13 and count < 30:
             count += 1
             # print("psi, eta", psi, eta)
             x_w, y_w, z_w = wing(psi, eta)
@@ -193,19 +226,21 @@ def intersection(wing, fuselage, eta_w, psi_w0):
             # x_history.append(x_f)
             # y_history.append(y_f)
             # z_history.append(z_f)
-            psi, toss = wing.inverse(x_f, y_f, z_f)
+            toss, eta = wing.inverse(x_f, y_f, z_f)
+            # print(psi, "psi_error", psi-toss)
             error = np.sqrt((x_w-x_f)**2+(y_w-y_f)**2+(z_w-z_f)**2)
+            # print(psi, "error", error)
             # print("error: ", error)
             # input("Press Enter to continue....")
         # history = np.array([x_history, y_history, z_history]).T
         # np.savetxt("history"+str(i)+".csv", history, delimiter=',')
         x_w, y_w, z_w = wing(psi, eta)
 
-        p_intersect[i, 0] = x_w
-        p_intersect[i, 1] = y_w
-        p_intersect[i, 2] = z_w
+        x_intersect[i] = x_w
+        y_intersect[i] = y_w
+        z_intersect[i] = z_w
 
-    return p_intersect
+    return x_intersect, y_intersect, z_intersect
 
 
 def Euler2Quat(euler_angles):
