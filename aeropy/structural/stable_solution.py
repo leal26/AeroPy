@@ -3,7 +3,7 @@ from scipy.optimize import minimize
 
 
 class mesh_1D():
-    def __init__(self, alpha, alpha_nodes, mesh_n=10, x2=0):
+    def __init__(self, alpha=[1, 1], alpha_nodes=[0, 1], mesh_n=10, x2=0):
         self.n = mesh_n
         self.x_p = np.linspace(0, 1, mesh_n)
         self.dx_p = 1./(mesh_n-1)
@@ -97,17 +97,48 @@ class structure():
                            input_type='x1', diff=diff)
         # Taking into consideration extension of the beam
         child[0] *= self.mesh.alpha_x
-
         output = child - parent
-
+        if diff is not None:
+            print(output)
         if input is not None:
             self.mesh.x_p = stored_x_p
             self.mesh.mesh_child()
         return(output)
 
+    def calculate_position(self, input=None):
+        # If for a one time run, run for new input and revert back to original
+        # input
+        if input is not None:
+            stored_x_p = self.mesh.x_p
+            self.mesh.x_p = input
+            self.mesh.mesh_child()
+
+        self.r_p = self.g_p.r(input=self.mesh.x_p, x2=self.mesh.x2,
+                              input_type='x1')
+        self.r_c = self.g_c.r(input=self.mesh.x_c, x2=self.mesh.x2,
+                              input_type='x1')
+
+        if input is not None:
+            self.mesh.x_p = stored_x_p
+            self.mesh.mesh_child()
+
+    def cosine_direction(self):
+        def dot(a, b):
+            a_1, a_2 = a
+            b_1, b_2 = b
+            return(a_1*b_1 + a_2*b_2)
+        self.R = np.zeros((2, 2, self.mesh.n))
+        for i in range(2):
+            for j in range(2):
+                gi = self.g_c.g(i)
+                gj = self.g_p.g(j)
+                self.R[i][j] = dot(gi, gj)
+        return(self.R)
+
     def uij(self, i, j, diff=None, input_type='x1'):
         '''Indexes here are from 1 to n. So +=1 compared to rest'''
         # TODO: makes this more optimal(calculating u multiple times)
+        print('x%i' % (j))
         ui_j = self.u(diff='x%i' % (j))[i-1]
         ui = self.u()[i-1]
 
@@ -133,14 +164,10 @@ class structure():
         nu = self.properties.poisson
         if loading_condition == 'uniaxial':
             self.sigma = E*self.epsilon
-        elif loading_condition == '3D':
-            self.lame = [E*nu/((1+self.poisson) * (1-2*self.poisson)),
-                         E/(2*(1+self.poisson))]
-            self.sigma = 2*self.lame[1]*self.epsilon
-            # for main diagonal components
-            for i in range(2):
-                for k in range(2):
-                    self.sigma[i][i] += self.lame[1]*self.epsilon[k][k]
+        if loading_condition == 'plane_stress':
+            self.sigma = E/(1-nu**2)*(1-nu)*self.epsilon
+            for k in range(2):
+                self.sigma[k][k] += E/(1-nu**2)*nu*self.epsilon[k][k]
         return(self.sigma)
 
     def strain_energy(self):
