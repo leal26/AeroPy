@@ -122,23 +122,33 @@ class structure():
             self.mesh.x_p = stored_x_p
             self.mesh.mesh_child()
 
-    def cosine_direction(self):
+    def cosine_direction(self, diff=None, g=None):
+        """Calculate cosine matrix between a rectangular cartesian system and
+        a curvilinear(or given) coordinate system. Returns matrix with shape
+        (number of nodes, Ri, Rj). Different from rest of code where (x,y,n)"""
         def dot(a, b):
             a_1, a_2 = a
             b_1, b_2 = b
             return(a_1*b_1 + a_2*b_2)
-        self.R = np.zeros((2, 2, self.mesh.n))
-        for i in range(2):
-            for j in range(2):
-                gi = self.g_c.g(i)
-                gj = self.g_p.g(j)
-                self.R[i][j] = dot(gi, gj)
+        self.R = np.zeros((self.mesh.n, 2, 2))
+        e = np.eye(2)
+        for k in range(self.mesh.n):
+            for i in range(2):
+                for j in range(2):
+                    gi = e[i]
+                    if g is None:
+                        gj = self.g_p.g(j+1, np.array([self.mesh.x_c[k]]),
+                                        diff=diff)
+                        print('g', gj)
+                    else:
+                        gj = g[j]
+                    self.R[k][i][j] = dot(gi, gj)
         return(self.R)
 
     def uij(self, i, j, diff=None, input_type='x1'):
         '''Indexes here are from 1 to n. So +=1 compared to rest'''
         # TODO: makes this more optimal(calculating u multiple times)
-        print('x%i' % (j))
+
         ui_j = self.u(diff='x%i' % (j))[i-1]
         ui = self.u()[i-1]
 

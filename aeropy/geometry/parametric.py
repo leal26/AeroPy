@@ -149,16 +149,23 @@ class poly():
                 x2*self.normal(z1, diff=diff)
         return(output)
 
-    def g(self, i, z1, x2=0, diff=None):
+    def g(self, i, input, x2=0, diff=None, input_type='z1'):
         """Tangent vector r (checked)"""
+        z1 = self._process_input(input, input_type)
+
         if i == 1:
-            g_i = self.tangent(z1) + x2*self.normal(z1, diff='x1')
+            if diff is None:
+                g_i = self.tangent(z1) + x2*self.normal(z1, diff='x1')
+            elif diff == 'x1':
+                g_i = self.tangent(z1, 'x1') + x2*self.normal(z1, diff='x2')
+            elif diff == 'x2':
+                g_i = self.normal(z1, diff='x1')
         elif i == 2:
-            g_i = self.normal(z1)
-        if diff is None:
-            return(g_i)
-        elif diff == 'x1':
-            return
+            if diff is None:
+                g_i = self.normal(z1)
+            else:
+                g_i = np.zeros(np.zeros((len(z1), 2)))
+        return(g_i)
 
     def gij(self, i, j, z1, x2=0, diff=None, covariant=True, orthogonal=True):
         def dot(a, b):
