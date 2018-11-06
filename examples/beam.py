@@ -33,9 +33,9 @@ curve_parent = poly(a=[0, 0, 0, 0])
 curve_child = poly(a=analytical_solution)
 
 beam = structure(curve_parent, curve_child, mesh, bp, bc)
+beam.calculate_position()
 strain = beam.strain()
 stress = beam.stress(loading_condition='plane_stress')
-beam.calculate_position()
 
 # Plot beam results
 plt.figure()
@@ -52,18 +52,34 @@ plt.grid()
 plt.legend()
 
 # Plot beam results
-# plt.figure()
-# u = beam.u()
-# u1 = beam.u(diff='x1')
-# u2 = beam.u(diff='x2')
-# plt.scatter(beam.mesh.x_c, u[0], label=r'$u_1$')
-# plt.scatter(beam.mesh.x_c, u[1], label=r'$u_2$')
-# plt.plot(beam.mesh.x_c, u[0], label=r'$u_1$')
-# plt.plot(beam.mesh.x_c, u[1], label=r'$u_2$')
+plt.figure()
+r1_p, r1_c = beam.calculate_position(diff='x1')
+r2_p, r2_c = beam.calculate_position(diff='x2')
+# plt.plot(beam.r_p[0], r1_p[0], label='$r_{1,1}^p$')
+plt.plot(beam.r_p[0], r1_p[1], label='$r_{2,1}^p$')
+# plt.plot(beam.r_p[0], r2_p[0], label='$r_{1,2}^p$')
+plt.plot(beam.r_p[0], r2_p[1], label='$r_{2,2}^p$')
+# plt.plot(beam.r_p[0], r1_c[0], label='$r_{1,1}^c$')
+plt.plot(beam.r_p[0], r1_c[1], label='$r_{2,1}^c$')
+# plt.plot(beam.r_p[0], r2_c[0], label='$r_{1,2}^c$')
+plt.plot(beam.r_p[0], r2_c[1], label='$r_{2,2}^c$')
+plt.title('Position gradients')
+plt.grid()
+plt.legend()
+
+# Plot beam results
+plt.figure()
+u = beam.u()
+u1 = beam.u(diff='x1')
+u2 = beam.u(diff='x2')
+plt.scatter(beam.mesh.x_p, u[0], label=r'$u_1$')
+plt.scatter(beam.mesh.x_p, u[1], label=r'$u_2$')
+plt.plot(beam.mesh.x_p, u[0], label=r'$u_1$')
+plt.plot(beam.mesh.x_p, u[1], label=r'$u_2$')
 # plt.plot(abq_x, abq_u1, label=r'Abaqus $u_1$')
 # plt.plot(abq_x, abq_u2, label=r'Abaqus $u_2$')
-# plt.title('Displacement')
-# plt.legend()
+plt.title('Displacement diff')
+plt.legend()
 
 
 plt.figure()
@@ -79,16 +95,16 @@ plt.plot(abaqus_secondary['X'], abaqus_secondary['LE22'],
 plt.title('Strain')
 plt.legend()
 
-# plt.figure()
-# plt.plot(beam.mesh.x_p, stress[0][0], label=r'$\sigma_{11}$')
-# plt.plot(beam.mesh.x_p, stress[0][1], label=r'$\sigma_{12}$')
-# plt.plot(beam.mesh.x_p, stress[1][1], label=r'$\sigma_{22}$')
-# plt.plot(abaqus_secondary['X'], abaqus_secondary['S11'],
-#          label=r'Abaqus $\sigma_{11}$')
-# plt.plot(abaqus_secondary['X'], abaqus_secondary['S12'],
-#          label=r'Abaqus $\sigma_{12}$')
-# plt.plot(abaqus_secondary['X'], abaqus_secondary['S22'],
-#          label=r'Abaqus $\sigma_{22}$')
-# plt.legend()
-# plt.title('Stress')
+plt.figure()
+plt.plot(beam.mesh.x_p, stress[0][0], label=r'$\sigma_{11}$')
+plt.plot(beam.mesh.x_p, stress[0][1], label=r'$\sigma_{12}$')
+plt.plot(beam.mesh.x_p, stress[1][1], label=r'$\sigma_{22}$')
+plt.plot(abaqus_secondary['X'], abaqus_secondary['S11'],
+         label=r'Abaqus $\sigma_{11}$')
+plt.plot(abaqus_secondary['X'], abaqus_secondary['S12'],
+         label=r'Abaqus $\sigma_{12}$')
+plt.plot(abaqus_secondary['X'], abaqus_secondary['S22'],
+         label=r'Abaqus $\sigma_{22}$')
+plt.legend()
+plt.title('Stress')
 plt.show()

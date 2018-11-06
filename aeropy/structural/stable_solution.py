@@ -95,17 +95,20 @@ class structure():
                             input_type='x1', diff=diff)
         child = self.g_c.r(input=self.mesh.x_c, x2=self.mesh.x2,
                            input_type='x1', diff=diff)
+        self.cosine_direction(diff=None)
         # Taking into consideration extension of the beam
         child[0] *= self.mesh.alpha_x
         output = child - parent
-        if diff is not None:
-            print(output)
+
+        for i in range(self.mesh.n):
+            output[:, i] = np.matmul(self.R[i], output[:, i])
+
         if input is not None:
             self.mesh.x_p = stored_x_p
             self.mesh.mesh_child()
         return(output)
 
-    def calculate_position(self, input=None):
+    def calculate_position(self, input=None, diff=None):
         # If for a one time run, run for new input and revert back to original
         # input
         if input is not None:
@@ -114,10 +117,13 @@ class structure():
             self.mesh.mesh_child()
 
         self.r_p = self.g_p.r(input=self.mesh.x_p, x2=self.mesh.x2,
-                              input_type='x1')
+                              input_type='x1', diff=diff)
         self.r_c = self.g_c.r(input=self.mesh.x_c, x2=self.mesh.x2,
-                              input_type='x1')
-
+                              input_type='x1', diff=diff)
+        if diff is not None:
+            r_p, r_c = self.r_p, self.r_c
+            self.calculate_position(input=input, diff=None)
+            return(r_p, r_c)
         if input is not None:
             self.mesh.x_p = stored_x_p
             self.mesh.mesh_child()
@@ -139,7 +145,6 @@ class structure():
                     if g is None:
                         gj = self.g_p.g(j+1, np.array([self.mesh.x_c[k]]),
                                         diff=diff)
-                        print('g', gj)
                     else:
                         gj = g[j]
                     self.R[k][i][j] = dot(gi, gj)
