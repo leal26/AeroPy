@@ -9,8 +9,9 @@ def piecewise_linear(x, y):
     return interp1d(x, y)
 
 
-class BernstienPolynomial:
-    """Implements Bernstien polynomial of arbitrary order"""
+class BernsteinPolynomial:
+    """Implements Bernstein polynomial of arbitrary order"""
+
     def __init__(self, order, coefficients=None):
         self._order = order
         if coefficients is not None:
@@ -48,7 +49,16 @@ class BernstienPolynomial:
 
 
 class CST3D:
-    """Implements general Class/Shape Transformation function"""
+    """Implements general Class/Shape Transformation function
+
+    :param location: changes part location in global
+    :param rotation: changes part rotation in global
+    :param ref: changes reference in parameterized domain
+    :param sx and sy:
+    :param nx and ny:
+    :param XYZ:
+    :param xshear and yshear:"""
+
     def __init__(self, **params):
         self.location = params.get('location', (0., 0., 0.))
         self.rotation = params.get('rotation', (0., 0., 0.))
@@ -85,6 +95,7 @@ class CST3D:
 
     def inverse(self, x_g, y_g, z_g):
         x_lrs, y_l, z_lrs = self._global_to_local(x_g, y_g, z_g)
+        import matplotlib.pyplot as plt
 
         eta = self._inverse_y(y_l)
 
@@ -98,7 +109,10 @@ class CST3D:
         z_l = np.sin(twist)*x_lr+np.cos(twist)*z_lr
 
         psi = self._inverse_x(x_l, eta)
-
+        # plt.figure()
+        # plt.scatter(psi, eta)
+        # plt.title('check')
+        # plt.show()
         return psi, eta
 
     def _cst_x(self, psi, eta):

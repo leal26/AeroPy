@@ -18,7 +18,7 @@ twist = [0., 1.]
 length = 4.
 
 f_sy = cst.piecewise_linear(eta_cp, taper)
-f_sx_upper = cst.BernstienPolynomial(5, [0.172802, 0.167353, 0.130747,
+f_sx_upper = cst.BernsteinPolynomial(5, [0.172802, 0.167353, 0.130747,
                                          0.172053, 0.112797, 0.168891])
 f_sx_lower = cst.BernstienPolynomial(5, [0.163339, 0.175407, 0.134176,
                                          0.152834, 0.133240, 0.161677])
