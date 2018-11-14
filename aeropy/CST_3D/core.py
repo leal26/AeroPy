@@ -17,7 +17,7 @@ class BernsteinPolynomial:
         if coefficients is not None:
             self._coefficients = coefficients
         else:
-            self._coefficients = n_coeff*[0.]
+            self._coefficients = n_coeff*[1.]
         self._K = self._calculate_k(order+1)
 
     @staticmethod
@@ -32,20 +32,44 @@ class BernsteinPolynomial:
     def set_coefficients(self, coeff):
         self._coefficients = coeff
 
-    def __call__(self, parameter):
+    def __call__(self, param1, param2=None):
 
         A = self._coefficients
         K = self._K
         n = self._order
         try:
-            F = np.zeros(parameter.shape)
+            F = np.zeros(param1.shape)
         except AttributeError:
             F = 0.
 
         for r in range(n+1):
-            F += A[r]*K[r]*np.power(parameter, r)*np.power(1.-parameter, n-r)
+            F += (try_as_func(A[r], param2)*K[r]*np.power(param1, r) *
+                  np.power(1.-param1, n-r))
 
         return F
+
+
+def try_as_func(f, x, y=None):
+    """
+    if f is function of x and y, returns f(x, y)
+    if f is function, returns f(x)
+    if f is a float, returns f
+    """
+    if y is not None:
+        try:
+            fx = f(x, y)
+        except TypeError:
+            try:
+                fx = f(x)
+            except TypeError:
+                fx = f
+    else:
+        try:
+            fx = f(x)
+        except TypeError:
+            fx = f
+
+    return fx
 
 
 class CST3D:
@@ -79,13 +103,13 @@ class CST3D:
         z_l = self._cst_z(psi, eta)
 
         # rotate
-        twist = self._try_f(self.twist, eta)*np.pi/180.
+        twist = try_as_func(self.twist, eta)*np.pi/180.
         x_lr = np.cos(twist)*x_l+np.sin(twist)*z_l
         z_lr = -np.sin(twist)*x_l+np.cos(twist)*z_l
 
         # shear
-        x_lrs = x_lr + self._try_f(self.xshear, eta)
-        z_lrs = z_lr + self._try_f(self.zshear, eta)
+        x_lrs = x_lr + try_as_func(self.xshear, eta)
+        z_lrs = z_lr + try_as_func(self.zshear, eta)
 
         # rotate from local CST coordinate system to global
         x_g, y_g, z_g = self._local_to_global(x_lrs, y_l, z_lrs)
@@ -100,11 +124,11 @@ class CST3D:
         eta = self._inverse_y(y_l)
 
         # shear
-        x_lr = x_lrs - self._try_f(self.xshear, eta)
-        z_lr = z_lrs - self._try_f(self.zshear, eta)
+        x_lr = x_lrs - try_as_func(self.xshear, eta)
+        z_lr = z_lrs - try_as_func(self.zshear, eta)
 
         # rotate
-        twist = self._try_f(self.twist, eta)*np.pi/180.
+        twist = try_as_func(self.twist, eta)*np.pi/180.
         x_l = np.cos(twist)*x_lr-np.sin(twist)*z_lr
         z_l = np.sin(twist)*x_lr+np.cos(twist)*z_lr
 
@@ -119,8 +143,8 @@ class CST3D:
         psi0 = self.ref[0]
         X = self.XYZ[0]
 
-        sc_y = self._try_f(self.sy, eta)*self._cy(eta)
-        x = sc_y*(psi-psi0)*X  # +self._try_f(self.xshear, eta)
+        sc_y = try_as_func(self.sy, eta)  # *self._cy(eta)
+        x = sc_y*(psi-psi0)*X  # +try_as_func(self.xshear, eta)
 
         return x
 
@@ -136,16 +160,16 @@ class CST3D:
         zeta0 = self.ref[2]
         Z = self.XYZ[2]
 
-        sc_x = self._try_f(self.sx, psi)*self._cx(psi, eta)
-        sc_y = self._try_f(self.sy, eta)*self._cy(eta)
-        z = (sc_x*sc_y-zeta0)*Z  # +self._try_f(self.zshear, eta)
+        sc_x = try_as_func(self.sx, psi, eta)*self._cx(psi, eta)
+        sc_y = try_as_func(self.sy, eta)*self._cy(eta)
+        z = (sc_x*sc_y-zeta0)*Z  # +try_as_func(self.zshear, eta)
 
         return z
 
     def _cx(self, psi, eta):
         # class function in x
-        nx1 = self._try_f(self.nx[0], eta)
-        nx2 = self._try_f(self.nx[1], eta)
+        nx1 = try_as_func(self.nx[0], eta)
+        nx2 = try_as_func(self.nx[1], eta)
         kx = self._k(nx1, nx2)
         c = kx*np.power(psi, nx1)*np.power(1.-psi, nx2)
 
@@ -175,8 +199,8 @@ class CST3D:
         psi0, eta0, zeta0 = self.ref
         X, Y, Z = self.XYZ
 
-        sc_y = self._try_f(self.sy, eta)*self._cy(eta)
-        # psi = (x_l-self._try_f(self.xshear, eta))/(sc_y*X)+psi0
+        sc_y = try_as_func(self.sy, eta)*self._cy(eta)
+        # psi = (x_l-try_as_func(self.xshear, eta))/(sc_y*X)+psi0
         psi = (x_l)/(sc_y*X)+psi0
 
         return psi
@@ -202,17 +226,6 @@ class CST3D:
         x_l, y_l, z_l = Fixed2Body((x_g-dx, y_g-dy, z_g-dz), q)
 
         return x_l, y_l, z_l
-
-    @staticmethod
-    def _try_f(f, x):
-        # if f is function, returns f(x)
-        # if f is a float, returns f
-        try:
-            fx = f(x)
-        except TypeError:
-            fx = f
-
-        return fx
 
 
 def intersection(wing, fuselage, psi_w, eta_w0):
