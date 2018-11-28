@@ -166,8 +166,8 @@ class _uniform_spacing:
     def __init__(self, limits, index):
         self._limits = limits
         self._i = index
-        print(self._limits)
-        print(self._i)
+        # print(self._limits)
+        # print(self._i)
 
     def __call__(self, *dummy):
         lower, upper = self._limits
