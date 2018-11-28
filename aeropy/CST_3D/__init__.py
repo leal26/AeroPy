@@ -1,1 +1,1 @@
-from .core import piecewise_linear, BernstienPolynomial, CST3D, intersection
+from .core import piecewise_linear, BernsteinPolynomial, CST3D, intersection

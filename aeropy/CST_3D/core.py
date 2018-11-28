@@ -9,7 +9,7 @@ def piecewise_linear(x, y):
     return interp1d(x, y)
 
 
-class BernstienPolynomial:
+class BernsteinPolynomial:
     """Implements Bernstien polynomial of arbitrary order"""
     def __init__(self, order, coefficients=None):
         self._order = order
