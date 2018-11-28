@@ -166,6 +166,8 @@ class _uniform_spacing:
     def __init__(self, limits, index):
         self._limits = limits
         self._i = index
+        print(self._limits)
+        print(self._i)
 
     def __call__(self, *dummy):
         lower, upper = self._limits
@@ -183,6 +185,11 @@ def meshparameterspace(shape=(20, 20), psi_limits=(None, None),
                        eta_spacing="linear"):
     """Builds curvilinear mesh inside parameter space.
 
+    :param psi_spacing and eta_spacing:
+           - 'linear': for uniform spacing not considering edges
+
+    :param psi_limits and eta_limits: only define if 'uniform'. Should be
+           points where intersection is located.
     """
     if psi_spacing == "cosine":
         x_spacing = cosine_spacing
@@ -239,10 +246,6 @@ def mesh_curvilinear(x_lower, x_upper, y_lower, y_upper, x_spacing, y_spacing):
     xlyu = np.array_equal(x_lower[-1], y_upper[0])
     xuyl = np.array_equal(x_upper[0], y_lower[-1])
     xuyu = np.array_equal(x_upper[-1], y_upper[-1])
-    # print(x_lower[0], y_lower[0])
-    # print(x_lower[-1], y_upper[0])
-    # print(x_upper[0], y_lower[-1])
-    # print(x_upper[-1], y_upper[-1])
 
     if not (xlyl and xlyu and xuyl and xuyu):
         print(xlyl, xlyu, xuyl, xuyu)
