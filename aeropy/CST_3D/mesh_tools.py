@@ -69,6 +69,21 @@ def generate_wake(te_points, x_end, n_points=10, angle_of_attack=0.,
     return wake
 
 
+def constant_eta_edge(eta, n_points):  # , cos_spacing=True):
+    edge = np.full((n_points, 2), eta)
+    edge[:, 0] = cosine_spacing(0., 1., n_points)
+
+    return edge
+
+
+def constant_psi_edge(psi, n_points, eta_lim):  # , cos_spacing=True):
+    edge = np.full((n_points, 2), psi)
+    eta0, eta1 = eta_lim
+    edge[:, 1] = cosine_spacing(eta0, eta1, n_points)
+
+    return edge
+
+
 def gen_network_edge(surface, intersection, N_b=None, N_t=None,
                      vertical=False):
     """takes in intersection(s) and returns properly ordered and
@@ -126,7 +141,8 @@ def _process_edge(p1, p2, N_b, N_t):
     if abs(p1[0]-0.) < 1e-10:
         p1[0] = 0.
     elif N_b:
-        p1_b = np.linspace(0., p1[0], N_b)
+        p1_b = cosine_spacing(0., p1[0], N_b)
+        # p1_b = np.linspace(0., p1[0], N_b)
         p2_b = np.full(N_b, p2[0])
         p1 = np.concatenate((p1_b[:-1], p1))
         p2 = np.concatenate((p2_b[:-1], p2))
@@ -135,7 +151,8 @@ def _process_edge(p1, p2, N_b, N_t):
     if abs(p1[-1]-1.) < 1e-10:
         p1[-1] = 1.
     elif N_t:
-        p1_t = np.linspace(p1[-1], 1., N_t)
+        p1_t = cosine_spacing(p1[-1], 1., N_t)
+        # p1_t = np.linspace(p1[-1], 1., N_t)
         p2_t = np.full(N_t, p2[-1])
         p1 = np.concatenate((p1, p1_t[1:]))
         p2 = np.concatenate((p2, p2_t[1:]))
