@@ -5,12 +5,13 @@ from aeropy.filehandling.vtk import generate_points
 
 directory = 'D:\\GitHub\\AeroPy\\examples\\JAXA_files\\processed\\'
 filename = 'fuselage'
-n = 100
+n = 200
 
 data = []
 upper = []
 lower = []
 for i in range(n):
+    print(i)
     data_i = np.genfromtxt(directory+filename+'_%i.csv' % i, delimiter=',')
     for j in reversed(range(len(data_i))):
         if np.isnan(data_i[j]).any():

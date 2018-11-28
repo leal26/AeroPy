@@ -143,7 +143,7 @@ class CST3D:
         psi0 = self.ref[0]
         X = self.XYZ[0]
 
-        sc_y = try_as_func(self.sy, eta)  # *self._cy(eta)
+        sc_y = try_as_func(self.sy, eta)*self._cy(eta)
         x = sc_y*(psi-psi0)*X  # +try_as_func(self.xshear, eta)
 
         return x

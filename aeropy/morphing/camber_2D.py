@@ -20,7 +20,7 @@ from aeropy.CST_2D.module import *
 # Just as quick trick, to make upper morph I just mirror the image in regards to x
 inverted = False
 # Defines if basckwards or forwards morphing
-# morphing_direction = 'backwards'
+morphing_direction = 'forwards'
     
 #==============================================================================
 # Calculate dependent shape function parameters
@@ -346,7 +346,7 @@ def plot_airfoil(AC, psi_spars, c_P, deltaz, Au_P, Al_P, image = 'plot',
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     # testing = 'structurally_consistent'
-    testing = 'tracing'
+    testing = 'structurally_consistent'
     
     if testing == 'tracing':
         N1 = 1.
