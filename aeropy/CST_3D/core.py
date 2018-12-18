@@ -123,6 +123,9 @@ class CST3D:
 
         eta = self._inverse_y(y_l)
 
+        # Correction for in case slightly above 1 or below 0
+        eta[eta < 0] = 0
+        eta[eta > 1] = 1
         # shear
         x_lr = x_lrs - try_as_func(self.xshear, eta)
         z_lr = z_lrs - try_as_func(self.zshear, eta)

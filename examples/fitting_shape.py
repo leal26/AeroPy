@@ -57,14 +57,14 @@ if __name__ == "__main__":
     raw = raw[::80]
     x_raw, y_raw, z_raw = raw.T
     fuselage = pickle.load(open('fuselage_object.p', 'rb'))
-    Nx = 2
-    n_cp = 2
+    Nx = 4
+    n_cp = 4
 
     fuselage.nx = [0.5, 0.5]
     study = fitting(object=fuselage,
                     update=update,
-                    p1=np.linspace(3, 4, Nx),
-                    p2=np.linspace(3, 4, n_cp),
+                    p1=np.linspace(10, 25, Nx),
+                    p2=np.linspace(10, 25, n_cp),
                     p1_name='Berstein order for Ay',
                     p2_name='Berstein order for Sx',
                     x0=x0,

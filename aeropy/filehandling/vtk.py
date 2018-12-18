@@ -21,7 +21,8 @@ def generate_surface(data, filename='panair'):
     X = np.ascontiguousarray(data[:, :, 0])
     Y = np.ascontiguousarray(data[:, :, 1])
     Z = np.ascontiguousarray(data[:, :, 2])
-    gridToVTK(filename+'_network', X[:, :, None], Y[:, :, None], Z[:, :, None])
+    gridToVTK(filename+'_network', X[:, :, None], Y[:, :, None], Z[:, :, None],
+              cellData={'test': Z[:, :, None]})
     # def _write_network(points_array, multiple_networks=False):
     #     n_columns = int(points_array.shape[0])
     #     n_rows = int(points_array.shape[1])

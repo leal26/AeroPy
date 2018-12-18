@@ -12,6 +12,8 @@ from aeropy.xfoil_module import output_reader
 
 class fitting():
     def __init__(self, **params):
+        def _callback(*args):
+            return params.get('callback', None)(self.object, *args)
         self.object = params.get('object', np.linspace(10, 50, 9))
         self.update = params.get('update', np.linspace(10, 50, 9))
         self.x0 = params.get('x0', np.linspace(10, 50, 9))
@@ -21,7 +23,7 @@ class fitting():
         self.p2_name = params.get('p2_name', 'Parameter 2')
         self.calculate_points = params.get('calculate_points', 0)
         self.raw = params.get('raw', 0)
-        self.callback = params.get('callback', None)
+        self.callback = _callback
 
     def convergence_study(self, parallel=True):
         P1_f, P2_f = self._format_parameters()
@@ -37,7 +39,7 @@ class fitting():
         self.error = self.error.reshape(self.P1.shape)
         self.rel_error = self.error/self.error[0][0]
 
-    def find(self, param_i):
+    def find(self, param_i=[None, None]):
         '''
         inputs: [location, XYZ, sy, ny, xshear]'''
         p1_i, p2_i = param_i
@@ -46,10 +48,16 @@ class fitting():
         solution = minimize(self.shape_difference, x0, args=param_i)
         end = time.time()
         error = solution['fun']
-        print('p1=%i\t p2=%i\t error=%f\t time=%f' % (p1_i, p2_i, error,
-                                                      end-start))
+        if p1_i is None:
+            print('error=%f\t time=%f' % (error, end-start))
+        else:
+            print('p1=%i\t p2=%i\t error=%f\t time=%f' % (p1_i, p2_i, error,
+                                                          end-start))
         if self.callback is not None:
-            self.callback(self.object, p1_i, p2_i)
+            if p1_i is None:
+                self.callback()
+            else:
+                self.callback(p1_i, p2_i)
         return solution
 
     def shape_difference(self, x, param_i):
