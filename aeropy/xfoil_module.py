@@ -635,7 +635,9 @@ def output_reader(filename, separator='\t', output=None,  # noqa C901
             return variable
         elif type_structure == 'float':
             return float(variable)
-
+        elif type_structure == 'integer':
+            return int(variable)
+            
     # In case we are using an XFOIL file, we define the number of rows
     # skipped
     if output == 'Polar' or output == 'Alfa_L_0':

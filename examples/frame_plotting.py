@@ -1,4 +1,5 @@
-from aeropy.geometry.parametric import poly, frame
+from aeropy.geometry.parametric import poly
+from aeropy.geometry.frame import frame
 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm

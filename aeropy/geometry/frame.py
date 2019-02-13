@@ -1,3 +1,8 @@
+from aeropy.geometry.parametric import poly
+import numpy as np
+import math
+
+
 class frame():
     def __init__(self, curve=poly(), frame='Frenet-Serret',
                  z1=np.linspace(0, 1, 11)):

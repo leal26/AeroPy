@@ -22,6 +22,7 @@ class mesh_1D():
         self.nodes_xc = self.mesh_child()
 
     def mesh_child(self):
+        self.n = len(self.x_p)
         x = self.x_p
         counter = 0
         self.x_c = self.x_p.copy()
@@ -211,6 +212,7 @@ class structure():
             self.mesh.mesh_child()
             self.strain()
             self.stress()
+
         energy = self.strain_energy() - self.work()
         return(energy)
 
@@ -230,7 +232,7 @@ class structure():
         n = len(strains)
         for i in range(n):
             self.mesh.alpha = 1 + strains[i]
-            self.mesh.alpha_x = strains_x[i]
+            self.mesh.alpha_x = strains_x
             self.mesh.mesh_child()
             self.strain()
             self.stress()

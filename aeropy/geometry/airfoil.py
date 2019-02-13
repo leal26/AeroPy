@@ -899,7 +899,7 @@ def intersect_curves(x1, y1, x2, y2, input_type='list',
         # ax=b, prepare matrices a and b
         a = np.array([[xa[1] - xa[0], xb[0] - xb[1]], [ya[1] - ya[0], yb[0] - yb[1]]])
         b = np.array([xb[0] - xa[0], yb[0] - ya[0]])
-        r, residuals, rank, s = np.linalg.lstsq(a, b)
+        r, residuals, rank, s = np.linalg.lstsq(a, b, None)
         # if this is not a
         if rank == 2 and not residuals and r[0] >= 0 and r[0] < 1 and r[1] >= 0 and r[1] < 1:
             if r[0] == 0 and r[1] == 0 and i > 0 and j > 0:
