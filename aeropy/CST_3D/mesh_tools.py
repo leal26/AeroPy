@@ -43,15 +43,15 @@ def axisymmetric_surf(data_x, data_r, N_theta):
 
 
 def generate_wake(te_points, x_end, n_points=10, angle_of_attack=0.,
-                  cos_spacing=False):
+                  user_spacing=None):
     # check that x_end is downstream of all trailing edge points
     if not np.all(te_points[:, 0] < x_end):
         raise RuntimeError("wake must terminate downstream of trailing edge")
 
-    if cos_spacing:
-        spacing = cosine_spacing
-    else:
+    if user_spacing is None:
         spacing = np.linspace
+    else:
+        spacing = user_spacing
 
     Ny = te_points.shape[0]
     wake = np.zeros((n_points, Ny, 3))
@@ -71,7 +71,8 @@ def generate_wake(te_points, x_end, n_points=10, angle_of_attack=0.,
 
 def constant_eta_edge(eta, n_points):  # , cos_spacing=True):
     edge = np.full((n_points, 2), eta)
-    edge[:, 0] = cosine_spacing(0., 1., n_points)
+    cos_space = cosine_spacing()
+    edge[:, 0] = cos_space(0., 1., n_points)
 
     return edge
 
@@ -79,7 +80,8 @@ def constant_eta_edge(eta, n_points):  # , cos_spacing=True):
 def constant_psi_edge(psi, n_points, eta_lim):  # , cos_spacing=True):
     edge = np.full((n_points, 2), psi)
     eta0, eta1 = eta_lim
-    edge[:, 1] = cosine_spacing(eta0, eta1, n_points)
+    cos_space = cosine_spacing()
+    edge[:, 1] = cos_space(eta0, eta1, n_points)
 
     return edge
 
@@ -141,8 +143,8 @@ def _process_edge(p1, p2, N_b, N_t):
     if abs(p1[0]-0.) < 1e-10:
         p1[0] = 0.
     elif N_b:
-        p1_b = cosine_spacing(0., p1[0], N_b)
-        # p1_b = np.linspace(0., p1[0], N_b)
+        # p1_b = cosine_spacing(0., p1[0], N_b)
+        p1_b = np.linspace(0., p1[0], N_b)
         p2_b = np.full(N_b, p2[0])
         p1 = np.concatenate((p1_b[:-1], p1))
         p2 = np.concatenate((p2_b[:-1], p2))
@@ -151,8 +153,8 @@ def _process_edge(p1, p2, N_b, N_t):
     if abs(p1[-1]-1.) < 1e-10:
         p1[-1] = 1.
     elif N_t:
-        p1_t = cosine_spacing(p1[-1], 1., N_t)
-        # p1_t = np.linspace(p1[-1], 1., N_t)
+        # p1_t = cosine_spacing(p1[-1], 1., N_t)
+        p1_t = np.linspace(p1[-1], 1., N_t)
         p2_t = np.full(N_t, p2[-1])
         p1 = np.concatenate((p1, p1_t[1:]))
         p2 = np.concatenate((p2, p2_t[1:]))
@@ -182,27 +184,46 @@ class _uniform_spacing:
 def meshparameterspace(shape=(20, 20), psi_limits=(None, None),
                        eta_limits=(None, None),
                        psi_spacing="linear",
-                       eta_spacing="linear"):
+                       eta_spacing="linear",
+                       user_spacing=(None, None)):
     """Builds curvilinear mesh inside parameter space.
 
     :param psi_spacing and eta_spacing:
-           - 'linear': for uniform spacing not considering edges
+           - 'linear': uniform spacing on interior of the surface
+           - 'cosine': cosine spacing
+           - 'uniform': spacing matches the spacing along edge
+           - 'user': user spacing that is passed in through user_spacing
 
     :param psi_limits and eta_limits: only define if 'uniform'. Should be
            points where intersection is located.
     """
     if psi_spacing == "cosine":
-        x_spacing = cosine_spacing
+        x_spacing = cosine_spacing()
     elif psi_spacing == "linear":
         x_spacing = np.linspace
-    else:
+    elif psi_spacing == "uniform":
         x_spacing = _uniform_spacing(eta_limits, 0)
+    elif psi_spacing == "user":
+        if user_spacing[0] is not None:
+            x_spacing = user_spacing[0]
+        else:
+            raise RuntimeError("must provide user_spacing w/ psi_spacing=user")
+    else:
+        raise RuntimeError("specified spacing not recognized")
+
     if eta_spacing == "cosine":
-        y_spacing = cosine_spacing
+        y_spacing = cosine_spacing()
     elif eta_spacing == "linear":
         y_spacing = np.linspace
-    else:
+    elif eta_spacing == "uniform":
         y_spacing = _uniform_spacing(psi_limits, 1)
+    elif eta_spacing == "user":
+        if user_spacing[1] is not None:
+            y_spacing = user_spacing[1]
+        else:
+            raise RuntimeError("must provide user_spacing w/ psi_spacing=user")
+    else:
+        raise RuntimeError("specified spacing not recognized")
 
     n_psi, n_eta = shape
     psi_lower, psi_upper = psi_limits
@@ -242,13 +263,17 @@ def meshparameterspace(shape=(20, 20), psi_limits=(None, None),
 
 def mesh_curvilinear(x_lower, x_upper, y_lower, y_upper, x_spacing, y_spacing):
     # verify that corner points match
-    xlyl = np.array_equal(x_lower[0], y_lower[0])
-    xlyu = np.array_equal(x_lower[-1], y_upper[0])
-    xuyl = np.array_equal(x_upper[0], y_lower[-1])
-    xuyu = np.array_equal(x_upper[-1], y_upper[-1])
+    xlyl = np.allclose(x_lower[0], y_lower[0], atol=1e-13, rtol=0.)
+    xlyu = np.allclose(x_lower[-1], y_upper[0], atol=1e-13, rtol=0.)
+    xuyl = np.allclose(x_upper[0], y_lower[-1], atol=1e-13, rtol=0.)
+    xuyu = np.allclose(x_upper[-1], y_upper[-1], atol=1e-13, rtol=0.)
 
     if not (xlyl and xlyu and xuyl and xuyu):
         print(xlyl, xlyu, xuyl, xuyu)
+        print(x_lower[0]-y_lower[0])
+        print(x_lower[-1]-y_upper[0])
+        print(x_upper[0]-y_lower[-1])
+        print(x_upper[-1]-y_upper[-1])
         raise RuntimeError("corner points do not match")
 
     n_x = y_lower.shape[0]
@@ -271,14 +296,31 @@ def mesh_curvilinear(x_lower, x_upper, y_lower, y_upper, x_spacing, y_spacing):
     return grid
 
 
-def cosine_spacing(start, stop, num=50, offset=0):
-    # calculates the cosine spacing
-    index = np.linspace(0., 1., num)
-    spacing = .5*(1.-np.cos(np.pi*(index-offset)))
+class cosine_spacing:
+    """Parametric function for obtaining a cosine distribution of points"""
+    def __init__(self, offset=0, period=1.):
+        self._offset = offset
+        self._period = period
 
-    points = start+spacing*(stop-start)
+    def __call__(self, start, stop, num=50):
+        # calculates the cosine spacing
+        p = self._period
+        offset = self._offset
+        index = np.linspace(0., 1., num)
+        # spacing = .5*(1.-np.cos(p*np.pi*(index-offset)))
+        spacing = ((np.cos(np.pi*offset)-np.cos(np.pi*(p*index+offset))) /
+                   (np.cos(np.pi*offset)-np.cos(np.pi*(p+offset))))
 
-    return points
+        points = start+spacing*(stop-start)
+
+        return points
+
+# def cosine_spacing(start, stop, num=50, offset=0, period=1.):
+#     # calculates the cosine spacing
+#     index = np.linspace(0., 1., num)
+#     spacing = .5*(1.-np.cos(period*np.pi*(index-offset)))
+#     points = start+spacing*(stop-start)
+#     return points
 
 
 def _distance_point_to_line(P1, P2, PQ):
