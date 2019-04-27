@@ -392,11 +392,14 @@ def coarsen_axi(data_x, data_r, tol, max_length):
             P1 = P2
             P2 = P1 + 2
 
-    print("size of new list", len(new_point_list))
+    if not (new_point_list[-1][0] == point_list[-1][0]):
+        new_point_list.append(point_list[-1])
+
+    # print("size of new list", len(new_point_list))
     sys.stdout.flush()
     new_x = np.zeros(len(new_point_list))
     new_r = np.zeros(len(new_point_list))
-    for i in range(1, len(new_point_list)):
+    for i in range(0, len(new_point_list)):
         new_x[i] = new_point_list[i][0]
         new_r[i] = new_point_list[i][1]
 
