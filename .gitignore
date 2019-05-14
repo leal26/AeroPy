@@ -221,3 +221,8 @@ Coordinates*
 naca*
 flapped
 flapped
+__pycache__
+*.pyc
+*.vts
+*.vtu
+*.csv

@@ -116,7 +116,10 @@ def fitting_shape_coefficients(filename, bounds='Default', n=5,
         n = len(bounds) - 1
 
     # Obtaining data
-    if filename[-2:] == '.p':
+    if type(filename) != str:
+        data = filename
+        x, z = data.T
+    elif filename[-2:] == '.p':
         import pickle
         data = pickle.load(open(filename, "rb"), encoding='latin1')
         data = data['wing'][list(data['wing'].keys())[3]]
@@ -216,11 +219,11 @@ def fitting_shape_coefficients(filename, bounds='Default', n=5,
     if return_error:
         to_return.append(f)
     to_return.append(deltaz)
+
     if surface == 'lower' or surface == 'both':
         to_return.append(Al)
-    elif surface == 'upper' or surface == 'both':
+    if surface == 'upper' or surface == 'both':
         to_return.append(Au)
-    print(to_return)
     return to_return
 
 
@@ -265,52 +268,3 @@ def shape_parameter_study(filename, n=5, solver='gradient', deltaz=None,
     file = open('shape_study.p', 'wb')
     pickle.dump(Data, file)
     return Data
-
-
-if __name__ == '__main__':
-    import matplotlib.cm as cm
-    import matplotlib.pyplot as plt
-
-# ==============================================================================
-#   Tests for curve fitting
-# ==============================================================================
-    # plt.figure()
-    filename = '../filehandling/examples/SCFCoordinates.txt'
-    surface = 'lower'
-    output = fitting_shape_coefficients(filename, n=8, optimize_deltaz=False,
-                                        return_error=True, deltaz=0,
-                                        solver='differential_evolution',
-                                        objective='squared_mean',
-                                        surface=surface, x0=None)
-    if surface == 'both':
-        error, fitted_deltaz, fitted_Al, fitted_Au = output
-        print(error)
-        print(fitted_Al)
-        print(fitted_Au)
-    elif surface == 'lower':
-        error, fitted_deltaz, fitted_Al = output
-        print('Coefficients', fitted_Al)
-
-    data = output_reader(filename, separator='\t', header=['x', 'z'])
-    plt.scatter(data['x'], data['z'], c='r')
-    x = np.linspace(0, 1, 100)
-    # y_u = CST(x, 1, deltasz=0, Au=fitted_Au)
-    y_l = CST(x, 1, deltasz=0, Al=fitted_Al)
-    # plt.plot(x, y_u, 'b')
-    plt.plot(x, y_l, 'b')
-    plt.show()
-
-# ==============================================================================
-#   Shape parameter study
-# ==============================================================================
-    n = 8
-    Data = shape_parameter_study(filename, n=n, solver='gradient', deltaz=0,
-                                 objective='squared_mean', surface='lower')
-    plt.figure()
-    x = np.linspace(2, 2*n, n)
-    plt.plot(x, Data['error'])
-    plt.scatter(x, Data['error'])
-    plt.grid()
-    plt.xlabel('Number of shape functions')
-    plt.ylabel('Error')
-    plt.show()

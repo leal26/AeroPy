@@ -1030,25 +1030,3 @@ def M_crit(airfoil, pho, speed_sound, lift, c):
         # if Data_crit['CL']==previous_iteration:
     return Data_crit
 
-
-if __name__ == '__main__':
-    print(find_coefficients('naca0012', 1., Reynolds=1000000))
-
-    import matplotlib.pyplot as plt
-    upper = {'x': [0, .1, 10, 20, 30], 'y': [0, 2, 4, 2, 1]}
-    lower = {'x': [0, .1, 10, 20, 30], 'y': [0, -10, -2, -1, 0]}
-    plt.plot(lower['x'], lower['y'], 'r')
-    plt.plot(upper['x'], upper['y'], 'r', label='original data')
-    rotated_upper, rotated_lower = prepare_xfoil(upper, lower, 1.0,
-                                                 reposition=True)
-    print(rotated_upper)
-    print(rotated_lower)
-
-    plt.plot(rotated_lower['x'], rotated_lower['y'], 'b')
-    plt.plot(rotated_upper['x'], rotated_upper['y'], 'b',
-             label='after LE rotation/translation')
-    plt.legend(loc='best')
-    plt.xlabel('x-coordinate')
-    plt.ylabel('y-coordinate')
-    plt.grid()
-    plt.show()
