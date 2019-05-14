@@ -17,43 +17,49 @@ def generate_surface(data, filename='panair'):
     from evtk.hl import gridToVTK
     # TODO: Currently not working when meshes seeds are not the same
 
-    def _write_network(points_array, multiple_networks=False):
-        n_columns = int(points_array.shape[0])
-        n_rows = int(points_array.shape[1])
+    # X, Y, Z = data
+    X = np.ascontiguousarray(data[:, :, 0])
+    Y = np.ascontiguousarray(data[:, :, 1])
+    Z = np.ascontiguousarray(data[:, :, 2])
+    gridToVTK(filename+'_network', X[:, :, None], Y[:, :, None], Z[:, :, None],
+              cellData={'test': Z[:, :, None]})
+    # def _write_network(points_array, multiple_networks=False):
+    #     n_columns = int(points_array.shape[0])
+    #     n_rows = int(points_array.shape[1])
 
-        X = np.zeros((n_rows, n_columns, 1))
-        Y = np.zeros((n_rows, n_columns, 1))
-        Z = np.zeros((n_rows, n_columns, 1))
+    #     X = np.zeros((n_rows, n_columns, 1))
+    #     Y = np.zeros((n_rows, n_columns, 1))
+    #     Z = np.zeros((n_rows, n_columns, 1))
 
-        for i in range(n_columns):
-            for j in range(n_rows):
-                X[j, i, 0] = points_array[i, j, 0]
-                Y[j, i, 0] = points_array[i, j, 1]
-                Z[j, i, 0] = points_array[i, j, 2]
+    #     for i in range(n_columns):
+    #         for j in range(n_rows):
+    #             X[j, i, 0] = points_array[i, j, 0]
+    #             Y[j, i, 0] = points_array[i, j, 1]
+    #             Z[j, i, 0] = points_array[i, j, 2]
 
-        if multiple_networks:
-            gridToVTK(filename+'_network'+str(n+1), X, Y, Z)
-        else:
-            gridToVTK(filename+'_network', X, Y, Z)
+    #     if multiple_networks:
+    #         gridToVTK(filename+'_network'+str(n+1), X, Y, Z)
+    #     else:
+    #         gridToVTK(filename+'_network', X, Y, Z)
 
-    if type(data) == dict:
-        networks = len(data.keys())
-    else:
-        networks = len(data)
+    # if type(data) == dict:
+    #     networks = len(data.keys())
+    # else:
+    #     networks = len(data)
 
-    if type(data) != dict:
-        try:
-            # check to see if list of networks or just a single one
-            check = data[0][0][0][0]
-            for n in range(networks):
-                points_array = data[n]
-            _write_network(points_array, multiple_networks=True)
-        except:
-            _write_network(data, multiple_networks=False)
-    else:
-        for n in range(networks):
-            points_array = data[list(data.keys())[n]]
-            _write_network(points_array, multiple_networks=True)
+    # if type(data) != dict:
+    #     try:
+    #         # check to see if list of networks or just a single one
+    #         check = data[0][0][0][0]
+    #         for n in range(networks):
+    #             points_array = data[n]
+    #         _write_network(points_array, multiple_networks=True)
+    #     except:
+    #         _write_network(data, multiple_networks=False)
+    # else:
+    #     for n in range(networks):
+    #         points_array = data[list(data.keys())[n]]
+    #         _write_network(points_array, multiple_networks=True)
 
 
 def generate_points(data, filename):
