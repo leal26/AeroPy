@@ -121,7 +121,7 @@ class CST3D:
         x_lrs, y_l, z_lrs = self._global_to_local(x_g, y_g, z_g)
         import matplotlib.pyplot as plt
 
-        eta = self._inverse_y(y_l)
+        eta = np.array(self._inverse_y(y_l))
 
         # Correction for in case slightly above 1 or below 0
         eta[eta < 0] = 0

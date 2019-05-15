@@ -20,7 +20,7 @@ length = 4.
 f_sy = cst.piecewise_linear(eta_cp, taper)
 f_sx_upper = cst.BernsteinPolynomial(5, [0.172802, 0.167353, 0.130747,
                                          0.172053, 0.112797, 0.168891])
-f_sx_lower = cst.BernstienPolynomial(5, [0.163339, 0.175407, 0.134176,
+f_sx_lower = cst.BernsteinPolynomial(5, [0.163339, 0.175407, 0.134176,
                                          0.152834, 0.133240, 0.161677])
 f_xshear = cst.piecewise_linear(eta_cp, sweep)
 f_zshear = cst.piecewise_linear(eta_cp, dihedral)
@@ -68,7 +68,7 @@ N_tail = 3
 N_circ = 5
 
 # wing and fuselage intersection
-psi_spacing_w = meshtools.cosine_spacing(0., 1., N_chord)
+psi_spacing_w = meshtools.cosine_spacing()(0., 1., N_chord)
 intersection_f_wu = cst.intersection(wing_upper, fuselage, psi_spacing_w, 0.3)
 intersection_f_wl = cst.intersection(wing_lower, fuselage, psi_spacing_w, 0.3)
 
@@ -131,8 +131,9 @@ fuselage_wake_boundary = network_fu[0, -N_tail:]
 inner_endpoint = np.copy(fuselage_wake_boundary[-1])
 aoa = 0.
 n_wake_streamwise = len(fuselage_wake_boundary)
+spacing = meshtools.cosine_spacing()
 wake = meshtools.generate_wake(wing_trailing_edge, inner_endpoint[0],
-                               n_wake_streamwise, aoa, cos_spacing=True)
+                               n_wake_streamwise, aoa, user_spacing=spacing)
 
 wingbody_wake = np.zeros((n_wake_streamwise, 2, 3))
 wingbody_wake[:, 0] = fuselage_wake_boundary

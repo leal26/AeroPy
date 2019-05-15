@@ -103,7 +103,7 @@ wing_lower = cst.CST3D(rotation=(0., aoa, 0.),
 
 
 # fuselage parameters
-fuse_data = np.genfromtxt('./cross-section_fit_new2.txt', skip_header=1)
+fuse_data = np.genfromtxt('./fuselage_raw.txt', skip_header=1)
 i_sort = np.argsort(fuse_data[:, 0])
 fuse_data = fuse_data[i_sort]
 
@@ -254,14 +254,15 @@ wing_trailing_edge = np.concatenate((network_wu1[-1, :-1, :],
 fuselage_wake_boundary = network_fu[0, -N_tail:]
 inner_endpoint = np.copy(fuselage_wake_boundary[-1])
 n_wake_streamwise = len(fuselage_wake_boundary+1)
+cos_space = meshtools.cosine_spacing()
 
 body_wake_l = meshtools.generate_wake(network_fl[:, -1], inner_endpoint[0]+.05,
-                                      2, aoa, cos_spacing=True)
+                                      2, aoa, user_spacing=cos_space)
 body_wake_u = meshtools.generate_wake(network_fu[:, -1], inner_endpoint[0]+.05,
-                                      2, aoa, cos_spacing=True)
+                                      2, aoa, user_spacing=cos_space)
 
 wing_wake = meshtools.generate_wake(wing_trailing_edge, inner_endpoint[0]+.05,
-                                    n_wake_streamwise+1, aoa, cos_spacing=True)
+                                    n_wake_streamwise+1, aoa, user_spacing=cos_space)
 
 
 wingbody_wake = np.zeros((n_wake_streamwise+1, 2, 3))
@@ -288,7 +289,7 @@ generate_surface(wingbody_wake, "wingbody_wake")
 # run in Panair
 gamma = 1.4
 MACH = 1.6
-panair = panairwrapper.PanairWrapper('wingbody')
+panair = panairwrapper.PanairWrapper('wingbody', exe='panair.exe')
 panair.set_aero_state(MACH, aoa)
 panair.set_symmetry(1, 0)
 panair.add_network("wing_u1", np.flipud(network_wu1))

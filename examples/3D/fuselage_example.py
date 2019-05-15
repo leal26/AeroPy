@@ -51,10 +51,10 @@ network_f = np.dstack(mesh_f)
 generate_surface(network_f, "fuselage")
 
 
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-x, y, z = network_f.T
-ax.scatter(x, y, z)
-x, y, z = raw_data.T
-ax.scatter(x, y, z)
-plt.show()
+# fig = plt.figure()
+# ax = fig.add_subplot(111, projection='3d')
+# x, y, z = network_f.T
+# ax.scatter(x, y, z)
+# x, y, z = raw_data.T
+# ax.scatter(x, y, z)
+# plt.show()

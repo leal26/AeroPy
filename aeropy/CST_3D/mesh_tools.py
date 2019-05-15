@@ -2,7 +2,6 @@
 import numpy as np
 import sys
 from math import sin, cos, sqrt
-import panairwrapper.filehandling as fh
 
 
 def axisymmetric_surf(data_x, data_r, N_theta):
@@ -298,6 +297,7 @@ def mesh_curvilinear(x_lower, x_upper, y_lower, y_upper, x_spacing, y_spacing):
 
 class cosine_spacing:
     """Parametric function for obtaining a cosine distribution of points"""
+
     def __init__(self, offset=0, period=1.):
         self._offset = offset
         self._period = period
