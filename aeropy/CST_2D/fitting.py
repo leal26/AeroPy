@@ -5,7 +5,10 @@ from aeropy.geometry.airfoil import CST
 from aeropy.xfoil_module import output_reader
 
 from scipy.optimize import fsolve, minimize, differential_evolution
-
+try:
+    from optimization_tools.hausdorff_distance import hausdorff_distance_2D
+except:
+    pass
 
 def fitting_shape_coefficients(filename, bounds='Default', n=5,
                                return_data=False, return_error=False,
@@ -21,9 +24,7 @@ def fitting_shape_coefficients(filename, bounds='Default', n=5,
                 this input will define the order of the polynomial.
                 Otherwise the length of bounds (minus one) is taken into
                 consideration"""
-
-    from optimization_tools.hausdorff_distance import hausdorff_distance_2D
-
+ 
     def shape_difference(inputs, optimize_deltaz=False, surface=surface):
         # Define deltaz
         if optimize_deltaz is True or optimize_deltaz == [True]:
@@ -189,7 +190,7 @@ def fitting_shape_coefficients(filename, bounds='Default', n=5,
     if solver == 'differential_evolution':
 
         result = differential_evolution(f, bounds,
-                                        disp=True, popsize=10)
+                                        disp=False, popsize=10)
         x = result.x
         f = result.fun
     elif solver == 'gradient':
@@ -198,9 +199,11 @@ def fitting_shape_coefficients(filename, bounds='Default', n=5,
                             options={'maxfun': 30000, 'eps': 1e-02})
         x = solution['x']
         f = solution['fun']
-    print('order %i  done' % n)
+    #print('order %i  done' % n)
 
     # Unpackage data
+    if optimize_deltaz:
+        deltaz = x[-1]/2.
     if surface == 'both' or surface == 'upper':
         Au = list(x[:n+1])
     if surface == 'both':

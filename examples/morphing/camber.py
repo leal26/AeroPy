@@ -1,8 +1,11 @@
-
+import numpy as np
 import matplotlib.pyplot as plt
+from aeropy.geometry.airfoil import CST
+from aeropy.morphing.camber_2D import *
 # testing = 'structurally_consistent'
 testing = 'structurally_consistent'
-
+inverted = False
+morphing_direction = 'forwards'
 if testing == 'tracing':
     N1 = 1.
     N2 = 1.
@@ -168,7 +171,7 @@ elif testing == 'structurally_consistent':
             plt.plot([psi_i*c_C, psi_i*c_C], [y['u'], y['u']-spar_thicknesses[i]], 'b', lw=2, label = None)
 
     plt.xlabel('$\psi^p$', fontsize = 14)
-    plt.ylabel(r'$\xi^p$', fontsize = 14)
+    plt.ylabel(r'$\zeta^p$', fontsize = 14)
     plt.ylim([-0.06,0.17])
     plt.grid()
     plt.gca().set_aspect('equal', adjustable='box')

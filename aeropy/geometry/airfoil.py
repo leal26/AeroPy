@@ -523,18 +523,20 @@ def find_flap(data, hinge, extra_points=None):
     return static_data, flap_data
 
 
-def find_edges(x, y):
+def find_edges(x, y, both_surfaces=False):
     '''Defining chord as the greatest distance from the trailing edge,
        find the leading edge'''
 
     x = list(x)
     y = list(y)
     # The Trailing edge will always be the point with greatest x for small angles
-    TE_x = max(x)
-    TE_index = x.index(TE_x)
-    TE_y = y[TE_index]
-    print(x)
-    print(TE_x, TE_y)
+    if both_surfaces == True:
+        TE_x = (x[0]+x[-1])/2
+        TE_y = (y[0]+y[-1])/2
+    else:
+        TE_x = max(x)
+        TE_index = x.index(TE_x)
+        TE_y = y[TE_index]
     chord = 0
     LE_index = 0
 
@@ -543,16 +545,16 @@ def find_edges(x, y):
         if distance > chord:
             LE_index = i
             chord = distance
-    theta = math.atan2(y[TE_index] - y[LE_index],
-                       x[TE_index] - x[LE_index])
+    theta = math.atan2(TE_y - y[LE_index],
+                       TE_x - x[LE_index])
     return ({'x': x[LE_index], 'y': y[LE_index]},
-            {'x': x[TE_index], 'y': y[TE_index]},
+            {'x': TE_x, 'y': TE_y},
             theta, chord)
 
 
 def rotate(upper, lower={'x': [], 'y': []}, origin={'x': 0, 'y': 0},
            theta=None, unit_theta='rad', move_to_origin=False,
-           chord=None):
+           chord=None, both_surfaces=False):
     """
     :param upper: dictionary with keys x and y, each a list
 
@@ -569,8 +571,9 @@ def rotate(upper, lower={'x': [], 'y': []}, origin={'x': 0, 'y': 0},
     """
     # Calculate angle based on trailing edge if angle not defined
     if theta == None:
-        origin, TE, theta, chord = find_edges(upper['x'], upper['y'])
-        print('theta', theta)
+        origin, TE, theta, chord = find_edges(upper['x'], upper['y'],
+                                              both_surfaces)
+        # print('theta', theta)
         # theta = - theta
     output = []
 
