@@ -997,7 +997,7 @@ def find_alpha_L_0(airfoil, Reynolds=0, iteration=10, NACA=True):
     # If file already exists, there no need to recalculate it.
     if not os.path.isfile(filename):
         call(airfoil, output='Alfa_L_0', NACA=NACA)
-    alpha = output_reader(filename, output='Alfa_L_0')['alpha'][0]
+    alpha = output_reader(filename, output='Alfa_L_0', delete=True)['alpha'][0]
     return alpha
 
 
