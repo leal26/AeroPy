@@ -59,16 +59,16 @@ f.close()
 # points = []
 # designs = []
 # for i in range(len(data.values[:, 0])):
-    # print(i)
-    # AC_u = list(data.values[i, 0:4])
-    # Au_C, Al_C, c_C, spar_thicknesses = calculate_dependent_shape_coefficients(
-        # AC_u,
-        # psi_spars, Au_P, Al_P,
-        # deltaz, c_P, morphing=morphing_direction)
-    # x = np.linspace(0, c_C, 100)
-    # y = CST(x, c_C, deltasz=[deltaz/2., deltaz/2.], Al=Al_C, Au=Au_C)
-    # points.append(list(x) + list(y['l']) + list(y['u']))
-    # designs.append({'x': x, 'yl': y['l'], 'yu': y['u']})
+# print(i)
+# AC_u = list(data.values[i, 0:4])
+# Au_C, Al_C, c_C, spar_thicknesses = calculate_dependent_shape_coefficients(
+# AC_u,
+# psi_spars, Au_P, Al_P,
+# deltaz, c_P, morphing=morphing_direction)
+# x = np.linspace(0, c_C, 100)
+# y = CST(x, c_C, deltasz=[deltaz/2., deltaz/2.], Al=Al_C, Au=Au_C)
+# points.append(list(x) + list(y['l']) + list(y['u']))
+# designs.append({'x': x, 'yl': y['l'], 'yu': y['u']})
 # points = np.array(points)
 # f = open('design_optimal.p', 'wb')
 # designs = pickle.dump(designs, f)
@@ -130,9 +130,9 @@ for ii in range(len(closest)):
     i = closest[ii]
     d = designs[i]
     plt.figure()
-    
+
     AC_u = list(data[i, 0:4])
-    print(i, data[i] )
+    print(i, data[i])
     Au_C, Al_C, c_C, spar_thicknesses = calculate_dependent_shape_coefficients(
         AC_u,
         psi_spars, Au_P, Al_P,
