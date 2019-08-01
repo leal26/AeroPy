@@ -37,7 +37,7 @@ density = kde(values)
 
 di = interpolate.griddata((X.flatten(), Y.flatten()), density,
                           (xi[None, :], yi[:, None]), method='cubic')
-cset = ax.contourf(xi, yi, di, zdir='z', offset=-100, cmap=cm.coolwarm)
+cset = ax.scatter(xi, yi, di, zdir='z', offset=-100, cmap=cm.coolwarm)
 
 # Projection perpendicular to X
 # values = np.array([Z.flatten(), Y.flatten()])
@@ -56,7 +56,8 @@ density = kde(values)
 
 di = interpolate.griddata((X.flatten(), Z.flatten()), density,
                           (zi[None, :], yi[:, None]), method='cubic')
-cset = ax.contourf(xi, di, zi, zdir='y', offset=40, cmap=cm.coolwarm)
+print(xi.shape, di.shape, zi.shape)
+cset = ax.scatter(xi, zi, di, zdir='z', offset=40, cmap=cm.coolwarm)
 
 # plt.colorbar(label='Probability')
 ax.set_xlabel('X')

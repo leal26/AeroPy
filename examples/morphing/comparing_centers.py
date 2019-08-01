@@ -49,7 +49,7 @@ if inverted:
 
 # Passive shape coefficients for child
 
-data = pd.read_csv('performance_grid.csv')
+data = pd.read_csv('optimal_map.csv')
 # Spar position for cruise (adiminesional because the chord will still be calculated)
 psi_spars = [0.1, 0.3, 0.6, 0.8]
 
@@ -77,24 +77,30 @@ y_km = kmeans.fit_predict(points)
 # Find designs closest to cluster
 data = data.values
 closest, _ = pairwise_distances_argmin_min(kmeans.cluster_centers_, points)
-# closest = closest[np.argsort(data[closest, -3])]
+closest = closest[np.argsort(data[closest, -3])]
 
 # Find points from database that are closest to centers
 closest_database = []
 print(closest)
 for ii in range(n_clusters):
     error = 0
-    i = y_km[closest[ii]]
+    i = closest[ii]
+    print(i)
     x = designs[i]['x']
     yl_morphing = designs[i]['yl']
     yu_morphing = designs[i]['yu']
+    camber_morphing = (yu_morphing + yl_morphing)/2.
     chord = max(x)
     current_rmse = 1e10
-    for j in range(len(Au_database)):
+    jjs = np.arange(0, len(Au_database))
+    # jjs = np.delete(jjs, 991)
+    for j in jjs:
         Au = Au_database[j, :]
         Al = Al_database[j, :]
         y_database = CST(x, chord, deltasz=[du_database[j], dl_database[j]],
                          Al=Al, Au=Au)
+        camber_database = (y_database['u'] + y_database['l'])/2.
+        # rmse = np.sqrt(np.mean((camber_morphing - camber_database)**2))
         rmse = np.sqrt(np.sum((yl_morphing-y_database['l'])**2 +
                               (yu_morphing-y_database['u'])**2)/(2*len(x)))
         error += 1
@@ -111,6 +117,7 @@ for ii in range(n_clusters):
 #  Plot results
 # ==============================================================================
 colors = ['b', 'g', 'r', 'm', 'c']
+
 plt.figure()
 np.set_printoptions(precision=20)
 x_p = np.linspace(0, c_P, 100000)
@@ -118,17 +125,41 @@ y_p = CST(x_p, c_P, deltasz=[deltaz/2., deltaz/2.], Al=Al_P, Au=Au_P)
 for ii in range(len(closest)):
     i = closest[ii]
     d = designs[i]
+    plt.plot(d['x'], d['yu'], colors[ii], label='%i' % ii, lw=2)
+    plt.plot(d['x'], d['yl'], colors[ii], label=None, lw=2)
+plt.plot(x_p, y_p['u'], 'k--', label='Parent', lw=2)
+plt.plot(x_p, y_p['l'], 'k--', label=None, lw=2)
+plt.xlabel('$\psi^p$', fontsize=14)
+plt.ylabel(r'$\zeta^p$', fontsize=14)
+plt.ylim([-0.06, 0.17])
+plt.grid()
+plt.gca().set_aspect('equal', adjustable='box')
+plt.legend(loc=1)
+plt.show()
+
+
+plt.figure()
+np.set_printoptions(precision=20)
+x_p = np.linspace(0, c_P, 100000)
+y_p = CST(x_p, c_P, deltasz=[deltaz/2., deltaz/2.], Al=Al_P, Au=Au_P)
+print(closest)
+for ii in range(len(closest)):
+    i = closest[ii]
+    print(i, ii)
+    d = designs[i]
     c = closest_database[ii]
     print(c['name'])
     plt.plot(d['x'], d['yl'], colors[ii], label='%i' % ii, lw=2)
     plt.plot(d['x'], d['yu'], colors[ii], label=None, lw=2)
+    plt.plot(d['x'], (d['yu']+d['yl'])/2., colors[ii], label=None, lw=2)
     plt.plot(c['x'], c['yl'], colors[ii]+'--', label=c['name'], lw=2)
     plt.plot(c['x'], c['yu'], colors[ii]+'--', label=None, lw=2)
+    plt.plot(c['x'], (c['yu']+c['yl'])/2., colors[ii]+'--', label=None, lw=2)
 
+    plt.axis('off')
     plt.xlabel('$\psi^p$', fontsize=14)
     plt.ylabel(r'$\zeta^p$', fontsize=14)
     plt.ylim([-0.06, 0.17])
-    plt.grid()
     plt.gca().set_aspect('equal', adjustable='box')
     plt.legend(loc=1)
     plt.show()
