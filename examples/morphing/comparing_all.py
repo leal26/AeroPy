@@ -1,11 +1,13 @@
-import numpy as np
-import matplotlib.pyplot as plt
+
 from aeropy.geometry.airfoil import CST
 from aeropy.morphing.camber_2D import *
 
 import pickle
+import numpy as np
 import pandas as pd
 import seaborn as sns
+from scipy import interpolate
+import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances_argmin_min
 
@@ -97,16 +99,86 @@ from sklearn.metrics import pairwise_distances_argmin_min
 
 # data.to_pickle('./all_comparison.p')
 
+def name_to_value(name, names):
+    xs = len(names)*np.linspace(0, 1, len(names)+1)
+    if name in names:
+        return xs[list(names).index(name)]
+    else:
+        return xs[-1]
+
+limit = 5
+
 data = pd.read_pickle("./all_comparison.p")
-data.Name.value_counts().plot(kind='bar')
-print(data['Name'].value_counts())
+vc = data.Name.value_counts(normalize=True)*100
+vc[vc>=limit].plot(kind='bar', figsize=(6, 3), rot=0)
+plt.xlabel('Closet airfoils')
+plt.ylabel('Airfoil probability (%)')
+x = data['AOA'].values
+y = data['V'].values
+z = data['Distance'].values
+data_names = data['Name'].values
+points = np.array([x,y]).T
 
-data.plot.scatter(x='AOA', y='V', c='Distance', colormap='viridis')
-print(data['AOA'][19])
-X=np.reshape(data['AOA'], (13,-1))
-Y=np.reshape(data['V'], (13,15))
-Z=np.reshape(data['Distance'], (13,15))
-# x,y=np.meshgrid(X, Y)
-plt.contourf(X, Y, Z)
+
+X = np.linspace(min(x), max(x), 100)
+Y = np.linspace(min(y), max(y), 100)
+X, Y = np.meshgrid(X, Y)
+points_plot = np.array([X.flatten(), Y.flatten()]).T
+
+plt.figure()
+Z = interpolate.griddata(points, z, points_plot, method='cubic')
+Z = Z.reshape(X.shape)
+cs = plt.contourf(X, Y, Z)
+
+cs.cmap.set_under('k')
+plt.colorbar(cs, extend='min', label = 'Eucledian distance from closest existing airfoil')
+
+# tag = [0, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005, 0.0055]
+cmap = plt.get_cmap('gist_rainbow')
+# cmaplist = [cmap(i) for i in range(cmap.N)]
+# cmaplist = [(0, 0, 0, 1),].append(cmaplist)
+#
+# # create the new map
+# cmap = mpl.colors.LinearSegmentedColormap.from_list(
+#     'Custom cmap', cmaplist, cmap.N)
+#
+# # define the bins and normalize
+# bounds = np.linspace(0, 20, 21)
+# norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+#
+# # make the scatter
+# scat = ax.scatter(x, y, c=tag, s=np.random.randint(100, 500, 20),
+#                   cmap=cmap, norm=norm)
+
+plt.figure()
+vc_above = vc[vc>=limit]
+names_above = vc_above.index.values
+count = vc_above.values
+colors = cmap(np.linspace(0, 1, len(names_above)+1))
+for i, (name, color) in enumerate(zip(names_above, colors), 1):
+    print(i, name, color)
+    plt.scatter(x[data_names == name], y[data_names == name], label=name, c=np.array(color))
+
+vc_below = vc[vc<limit]
+names = vc_below.index.values
+for j, name in enumerate(names, 1):
+    if j == 1:
+        plt.scatter(x[data_names == name], y[data_names == name], c=colors[-1], label='Misc')
+    else:
+        plt.scatter(x[data_names == name], y[data_names == name], c=colors[-1])
+plt.legend()
+
+plt.figure()
+X = np.linspace(min(x), max(x), 26)
+Y = np.linspace(min(y), max(y), 30)
+X, Y = np.meshgrid(X, Y)
+points_plot = np.array([X.flatten(), Y.flatten()]).T
+z = []
+for i in range(len(x)):
+    z.append(name_to_value(data_names[i], names_above))
+Z = interpolate.griddata(points, z, points_plot, method='cubic')
+Z = Z.reshape(X.shape)
+cs = plt.contourf(X, Y, Z)
+cs.cmap.set_under('k')
+plt.colorbar(label = 'Airfoils')
 plt.show()
-

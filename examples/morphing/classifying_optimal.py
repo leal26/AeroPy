@@ -43,6 +43,7 @@ if inverted:
 # Passive shape coefficients for child
 
 data = pandas.read_csv('optimal_map.csv')
+
 # Spar position for cruise (adiminesional because the chord will still be calculated)
 psi_spars = [0.1, 0.3, 0.6, 0.8]
 
@@ -59,24 +60,24 @@ f.close()
 # points = []
 # designs = []
 # for i in range(len(data.values[:, 0])):
-# print(i)
-# AC_u = list(data.values[i, 0:4])
-# Au_C, Al_C, c_C, spar_thicknesses = calculate_dependent_shape_coefficients(
-# AC_u,
-# psi_spars, Au_P, Al_P,
-# deltaz, c_P, morphing=morphing_direction)
-# x = np.linspace(0, c_C, 100)
-# y = CST(x, c_C, deltasz=[deltaz/2., deltaz/2.], Al=Al_C, Au=Au_C)
-# points.append(list(x) + list(y['l']) + list(y['u']))
-# designs.append({'x': x, 'yl': y['l'], 'yu': y['u']})
+#     print(i)
+#     AC_u = list(data.values[i, 0:4])
+#     Au_C, Al_C, c_C, spar_thicknesses = calculate_dependent_shape_coefficients(
+#                                 AC_u,
+#                                 psi_spars, Au_P, Al_P,
+#                                 deltaz, c_P, morphing=morphing_direction)
+#     x = np.linspace(0, c_C, 100)
+#     y = CST(x, c_C, deltasz=[deltaz/2., deltaz/2.], Al=Al_C, Au=Au_C)
+#     points.append(list(x) + list(y['l']) + list(y['u']))
+#     designs.append({'x': x, 'yl': y['l'], 'yu': y['u']})
 # points = np.array(points)
 # f = open('design_optimal.p', 'wb')
-# designs = pickle.dump(designs, f)
+# pickle.dump(designs, f)
 # f.close()
 # f = open('points_optimal.p', 'wb')
-# points = pickle.dump(points, f)
+# pickle.dump(points, f)
 # f.close()
-n_clusters = 3
+n_clusters = 4
 # create kmeans object
 kmeans = KMeans(n_clusters=n_clusters)
 
@@ -137,7 +138,7 @@ for ii in range(len(closest)):
         AC_u,
         psi_spars, Au_P, Al_P,
         deltaz, c_P, morphing=morphing_direction)
-    x_c = np.linspace(0, c_C, 100)
+    x_c = np.linspace(0, c_C, 1000)
     y_c = CST(x_c, c_C, deltasz=[deltaz/2., deltaz/2.], Al=Al_C, Au=Au_C)
 
     plt.plot(d['x'], d['yu'], colors[ii], label='Children', lw=2)

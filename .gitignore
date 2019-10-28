@@ -226,6 +226,6 @@ __pycache__
 *.vts
 *.vtu
 *.csv
-examples/2D/airfoils
+examples/2D_fitting/airfoils
 panair_files
 sBOOM
