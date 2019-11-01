@@ -173,8 +173,8 @@ class CST3D:
         # class function in x
         nx1 = try_as_func(self.nx[0], eta)
         nx2 = try_as_func(self.nx[1], eta)
-        kx = self._k(nx1, nx2)
-        c = kx*np.power(psi, nx1)*np.power(1.-psi, nx2)
+        # kx = self._k(nx1, nx2)
+        c = np.power(psi, nx1)*np.power(1.-psi, nx2)
 
         return c
 
