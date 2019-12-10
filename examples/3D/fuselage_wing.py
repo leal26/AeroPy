@@ -13,7 +13,7 @@ taper = [1.0, 0.3]
 sweep = [0., 1.5]
 dihedral = [0., .0]
 twist = [0., 1.]
-
+TE_thickness = [0.01, 0.01]
 # fuselage parameters
 length = 4.
 
@@ -25,6 +25,7 @@ f_sx_lower = cst.BernsteinPolynomial(5, [0.163339, 0.175407, 0.134176,
 f_xshear = cst.piecewise_linear(eta_cp, sweep)
 f_zshear = cst.piecewise_linear(eta_cp, dihedral)
 f_twist = cst.piecewise_linear(eta_cp, twist)
+f_TE = cst.piecewise_linear(eta_cp, TE_thickness)
 
 wing_upper = cst.CST3D(rotation=(0., 0., 0.),
                        location=(1.5, 0., 0.),
@@ -36,7 +37,8 @@ wing_upper = cst.CST3D(rotation=(0., 0., 0.),
                        ny=(0., 0.),
                        xshear=f_xshear,
                        zshear=f_zshear,
-                       twist=f_twist)
+                       twist=f_twist,
+                       TE_thickness=f_TE)
 
 wing_lower = cst.CST3D(rotation=(0., 0., 0.),
                        location=(1.5, 0., 0.),
@@ -48,7 +50,8 @@ wing_lower = cst.CST3D(rotation=(0., 0., 0.),
                        ny=(0., 0.),
                        xshear=f_xshear,
                        zshear=f_zshear,
-                       twist=f_twist)
+                       twist=f_twist,
+                       TE_thickness=cst.piecewise_linear(eta_cp, [0, 0]))
 
 psi_w, eta_w = meshtools.meshparameterspace((20, 20),
                                             psi_spacing='cosine',
@@ -58,7 +61,8 @@ fuselage = cst.CST3D(rotation=(0., -90., -90.),
                      XYZ=(.4, length, .2),
                      nx=(.5, .5),
                      ref=(0.5, 0., 0.),
-                     ny=(1., 1.))
+                     ny=(1., 1.),
+                     TE_thickness=f_TE)
 
 # generate mesh
 N_chord = 5

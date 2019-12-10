@@ -43,7 +43,7 @@ def expected(data, airFrame):
 
 C172 = pickle.load(open('C172.p', 'rb'))
 data = pickle.load(open('aerodynamics_3.p', 'rb'))
-airfoil_database = pickle.load(open('../2D/fitting.p', 'rb'))
+airfoil_database = pickle.load(open('fitting.p', 'rb'))
 
 # list of strings
 Al_database = np.array(airfoil_database['Al'])
@@ -76,7 +76,7 @@ max_index = data['Expected'].index(max_value)
 df = pd.DataFrame(np.array([data['Expected']]).T,
                   columns = ['Expected'])
 df['Expected'] = df['Expected'].astype(float)
-df.hist(column = 'Expected')
+df.hist(column = 'Expected', cumulative=True, normed=True, bins=20)
 plt.show()
 print(max_index )
 print(df.max())

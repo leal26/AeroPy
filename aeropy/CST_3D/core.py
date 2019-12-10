@@ -95,6 +95,7 @@ class CST3D:
         self.xshear = params.get('xshear', 0.)
         self.zshear = params.get('zshear', 0.)
         self.twist = params.get('twist', 0.)
+        self.TE_thickness = params.get('TE_thickness', 0.)
 
     def __call__(self, psi, eta):
         # calculate x, y, and z from the 3D CST equation
@@ -165,7 +166,7 @@ class CST3D:
 
         sc_x = try_as_func(self.sx, psi, eta)*self._cx(psi, eta)
         sc_y = try_as_func(self.sy, eta)*self._cy(eta)
-        z = (sc_x*sc_y-zeta0)*Z  # +try_as_func(self.zshear, eta)
+        z = (sc_x*sc_y-zeta0 + psi*self.TE_thickness(eta))*Z  # +try_as_func(self.zshear, eta)
 
         return z
 
