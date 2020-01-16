@@ -37,9 +37,9 @@ def expected(data, airFrame):
     expected_value = numerator/denominator
     return(expected_value)
 
-C172 = pickle.load(open('C172.p', 'rb'))
+C172 = pickle.load(open('C172_new.p', 'rb'))
 
-airfoil_database = pickle.load(open('../2D/fitting.p', 'rb'))
+airfoil_database = pickle.load(open('fitting.p', 'rb'))
 
 # list of strings
 Al_database = np.array(airfoil_database['Al'])
@@ -47,7 +47,7 @@ Au_database = np.array(airfoil_database['Au'])
 dl_database = np.array(airfoil_database['dl'])
 du_database = np.array(airfoil_database['du'])
 
-airfoil = 'from_database_3'
+airfoil = 'from_database_5'
 altitude = 10000
 chord = 1
 
@@ -61,7 +61,7 @@ f = open('aerodynamics_3.p', 'rb')
 data = pickle.load(f)
 f.close()
 
-for j in range(1145, len(Au_database)):
+for j in range(240, len(Au_database)):
     data['L/D'].append([])
     print(j, airfoil_database['names'][j])
     Au = Au_database[j, :]
@@ -74,6 +74,7 @@ for j in range(1145, len(Au_database)):
     for i in range(len(AOAs)):
         AOA = AOAs[i]
         V = velocities[i]
+        AOA, V = C172.denormalize(np.array([AOA, V]).T)
         try:
             Data = xf.find_coefficients(airfoil, AOA,
                                         Reynolds=Reynolds(10000, V, chord),
@@ -106,6 +107,6 @@ for j in range(1145, len(Au_database)):
         data['L/D'][-1].append(lift_drag_ratio)
         if data['L/D'][-1].count(None) > 3:
             break
-    f = open('aerodynamics_3.p', 'wb')
+    f = open('aerodynamics_4.p', 'wb')
     pickle.dump(data,f)
     f.close()

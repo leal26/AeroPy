@@ -27,7 +27,6 @@ def expected(data, airFrame):
     except:
         print(alpha)
         print(velocity)
-        BREAk
     pdf = np.exp(pdf.reshape(lift_to_drag.shape))
     expected_value = 0
     numerator_list = []
@@ -41,7 +40,7 @@ def expected(data, airFrame):
             expected_value += (V/total_pdf)*pdf[i]*lift_to_drag[i]
     return(expected_value)
 
-C172 = pickle.load(open('C172.p', 'rb'))
+C172 = pickle.load(open('C172_new.p', 'rb'))
 data = pickle.load(open('aerodynamics_3.p', 'rb'))
 airfoil_database = pickle.load(open('fitting.p', 'rb'))
 
@@ -61,6 +60,8 @@ velocities = velocities[0]
 
 # data = {'Names':airfoil_database['names'], 'AOA':AOAs, 'V':velocities,
 #         'L/D':[], 'Expected':[]}
+print(len(data['L/D']))
+
 for j in range(len(data['L/D'])):
     if len(data['L/D'][j]) == len(AOAs.flatten()):
         data_i = np.array([AOAs.flatten(), velocities.flatten(),
