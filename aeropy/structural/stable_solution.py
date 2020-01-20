@@ -96,6 +96,7 @@ class structure():
                             input_type='x1', diff=diff)
         child = self.g_c.r(input=self.mesh.x_c, x2=self.mesh.x2,
                            input_type='x1', diff=diff)
+
         self.cosine_direction(diff=None)
         # Taking into consideration extension of the beam
         child[0] *= self.mesh.alpha_x
@@ -103,6 +104,14 @@ class structure():
 
         for i in range(self.mesh.n):
             output[:, i] = np.matmul(self.R[i], output[:, i])
+        if diff is 'x1':
+            dR = self.cosine_direction(diff='x1')
+            parent = self.g_p.r(input=self.mesh.x_p, x2=self.mesh.x2,
+                                input_type='x1', diff=None)
+            child = self.g_c.r(input=self.mesh.x_c, x2=self.mesh.x2,
+                               input_type='x1', diff=None)
+            position_delta = child - parent
+            output[:, i] += np.matmul(dR[i], position_delta[:, i])
 
         if input is not None:
             self.mesh.x_p = stored_x_p
@@ -148,6 +157,7 @@ class structure():
                                         diff=diff)
                     else:
                         gj = g[j]
+
                     self.R[k][i][j] = dot(gi, gj)
         return(self.R)
 
@@ -161,6 +171,7 @@ class structure():
         for l in range(1, 3):
             ui_j += self.g_c.christoffel(i, j, l, self.mesh.x_p,
                                          self.mesh.x2)*ui
+
         return(ui_j)
 
     def strain(self):
@@ -172,7 +183,6 @@ class structure():
                 jj = j + 1
                 self.epsilon[i][j] = .5*(self.uij(ii, jj) +
                                          self.uij(jj, ii))
-        # christoffel_122 = self.g_c.christoffel(input, x2)
         return(self.epsilon)
 
     def stress(self, loading_condition='uniaxial'):
@@ -206,27 +216,69 @@ class structure():
                 energy += self.bc.concentrated_load[i][j] * u[j][0]
         return(energy)
 
-    def residual(self, input=None):
+    def residual(self, input=None, input_type = 'Strain',
+                loading_condition = None, input_function = None):
         if input is not None:
-            self.mesh.alpha = 1+np.array(input)
-            self.mesh.mesh_child()
+            if input_function is not None:
+                input = input_function(input)
+            if input_type is 'Strain':
+                self.mesh.alpha = 1+np.array(input)
+                self.mesh.mesh_child()
+            elif input_type is 'Geometry':
+                self.g_c.a = input
+                self.mesh.mesh_child()
+                self.calculate_position()
             self.strain()
             self.stress()
-
         energy = self.strain_energy() - self.work()
         return(energy)
 
-    def find_stable(self, x0=[0]):
+    def find_stable(self, x0=[0], bounds=((-.1, .1),), input_type = 'Strain',
+                    loading_condition = None, input_function = None):
         def _callback(x):
-            self.opt_x.append(x)
-            self.opt_f.append(self.residual(x))
-        self.opt_x = [x0]
-        self.opt_f = [self.residual(x0)]
-        res = minimize(self.residual, x0, bounds=((-.1, .1),),
-                       callback=_callback)
-        return(res.x, res.fun)
+            input = (bounds[:,1]-bounds[:,0])*x + bounds[:,0]
+            self.opt_x.append(input)
+            self.opt_f.append(self.residual(input, input_type = input_type,
+                                 loading_condition = loading_condition,
+                                 input_function = input_function))
+        def to_optimize(x):
+            input = (bounds[:,1]-bounds[:,0])*x + bounds[:,0]
+            output = self.residual(input, input_type = input_type,
+                                 loading_condition = loading_condition,
+                                 input_function = input_function)
 
-    def sweep_geometries(self, strains, strains_x, reorder=None):
+            print(output, input)
+            return output
+
+        x0_nd = (x0-bounds[:,0]) / (bounds[:,1]-bounds[:,0])
+        bounds_nd = np.array([[-1,1],]*len(x0))
+
+        self.opt_x = [x0]
+        self.opt_f = [to_optimize(x0_nd)]
+
+        res = minimize(to_optimize, x0_nd, bounds=bounds_nd, callback=_callback)
+
+        x = (bounds[:,1]-bounds[:,0])*res.x + bounds[:,0]
+        return(x, res.fun)
+
+    def sweep_strains(self, strains, strains_x, reorder=None):
+        energy_list = []
+        residual_list = []
+        n = len(strains)
+        for i in range(n):
+            self.mesh.alpha = 1 + strains[i]
+            self.mesh.alpha_x = strains_x
+            self.mesh.mesh_child()
+            self.strain()
+            self.stress()
+            energy_list.append(self.strain_energy())
+            residual_list.append(self.residual())
+        if reorder is not None:
+            residual_list = np.resize(residual_list, reorder)
+            energy_list = np.resize(energy_list, reorder)
+        return(energy_list, residual_list)
+
+    def sweep_geometries(self, geom_variables, strains_x, reorder=None):
         energy_list = []
         residual_list = []
         n = len(strains)

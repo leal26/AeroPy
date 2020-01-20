@@ -15,13 +15,13 @@ class poly():
         if a is None:
             a = self.a
         if diff is None:
-            return(a[0]*z1**3 + a[1]*z1**2 + a[2]*z1 + a[3])
+            return(a[3]*z1**3 + a[2]*z1**2 + a[1]*z1 + a[0])
         elif diff == 'z1':
-            return(3*a[0]*z1**2 + 2*a[1]*z1 + a[2])
+            return(3*a[3]*z1**2 + 2*a[2]*z1 + a[1])
         elif diff == 'z11':
-            return(6*a[0]*z1 + 2*a[1])
+            return(6*a[3]*z1 + 2*a[2])
         elif diff == 'z111':
-            return(6*a[0])
+            return(6*a[3])
         elif diff == 'x1':
             return(self.z2(z1, 'z1')*self.z1(z1, 'x1'))
         elif diff == 'x11':
@@ -80,9 +80,10 @@ class poly():
             try:
                 output = self.z1(z1, 'x1')*np.array([np.ones(len(z1)),
                                                      self.z2(z1, 'z1')])
-
             except(ValueError):
                 output = self.z1(z1, 'x1')*np.array([1, self.z2(z1, 'z1')])
+            if len(output) > 2:
+                BRAKE
         elif diff == 'x1':
             try:
                 output = self.z1(z1, 'x1')**2*np.array([np.zeros(len(z1)),
@@ -125,6 +126,8 @@ class poly():
                                                  np.zeros(len(z1))])
             output += self.z1(z1, 'x1', a=diff)*np.array([- self.z2(z1, 'z1'),
                                                           np.ones(len(z1))])
+        elif diff == 'x2':
+            output = np.array([[0], [0]])
         return(output)
 
     def neutral_line(self, z1, a=None):
@@ -164,7 +167,7 @@ class poly():
             if diff is None:
                 g_i = self.normal(z1)
             else:
-                g_i = np.zeros(np.zeros((len(z1), 2)))
+                g_i = np.array([[0], [0]])
         return(g_i)
 
     def gij(self, i, j, z1, x2=0, diff=None, covariant=True, orthogonal=True):

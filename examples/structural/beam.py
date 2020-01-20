@@ -8,8 +8,9 @@ import matplotlib.cm as cm
 import numpy as np
 import pickle
 
-abaqus_primary = pickle.load(open("save.p", "rb"), encoding='latin1')
+abaqus_primary = pickle.load(open('save.p', 'rb'), encoding='latin1')
 abaqus_secondary = output_reader('secondary_variables.txt')
+
 # sort data
 abaqus_data = np.array(sorted(zip(abaqus_primary['C_U']['x'],
                                   abaqus_primary['C_U']['y'],
@@ -27,7 +28,7 @@ coefficients = np.array([0, 0, 0, 0])
 bp = properties()
 bc = boundary_conditions(load=np.array([[0, -1]]))
 analytical_solution = bc.concentrated_load[0][1]/(6*bp.young*bp.inertia) * \
-    np.array([-1, 3, 0, 0])
+    np.array([0, 0, 3, -1])
 mesh = mesh_1D(mesh_n=10)
 curve_parent = poly(a=[0, 0, 0, 0])
 curve_child = poly(a=analytical_solution)
@@ -74,10 +75,10 @@ u1 = beam.u(diff='x1')
 u2 = beam.u(diff='x2')
 plt.scatter(beam.mesh.x_p, u[0], label=r'$u_1$')
 plt.scatter(beam.mesh.x_p, u[1], label=r'$u_2$')
-plt.plot(beam.mesh.x_p, u[0], label=r'$u_1$')
-plt.plot(beam.mesh.x_p, u[1], label=r'$u_2$')
-# plt.plot(abq_x, abq_u1, label=r'Abaqus $u_1$')
-# plt.plot(abq_x, abq_u2, label=r'Abaqus $u_2$')
+plt.plot(beam.mesh.x_p, u[0])
+plt.plot(beam.mesh.x_p, u[1])
+plt.plot(abq_x, abq_u1, label=r'Abaqus $u_1$')
+plt.plot(abq_x, abq_u2, label=r'Abaqus $u_2$')
 plt.title('Displacement diff')
 plt.legend()
 

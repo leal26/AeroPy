@@ -26,7 +26,7 @@ strain_list = analytical_solution*np.linspace(0, 2, n)
 strain_matrix = np.array(list(zip(strain_list, strain_list)))
 strain_x = np.linspace(0, 1, n)
 strain_x = np.array(list(zip(strain_list, strain_x)))
-energy, residual = beam.sweep_geometries(strain_matrix, strain_x)
+energy, residual = beam.sweep_strains(strain_matrix, strain_x)
 
 print(beam.find_stable())
 fig = plt.figure()
