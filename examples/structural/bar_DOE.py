@@ -35,7 +35,7 @@ strain_matrix = np.array(list(zip(problem.domain['a1'],
 strain_x = np.array(list(zip(0*np.ones(n*n),
                              0.5*np.ones(n*n),
                              1*np.ones(n*n))))
-energy, residual = beam.sweep_geometries(strain_matrix, strain_x, (n, n))
+energy, residual = beam.sweep_strains(strain_matrix, strain_x, (n, n))
 
 fig = plt.figure()
 print('strain', strain_matrix)
