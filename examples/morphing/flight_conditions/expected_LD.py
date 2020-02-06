@@ -44,7 +44,7 @@ C172 = pickle.load(open('c172_2.p', 'rb'))
 
 data = {}
 states = ['nonmorphed', 'morphed']
-concepts = ['glider', 'NACA0012', 'NACA4415', 'NACA641212']
+concepts = ['NACA0012', 'NACA4415', 'NACA641212','glider']
 for state in states:
     data[state] = {}
     for concept in concepts:

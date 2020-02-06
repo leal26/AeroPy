@@ -46,8 +46,8 @@ print(np.shape(data_aoa))
 C172.pdf_aoa = KernelDensity(kernel='gaussian', bandwidth=0.01, algorithm='ball_tree').fit(data_aoa)
 
 data = {}
-states = ['nonmorphed']
-concepts = ['glider', 'NACA0012', 'NACA4415', 'NACA641212']
+states = ['nonmorphed', 'morphed']
+concepts = ['NACA0012', 'NACA4415', 'NACA641212', 'glider']
 for state in states:
     ranges = pickle.load(open('./'+state+'/'+'ranges_aoa.p', 'rb'))
     data[state] = {}
@@ -65,5 +65,5 @@ for state in states:
             velocity = data[:,1]
             cl = data[:,2]
             LD_ratio = data[:,3]
-            print(state, concept, max(LD_ratio.ravel()), expected_LD(aoa, velocity, cl, LD_ratio, C172))
+            print(state, concept, range_i[36], max(range_i[~np.isnan(range_i)]), expected_value(aoa, velocity, cl, range_i, C172))
 print(velocity[36])

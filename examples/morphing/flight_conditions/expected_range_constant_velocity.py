@@ -33,15 +33,15 @@ def expected_value(alpha, velocity, cl, metric, airFrame):
         expected_value += metric[0]
         pdfs.append(pdf[0])
     total_pdf = sum(pdfs)
-    print(expected_value, total_pdf)
+    # print(expected_value, total_pdf)
     expected_value = expected_value/len(airFrame.samples)
     return(expected_value)
     
 C172 = pickle.load(open('c172_2.p', 'rb'))
 
 data = {}
-states = ['nonmorphed']
-concepts = ['glider', 'NACA0012', 'NACA4415', 'NACA641212']
+states = ['nonmorphed', 'morphed']
+concepts = ['NACA0012', 'NACA4415', 'NACA641212', 'glider']
 for state in states:
     ranges = pickle.load(open('./'+state+'/'+'ranges_velocity.p', 'rb'))
     data[state] = {}
@@ -50,14 +50,16 @@ for state in states:
             mat =  scipy.io.loadmat('./'+state+'/'+ state + '_' + concept)
             aoa = mat['aoa'][0]
             velocity = mat['V'][0]
+            print(velocity[-1])
             cl = mat['CL'][0]
             range_i = ranges[concept]
-            print(state, concept, range_i[36], expected_value(aoa, velocity, cl, range_i, C172))
+            print(state, concept, range_i[-1], expected_value(aoa, velocity, cl, range_i, C172))
         elif state == 'morphed':
             data = np.loadtxt('./'+state + '/' + state + '_' + concept + '.txt')
             aoa = data[:,0]
             velocity = data[:,1]
+            print(velocity[-1])
             cl = data[:,2]
             LD_ratio = data[:,3]
-            print(state, concept, max(LD_ratio.ravel()), expected_LD(aoa, velocity, cl, LD_ratio, C172))
-print(velocity[36])
+            range_i = ranges[concept]
+            print(state, concept, range_i[-1], expected_value(aoa, velocity, cl, range_i, C172))

@@ -1,6 +1,6 @@
-from aeropy.geometry.parametric import poly
-from aeropy.structural.stable_solution import (structure, mesh_1D, properties,
-                                               boundary_conditions)
+from aeropy.geometry.parametric import polynomial
+from aeropy.structural.stable_solution import (properties, boundary_conditions)
+from aeropy.structural.shell import shell
 from aeropy.xfoil_module import output_reader
 
 import matplotlib.pyplot as plt
@@ -23,12 +23,10 @@ bc = boundary_conditions(load=np.array([[0, -1], ]))
 EB_solution = bc.concentrated_load[0][1]/(6*bp.young*bp.inertia) * \
     np.array([0, 0, 3, -1])
 
-mesh = mesh_1D(mesh_n=11, alpha=[1, 1],
-               alpha_nodes=[0, 1])
-curve_parent = poly(a=[0, 0, 0, 0])
-curve_child = poly(a=EB_solution)
+curve_parent = polynomial(a=[0, 0, 0, 0])
+curve_child = polynomial(a=EB_solution)
 
-beam = structure(curve_parent, curve_child, mesh, bp, bc)
+beam = shell(curve_parent, curve_child, bp, bc)
 beam.calculate_position()
 eulerBernoulle = beam.r_c
 

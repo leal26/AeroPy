@@ -1,8 +1,97 @@
 import math
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy import integrate, optimize
 
+class polynomial():
+    """class for a polynomial function
+    """
 
+    def __init__(self, a=[0, -math.sqrt(3)/3, math.sqrt(3)/3, 0], chord = None,
+                 color = 'k'):
+        self.a = a
+        self.chord = chord
+        self.color = color
+
+    def x1(self, x1, diff=None):
+        if diff is None:
+            return x1
+        elif diff == 'x1':
+            return np.ones(len(x1))
+        elif diff == 'theta1':
+            dr = self.r(x1, diff='x1')
+            return 1/np.einsum('ij,ij->i',dr, dr)
+
+    def x2(self, x1, diff=None):
+        return np.zeros(len(x1))
+
+    def x3(self, x1, diff=None, a=None):
+        """ z2 (checked)"""
+        if a is None:
+            a = self.a
+        if diff is None:
+            return(a[3]*x1**3 + a[2]*x1**2 + a[1]*x1 + a[0])
+        elif diff == 'x1':
+            return(3*a[3]*x1**2 + 2*a[2]*x1 + a[1])
+        elif diff == 'x11':
+            return(6*a[3]*x1 + 2*a[2])
+        elif diff == 'x111':
+            return(6*a[3])
+
+    def basis(self, x1 = None):
+        if x1 is None:
+            x1 = self.x1_grid
+        self.a1 = np.array([self.x1(x1, 'x1')*self.x1(x1, 'theta1'),
+                           [0]*len(x1),
+                           self.x3(x1, 'x1')*self.x1(x1, 'theta1')]).T
+        self.a2 = np.array([[0,1,0],]*len(x1))
+        self.a3 = np.cross(self.a1, self.a2)
+
+    def metric_tensor(self):
+        self.A = np.array([[np.einsum('ij,ij->i',self.a1, self.a1),
+                            np.einsum('ij,ij->i',self.a1, self.a3)],
+                           [np.einsum('ij,ij->i',self.a3, self.a1),
+                            np.einsum('ij,ij->i',self.a3, self.a3)]])
+
+    def r(self, x1, diff=None):
+        if type(x1) == float:
+            x1 = np.array([x1])
+        output = np.array([self.x1(x1, diff),
+                           self.x2(x1, diff),
+                           self.x3(x1, diff)]).T
+        if diff == 'theta1':
+            output*=self.x1(x1, 'theta1')
+        return (output)
+
+    def arclength(self, chord = None):
+        def integrand(x1):
+            dr = self.r(x1, 'x1')
+            return np.sqrt(np.inner(dr, dr))
+        if chord is None:
+            chord = self.chord
+        return integrate.quad(integrand, 0, chord)
+
+    def calculate_x1(self, length_target):
+        def f(c_c):
+            length_current, err = self.arclength(c_c)
+            return abs(target - length_current)
+
+        x1 = []
+        for target in length_target:
+            x1.append(optimize.minimize(f, target).x[0])
+        self.x1_grid = np.array(x1)
+
+    def plot(self, basis=False):
+        r = self.r(self.x1_grid)
+
+        plt.plot(r[:,0], r[:,2], self.color)
+        if basis:
+            plt.quiver(r[:,0], r[:,2],
+                       self.a1[:,0], self.a1[:,2],
+                       angles='xy', color = self.color, scale_units='xy')
+            plt.quiver(r[:,0], r[:,2],
+                       self.a3[:,0], self.a3[:,2],
+                       angles='xy', color = self.color, scale_units='xy')
 class poly():
     """class for a polynomial function
     """
