@@ -49,6 +49,8 @@ class properties():
         dimensions = [width, height]"""
         self.young = young
         self.poisson = poisson
+        self.dimensions = dimensions
+        self.length = 1
 
         if crosssection == 'square':
             self.area = dimensions[0]*dimensions[1]
@@ -58,15 +60,54 @@ class properties():
 
 
 class boundary_conditions():
-    def __init__(self, load=np.array([[10000, 0], ]), load_x=[1]):
-        self.concentrated_load = load
+    def __init__(self, concentrated_load=np.array([[0, 0, 0], ]), load_x=[1],
+                       distributed_load = 0):
+        self.concentrated_load = concentrated_load
         self.concentrated_x = load_x
-        self.concentrated_n = len(load)
+        self.concentrated_n = len(concentrated_load)
         self.distributed_load = None
 
-        if len(load) != len(load_x):
+        self.distributed_load = distributed_load
+
+        if len(concentrated_load) != len(load_x):
             raise Exception('load values and x lists have to match')
 
+class euler_bernouille():
+    def __init__(self, properties, load, load_type, geometry, x = np.linspace(0,1)):
+        self.properties = properties
+        self.load = load
+        self.load_type = load_type
+        self.x = x
+        self.g = geometry
+
+    def analytical_solutions(self):
+        if self.load_type == 'concentrated':
+            bp = self.properties
+            self.solution = self.load/(6*p.young*p.inertia) * \
+                            np.array([0, 0, 3, -1])
+        elif self.load_type == 'distributed':
+            bp = self.properties
+            self.solution = self.load/(24*p.young*p.inertia) * \
+                            np.array([0, -bp.length**2, -bp.length, 1])
+
+    def free_energy(self):
+        bp = self.properties
+        if self.load_type == 'concentrated':
+            raise NotImplementedError
+        elif self.load_type == 'distributed':
+            ddu = self.g.x3(x, 'x11')
+            u = self.g.x3(x)
+            self.phi = bp.young*p.inertia/2*ddu + self.load*u
+
+    def strain_energy(self):
+        self.U = np.trapz(self.phi, self.x)
+
+    def work(self):
+        if self.load_type == 'concentrated':
+            self.W = self.load*u
+
+    def residual(self):
+        self.R = self.U - self.W
 
 class structure():
     def __init__(self, geometry_parent, geometry_child, mesh, properties,

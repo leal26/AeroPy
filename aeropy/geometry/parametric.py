@@ -7,9 +7,9 @@ class polynomial():
     """class for a polynomial function
     """
 
-    def __init__(self, a=[0, -math.sqrt(3)/3, math.sqrt(3)/3, 0], chord = None,
+    def __init__(self, D=[0, -math.sqrt(3)/3, math.sqrt(3)/3, 0], chord = None,
                  color = 'k'):
-        self.a = a
+        self.D = D
         self.chord = chord
         self.color = color
 
@@ -18,50 +18,109 @@ class polynomial():
             return x1
         elif diff == 'x1':
             return np.ones(len(x1))
+        elif diff == 'x11':
+            return np.zeros(len(x1))
+        elif diff == 'theta3' or diff == 'theta33':
+            return np.zeros(len(x1))
         elif diff == 'theta1':
             dr = self.r(x1, diff='x1')
             return 1/np.einsum('ij,ij->i',dr, dr)
+        elif diff == 'theta11':
+            return -self.x1(x1, 'theta1')**4*self.x3(x1, 'x1')*self.x3(x1, 'x11')
 
     def x2(self, x1, diff=None):
         return np.zeros(len(x1))
 
-    def x3(self, x1, diff=None, a=None):
+    def x3(self, x1, diff=None, D=None):
         """ z2 (checked)"""
-        if a is None:
-            a = self.a
+        if D is None:
+            D = self.D
         if diff is None:
-            return(a[3]*x1**3 + a[2]*x1**2 + a[1]*x1 + a[0])
+            return(D[3]*x1**3 + D[2]*x1**2 + D[1]*x1 + D[0])
         elif diff == 'x1':
-            return(3*a[3]*x1**2 + 2*a[2]*x1 + a[1])
+            return(3*D[3]*x1**2 + 2*D[2]*x1 + D[1])
         elif diff == 'x11':
-            return(6*a[3]*x1 + 2*a[2])
+            return(6*D[3]*x1 + 2*D[2])
         elif diff == 'x111':
-            return(6*a[3])
+            return(6*D[3])
+        elif diff == 'theta3':
+            return(np.zeros(len(x1)))
 
-    def basis(self, x1 = None):
+    def r(self, x1 = None, diff=None):
         if x1 is None:
             x1 = self.x1_grid
-        self.a1 = np.array([self.x1(x1, 'x1')*self.x1(x1, 'theta1'),
-                           [0]*len(x1),
-                           self.x3(x1, 'x1')*self.x1(x1, 'theta1')]).T
-        self.a2 = np.array([[0,1,0],]*len(x1))
-        self.a3 = np.cross(self.a1, self.a2)
-
-    def metric_tensor(self):
-        self.A = np.array([[np.einsum('ij,ij->i',self.a1, self.a1),
-                            np.einsum('ij,ij->i',self.a1, self.a3)],
-                           [np.einsum('ij,ij->i',self.a3, self.a1),
-                            np.einsum('ij,ij->i',self.a3, self.a3)]])
-
-    def r(self, x1, diff=None):
-        if type(x1) == float:
-            x1 = np.array([x1])
-        output = np.array([self.x1(x1, diff),
-                           self.x2(x1, diff),
-                           self.x3(x1, diff)]).T
+        else:
+            if type(x1) == float:
+                x1 = np.array([x1])
         if diff == 'theta1':
-            output*=self.x1(x1, 'theta1')
+            output = np.array([self.x1(x1, 'x1'),
+                               self.x2(x1, 'x1'),
+                               self.x3(x1, 'x1')]).T
+            output = np.einsum('ij,i->ij',output, self.x1(x1, 'theta1'))
+        else:
+            output = np.array([self.x1(x1, diff),
+                               self.x2(x1, diff),
+                               self.x3(x1, diff)]).T
+            self.position = output
         return (output)
+
+    def basis(self, x1 = None, diff=None):
+        if x1 is None:
+            x1 = self.x1_grid
+
+        if diff is None:
+            self.a = np.zeros([3,  len(x1), 3])
+            self.a[0,:,:] = np.array([self.x1(x1, 'x1')*self.x1(x1, 'theta1'),
+                               [0]*len(x1),
+                               self.x3(x1, 'x1')*self.x1(x1, 'theta1')]).T
+            self.a[1,:,:]  = np.array([[0,1,0],]*len(x1))
+            self.a[2,:,:]  = np.cross(self.a[0,:,:], self.a[1,:,:])
+
+        elif diff == 'theta':
+            # Most components are null
+            self.da = np.zeros([3,3,len(x1),3])
+            #  a1 diff theta1
+            self.da[0,0,:,:] = np.einsum('ij,i->ij', self.r(x1, 'x11'), self.x1(x1, 'theta1')**2) + \
+                               np.einsum('ij,i->ij', self.r(x1, 'theta1'), self.x1(x1, 'theta11'))
+            #  a3 diff theta1
+            self.da[0,2,:,:] = np.einsum('ij,i->ij', self.r(x1, 'x11'), self.x1(x1, 'theta1')**2) + \
+                               np.einsum('ij,i->ij', self.r(x1, 'theta3'), self.x1(x1, 'theta33'))
+
+    def christoffel(self, i, j, k, order=1):
+        if order == 1:
+            gik_j = self.dA[i,k,j]
+            gjk_i = self.dA[j,k,i]
+            gij_k = self.dA[i,j,k]
+            return .5*(gik_j + gjk_i - gij_k)
+        elif order == 2:
+            raise NotImplementedError
+
+    def metric_tensor(self, diff = None):
+
+        if diff is None:
+            self.A = np.zeros([3,3,len(self.x1_grid)])
+            for i in range(3):
+                for j in range(3):
+                    self.A[i,j] = np.einsum('ij,ij->i',self.a[i,:], self.a[j,:])
+
+        elif diff == 'theta':
+            self.dA = np.zeros([3,3,3,len(self.x1_grid)])
+            for i in range(3):
+                for j in range(3):
+                        for k in range(3):
+                            self.dA[i,j,k] = np.einsum('ij,ij->i',self.da[i,k,:],
+                                                        self.a[j,:]) + \
+                                             np.einsum('ij,ij->i',self.a[i,:],
+                                                        self.da[j,k,:])
+
+    def curvature_tensor(self):
+        self.B = np.zeros([2,2,len(self.x1_grid)])
+        for alpha in range(2):
+            for beta in range(2):
+                self.B[alpha, beta] = self.christoffel(alpha, beta, 2)
+
+
+
 
     def arclength(self, chord = None):
         def integrand(x1):
@@ -87,10 +146,10 @@ class polynomial():
         plt.plot(r[:,0], r[:,2], self.color)
         if basis:
             plt.quiver(r[:,0], r[:,2],
-                       self.a1[:,0], self.a1[:,2],
+                       self.a[0,:,0], self.a[0,:,2],
                        angles='xy', color = self.color, scale_units='xy')
             plt.quiver(r[:,0], r[:,2],
-                       self.a3[:,0], self.a3[:,2],
+                       self.a[2,:,0], self.a[2,:,2],
                        angles='xy', color = self.color, scale_units='xy')
 class poly():
     """class for a polynomial function

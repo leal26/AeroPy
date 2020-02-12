@@ -9,20 +9,15 @@ import matplotlib.cm as cm
 import numpy as np
 
 bp = properties()
-# bc = boundary_conditions(concentrated_load=np.array([[0, 0, -1], ]))
-bc = boundary_conditions(distributed_load=1)
 
-# Define parent and child geometries
-straight = np.array([0, 0, 0, 0])
-eulerBernoulle = euler_bernouille()
 chord_parent = 1
 
-curve_parent = polynomial(np.copy(straight), chord_parent, color = 'b')
-curve_child = polynomial(np.copy(eulerBernoulle), color = 'g')
+curve_child = polynomial([0, 0, 0, 0], color = 'g')
 
-# Define shell
-beam = shell(curve_parent, curve_child, bp, bc)
+x1 = np.linspace(0, 1, 5)
+eulerBernoulle = euler_bernouille(bp, 1, 'distributed', curve_child, x1)
 
+BRAKE
 # Kinematics
 beam.calculate_chord()
 theta_1 = np.linspace(0, 1, 10)
