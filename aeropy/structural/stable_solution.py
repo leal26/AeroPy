@@ -72,42 +72,65 @@ class boundary_conditions():
         if len(concentrated_load) != len(load_x):
             raise Exception('load values and x lists have to match')
 
-class euler_bernouille():
-    def __init__(self, properties, load, load_type, geometry, x = np.linspace(0,1)):
+class euler_bernoulle():
+    def __init__(self, properties, load, load_type, geometry,
+                 x = np.linspace(0,1), boundaries = {'x':[], 'u':[]}):
         self.properties = properties
         self.load = load
         self.load_type = load_type
-        self.x = x
         self.g = geometry
+        self.g.x1_grid = x
+        self.boundaries = boundaries
 
     def analytical_solutions(self):
         if self.load_type == 'concentrated':
             bp = self.properties
-            self.solution = self.load/(6*p.young*p.inertia) * \
+            self.g.D = self.load/(6*bp.young*bp.inertia) * \
                             np.array([0, 0, 3, -1])
         elif self.load_type == 'distributed':
             bp = self.properties
-            self.solution = self.load/(24*p.young*p.inertia) * \
-                            np.array([0, -bp.length**2, -bp.length, 1])
+            c2 = 6*(bp.length**2)*self.load/(24*bp.young*bp.inertia)
+            c3 = -4*(bp.length)*self.load/(24*bp.young*bp.inertia)
+            c4 = (1)*self.load/(24*bp.young*bp.inertia)
+            self.g.D = np.array([0, 0, c2, c3, c4])
 
     def free_energy(self):
         bp = self.properties
         if self.load_type == 'concentrated':
             raise NotImplementedError
         elif self.load_type == 'distributed':
-            ddu = self.g.x3(x, 'x11')
-            u = self.g.x3(x)
-            self.phi = bp.young*p.inertia/2*ddu + self.load*u
+            ddu = self.g.x3(self.g.x1_grid, 'x11')
+            self.phi = bp.young*bp.inertia/2*ddu**2
 
     def strain_energy(self):
-        self.U = np.trapz(self.phi, self.x)
+        self.U = np.trapz(self.phi, self.g.x1_grid)
 
     def work(self):
+        u = self.g.x3(self.g.x1_grid)
         if self.load_type == 'concentrated':
-            self.W = self.load*u
+            self.W = self.load*u[-1]
+        elif self.load_type == 'distributed':
+            self.W = np.trapz(self.load*u, self.g.x1_grid)
 
     def residual(self):
         self.R = self.U - self.W
+
+    def minimum_potential(self, x0=[0,0,0]):
+        def to_optimize(x):
+            self.g.D = [0,0] + list(x)
+            self.work()
+            self.free_energy()
+            self.strain_energy()
+            self.residual()
+            return self.R
+
+        # With bounds
+        bounds = np.array(((-0.01,0.01),)*len(x0))
+
+        res = minimize(to_optimize, x0, bounds=bounds)
+        self.g.D = [0,0] + list(res.x)
+        self.R = res.fun
+        return(res.x, res.fun)
 
 class structure():
     def __init__(self, geometry_parent, geometry_child, mesh, properties,

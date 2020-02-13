@@ -35,14 +35,20 @@ class polynomial():
         """ z2 (checked)"""
         if D is None:
             D = self.D
+
+        if len(D) != 5:
+            D_temp = np.zeros(len(D))
+            D_temp[-len(D):] = D
+            D = D_temp
+
         if diff is None:
-            return(D[3]*x1**3 + D[2]*x1**2 + D[1]*x1 + D[0])
+            return(D[4]*x1**4 + D[3]*x1**3 + D[2]*x1**2 + D[1]*x1 + D[0])
         elif diff == 'x1':
-            return(3*D[3]*x1**2 + 2*D[2]*x1 + D[1])
+            return(4*D[4]*x1**3 + 3*D[3]*x1**2 + 2*D[2]*x1 + D[1])
         elif diff == 'x11':
-            return(6*D[3]*x1 + 2*D[2])
+            return(12*D[4]*x1**2 + 6*D[3]*x1 + 2*D[2])
         elif diff == 'x111':
-            return(6*D[3])
+            return(24*D[4]*x1 + 6*D[3])
         elif diff == 'theta3':
             return(np.zeros(len(x1)))
 
@@ -140,10 +146,17 @@ class polynomial():
             x1.append(optimize.minimize(f, target).x[0])
         self.x1_grid = np.array(x1)
 
-    def plot(self, basis=False):
+    def plot(self, basis=False, label=None, linestyle = '-', color = None):
         r = self.r(self.x1_grid)
 
-        plt.plot(r[:,0], r[:,2], self.color)
+        if color is None:
+            color = self.color
+
+        if label is None:
+            plt.plot(r[:,0], r[:,2], color, linestyle = linestyle, lw = 4)
+        else:
+            plt.plot(r[:,0], r[:,2], color, linestyle = linestyle, lw = 4,
+                     label=label)
         if basis:
             plt.quiver(r[:,0], r[:,2],
                        self.a[0,:,0], self.a[0,:,2],
@@ -151,6 +164,9 @@ class polynomial():
             plt.quiver(r[:,0], r[:,2],
                        self.a[2,:,0], self.a[2,:,2],
                        angles='xy', color = self.color, scale_units='xy')
+        plt.xlabel('x (m)')
+        plt.ylabel('y (m)')
+        
 class poly():
     """class for a polynomial function
     """
