@@ -86,7 +86,7 @@ class euler_bernoulle():
         if self.load_type == 'concentrated':
             bp = self.properties
             self.g.D = self.load/(6*bp.young*bp.inertia) * \
-                            np.array([0, 0, 3, -1])
+                            np.array([0, 0, 3, -1, 0])
         elif self.load_type == 'distributed':
             bp = self.properties
             c2 = 6*(bp.length**2)*self.load/(24*bp.young*bp.inertia)
@@ -94,13 +94,14 @@ class euler_bernoulle():
             c4 = (1)*self.load/(24*bp.young*bp.inertia)
             self.g.D = np.array([0, 0, c2, c3, c4])
 
+    def bending_strain(self):
+        print(self.g.x1_grid)
+        self.B = self.g.x3(self.g.x1_grid, 'x11')
+
     def free_energy(self):
         bp = self.properties
-        if self.load_type == 'concentrated':
-            raise NotImplementedError
-        elif self.load_type == 'distributed':
-            ddu = self.g.x3(self.g.x1_grid, 'x11')
-            self.phi = bp.young*bp.inertia/2*ddu**2
+        ddu = self.g.x3(self.g.x1_grid, 'x11')
+        self.phi = bp.young*bp.inertia/2*ddu**2
 
     def strain_energy(self):
         self.U = np.trapz(self.phi, self.g.x1_grid)

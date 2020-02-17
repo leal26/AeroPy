@@ -70,14 +70,14 @@ class shell():
 
     def free_energy(self):
         self.phi_M = (self.h/2)*np.einsum('ijklm,ijm,klm->m',self.C,self.gamma,self.gamma)
-        self.phi_B = (self.h/2)*np.einsum('ijklm,ijm,klm->m',self.C,self.rho,self.rho)
+        self.phi_B = (self.h**3/24)*np.einsum('ijklm,ijm,klm->m',self.C,self.rho,self.rho)
 
-        self.phi = self.phi_M + self.phi_B
+        self.phi =  self.phi_B + self.phi_M
 
 
     def strain_energy(self):
-        print('M', self.phi_M)
-        print('B', self.phi_B)
+        # print('M', self.phi_M)
+        # print('B', self.phi_B)
         self.U = self.width*np.trapz(self.phi, self.g_p.x1_grid)
 
     def work(self):

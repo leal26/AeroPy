@@ -24,7 +24,7 @@ class polynomial():
             return np.zeros(len(x1))
         elif diff == 'theta1':
             dr = self.r(x1, diff='x1')
-            return 1/np.einsum('ij,ij->i',dr, dr)
+            return 1/np.sqrt(np.einsum('ij,ij->i',dr, dr))
         elif diff == 'theta11':
             return -self.x1(x1, 'theta1')**4*self.x3(x1, 'x1')*self.x3(x1, 'x11')
 
@@ -37,8 +37,8 @@ class polynomial():
             D = self.D
 
         if len(D) != 5:
-            D_temp = np.zeros(len(D))
-            D_temp[-len(D):] = D
+            D_temp = np.zeros(5)
+            D_temp[:len(D)] = D
             D = D_temp
 
         if diff is None:
@@ -77,8 +77,8 @@ class polynomial():
         if diff is None:
             self.a = np.zeros([3,  len(x1), 3])
             self.a[0,:,:] = np.array([self.x1(x1, 'x1')*self.x1(x1, 'theta1'),
-                               [0]*len(x1),
-                               self.x3(x1, 'x1')*self.x1(x1, 'theta1')]).T
+                                     [0]*len(x1),
+                                      self.x3(x1, 'x1')*self.x1(x1, 'theta1')]).T
             self.a[1,:,:]  = np.array([[0,1,0],]*len(x1))
             self.a[2,:,:]  = np.cross(self.a[0,:,:], self.a[1,:,:])
 
@@ -113,7 +113,7 @@ class polynomial():
             self.dA = np.zeros([3,3,3,len(self.x1_grid)])
             for i in range(3):
                 for j in range(3):
-                        for k in range(3):
+                        for k  in range(3):
                             self.dA[i,j,k] = np.einsum('ij,ij->i',self.da[i,k,:],
                                                         self.a[j,:]) + \
                                              np.einsum('ij,ij->i',self.a[i,:],
@@ -124,9 +124,6 @@ class polynomial():
         for alpha in range(2):
             for beta in range(2):
                 self.B[alpha, beta] = self.christoffel(alpha, beta, 2)
-
-
-
 
     def arclength(self, chord = None):
         def integrand(x1):
@@ -166,7 +163,7 @@ class polynomial():
                        angles='xy', color = self.color, scale_units='xy')
         plt.xlabel('x (m)')
         plt.ylabel('y (m)')
-        
+
 class poly():
     """class for a polynomial function
     """
