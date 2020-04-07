@@ -70,7 +70,7 @@ beam.minimum_potential(x0=[0,0], input_function = lambda x: [0,0] + list(x),
 [x,y,z] = eulerBernoulle.T
 beam.g_p.plot(label='Parent')
 plt.plot(x,z, 'k', lw = 3, label='Euler-Bernoulle', linestyle = '-', zorder=0)
-beam.g_c.plot(label='Child', linestyle = '-')
+beam.g_c.plot(label='Child', linestyle = '--')
 
 
 

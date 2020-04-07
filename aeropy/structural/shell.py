@@ -24,6 +24,7 @@ class shell():
         self.ndim = 2
         self.bc = bc
         self.properties = properties
+        self.arc_length = self.g_p.arclength()[0]
 
     def kinematics_p(self, x1):
         self.g_p.basis(x1)
@@ -89,46 +90,33 @@ class shell():
         # print('B', self.phi_B)
         self.U = self.width*np.trapz(self.phi, self.theta1)
 
-    def work(self, steps = False):
+    def work(self):
         energy = 0
         for i in range(self.bc.concentrated_n):
+            # determine displacement of the tip
             theta1 = self.g_p.arclength(self.bc.concentrated_x[i])[0]
-            # print('t', theta1)
             x1_c = np.array(self.g_c.calculate_x1([theta1], output = True))
-            # print('x', x1_c)
             u = self.g_c.r(x1_c) - self.g_p.r(np.array([self.bc.concentrated_x[i]]))
-            # print('displacement', u)
 
-            # print(u)
-            # print(theta1, type(theta1))
+            # determine angle a tthe tip
             dydx = self.g_c.x3(theta1, diff='x1')
-            phi = math.atan2(0.001*dydx, 0.001)
-            # print(phi, math.cos(phi),math.cos(phi)*math.cos(phi), math.cos(phi)*math.sin(phi))
-            loads = [0,0,0]
+            phi = math.atan2(-.001*dydx,0.001)
+
+            # Calculating components of load
             load_normal = self.bc.concentrated_load[i][2]*math.cos(phi) + self.bc.concentrated_load[i][0]*math.sin(phi)
+            loads = [0,0,0]
             loads[0] = -load_normal*math.sin(phi)
             loads[2] = load_normal*math.cos(phi)
 
+            # Calculating energy
             energy_u  = loads[0] * u[0][0]
             energy_w = loads[2] * u[0][2]
-
-            for j in range(3):
-                if steps:
-                    # energy = self.W0 + .5*(self.load0[j] + loads[j])*(u[i][j]-self.u0[i][j])
-                    # print(self.W0, loads[j], self.load0[j], u[i][j], self.u0[i][j])
-                    energy += self.W0 + .5*(self.bc.concentrated_load[i][j] + self.load0[j])*(u[i][j]-self.u0[i][j])
-                    # print(energy, energy_0)
-                else:
-                    energy += self.bc.concentrated_load[i][j]*u[i][j]
-                    # energy += ( loads[j])*(u[i][j])
-            energy = energy_w - energy_u
-            energy_w = self.bc.concentrated_load[i][2]*u[0][2]*math.cos(phi)*math.cos(phi)
-            energy_u = self.bc.concentrated_load[i][2]*u[0][0]*math.cos(phi)*math.sin(phi)
-            energy = energy_w + energy_u
-            print('energy', energy_u, energy_w)
+            energy += energy_w + energy_u
+            # energy += self.bc.concentrated_load[i][2]*u[0][2]
 
         self.W = energy
         self.u = u
+
     def residual(self):
         self.R = self.U - self.W
 
@@ -141,7 +129,7 @@ class shell():
         self.g_p.curvature_tensor()
 
     def update_child(self, steps=False):
-        self.calculate_chord(bounds = self.g_c.bounds)
+        self.calculate_chord(length_target = self.arc_length, bounds = self.g_c.bounds)
         self.g_c.calculate_x1(self.theta1, bounds = self.g_c.bounds)
         self.g_c.basis()
         self.g_c.metric_tensor()
@@ -155,16 +143,15 @@ class shell():
         self.CauchyGreen()
         self.free_energy()
         self.strain_energy()
-        self.work(steps)
+        self.work()
         self.residual()
 
     def minimum_potential(self, x0=[0,0], input_function = None,
-                          bounds = np.array([[-0.01,0.01], [-0.01,0.01]]),
-                          steps = False):
+                          bounds = np.array([[-0.01,0.01], [-0.01,0.01]])):
         def to_optimize(n_x):
             x = (bounds[:,1] - bounds[:,0])*n_x + bounds[:,0]
             self.g_c.D = input_function(x)
-            self.update_child(steps=steps)
+            self.update_child()
             print(self.u[0], self.R) #, self.W, self.U)
             return self.R
 
@@ -178,19 +165,7 @@ class shell():
         x = (bounds[:,1] - bounds[:,0])*res.x + bounds[:,0]
         self.g_c.D = input_function(x)
         self.R = res.fun
-        self.update_child(steps=steps)
-        print('inside', x, self.W)
-        if steps:
-            # Updating part
-            theta1 = self.g_p.arclength(self.bc.concentrated_x[0])[0]
-            # print('t', theta1)
-            x1_c = np.array(self.g_c.calculate_x1([theta1], output = True))
-            # print('x', x1_c)
-            u = self.g_c.r(x1_c) - self.g_p.r(np.array([self.bc.concentrated_x[0]]))
-
-            self.u0 = u
-            self.W0 = self.W
-            self.load0 = self.bc.concentrated_load[0]
+        self.update_child()
         return(x, res.fun)
 
     def stepped_loading(self, x0=[0,0], input_function = None,
@@ -216,10 +191,10 @@ class shell():
             print(self.bc.concentrated_load)
             xi, residual = self.minimum_potential(x0 = x0,
                                                   input_function = input_function,
-                                                  bounds = bounds, steps = True)
+                                                  bounds = bounds)
             coefficients[i,:] = xi
             results[i,0] = load_i
-            results[i,1] = self.u0[0][2]
+            results[i,1] = self.u[0][2]
             arc_lengths[i,0] = load_i
             arc_lengths[i,1] = self.g_c.arclength(1)[0]
             x0 = xi
