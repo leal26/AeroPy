@@ -1,4 +1,4 @@
-from aeropy.geometry.parametric import polynomial
+from aeropy.geometry.parametric import CoordinateSystem
 from aeropy.structural.stable_solution import (properties, boundary_conditions)
 from aeropy.structural.shell import shell
 from aeropy.xfoil_module import output_reader
@@ -19,35 +19,64 @@ abaqus_data = pickle.load(open('neutral_line.p', 'rb'))
 
 # Beam properties
 bp = properties()
-bc = boundary_conditions(load=np.array([[0, -1], ]))
-EB_solution = bc.concentrated_load[0][1]/(6*bp.young*bp.inertia) * \
+bc = boundary_conditions(concentrated_load=np.array([[0.0, 0.0, -1.0], ]))
+EB_solution = bc.concentrated_load[0][2]/(6*bp.young*bp.inertia) * \
     np.array([0, 0, 3, -1])
 
-curve_parent = polynomial(a=[0, 0, 0, 0])
-curve_child = polynomial(a=EB_solution)
+curve_parent = CoordinateSystem.polynomial(D=[0, 0, 0, 0], chord = 1, color = 'b')
+curve_child = CoordinateSystem.polynomial(D=EB_solution, chord = 1, color  ='0.5')
 
 beam = shell(curve_parent, curve_child, bp, bc)
-beam.calculate_position()
-eulerBernoulle = beam.r_c
+chord_bounds = [[0., 2],]
+beam.g_p.bounds = chord_bounds
+beam.g_c.bounds = chord_bounds
+beam.theta1 = np.linspace(0, beam.g_p.arclength()[0], 10)
+beam.update_parent()
+beam.update_child()
+eulerBernoulle = beam.g_c.r(beam.g_c.x1_grid)
 
 # Find stable solution
 bounds = np.array(((-0.02,0.02),
                   (-0.02,0.02)))
 
-x,fun = beam.find_stable(beam.g_c.a[2:4], bounds=bounds, input_type = 'Geometry',
-                 loading_condition='plane_stress',
-                 input_function = input_function)
-beam.g_c.a = input_function(x)
-beam.mesh.mesh_child()
-beam.calculate_position()
-beam.strain()
-beam.stress(loading_condition='plane_stress')
 
-print('x', x)
-print('f', beam.opt_f)
-print('Residual', beam.residual(x, input_type = 'Geometry',
-                                loading_condition = 'plane_stress',
-                                input_function = input_function))
+beam.minimum_potential(x0=[0,0], input_function = lambda x: [0,0] + list(x),
+                       bounds = bounds)
+# coefficients, results, arc_length = beam.stepped_loading(x0=[0,0],
+#                                              input_function = lambda x: [0,0] + list(x),
+#                                              bounds = bounds)
+# print('arc_length')
+# print(arc_length)
+# plt.figure()
+# plt.scatter(-1*np.array(results[:,0]), -1*np.array(results[:,1]))
+# plt.plot([0, 1], [0, 0.00564])
+# plt.show()
+#
+# plt.figure()
+# plt.plot(arc_length[:,0], arc_length[:,1])
+# plt.show()
+
+# beam.g_c.a = input_function(x)
+# beam.mesh.mesh_child()
+# beam.calculate_position()
+# beam.strain()
+# beam.stress(loading_condition='plane_stress')
+#
+# print('x', x)
+# print('f', beam.opt_f)
+# print('Residual', beam.residual(x, input_type = 'Geometry',
+#                                 loading_condition = 'plane_stress',
+#                                 input_function = input_function))
+[x,y,z] = eulerBernoulle.T
+beam.g_p.plot(label='Parent')
+plt.plot(x,z, 'k', lw = 3, label='Euler-Bernoulle', linestyle = '-', zorder=0)
+beam.g_c.plot(label='Child', linestyle = '-')
+
+
+
+plt.scatter(abaqus_data['coord'][0:401:40,0], abaqus_data['coord'][0:401:40,1], c='g', label='FEA', edgecolors='k', zorder = 10)
+plt.legend()
+plt.show()
 
 # Plot beam results
 plt.figure()

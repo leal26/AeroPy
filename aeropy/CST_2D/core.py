@@ -42,10 +42,8 @@ def dxi_u(psi, Au, delta_xi, N1=0.5, N2=1):
     """Calculate upper derivate of xi for a given psi"""
     n = len(Au)-1
 
-    if N1 == 0.5 and N2 == 1:
-        diff = delta_xi/2.
-    else:
-        diff = delta_xi
+    xi_0 = CST(psi, 1, 0, Au, N1=N1, N2=N2)
+    diff = xi_0*((1-n-N2))
     for i in range(n+1):
         # print N1-1., N2-1.
         # print psi**(N1-1.), (1-psi)**(N2-1.)

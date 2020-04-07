@@ -10,27 +10,28 @@ import numpy as np
 import math
 
 bp = properties()
-bc = boundary_conditions(concentrated_load=np.array([[0, 0, -1], ]))
+bc = boundary_conditions(concentrated_load=np.array([[0, 0, -0.098], ]))
 # bc = boundary_conditions(distributed_load=1)
 
 # Define parent and child geometries
-straight = np.array([0, 0, 0, 0, 0])
-chord_parent = 1
+chord_parent = .4
 
-curve_parent = CoordinateSystem.polynomial(np.copy(straight), chord_parent, 'b')
-curve_child = CoordinateSystem.polynomial(np.array([0, 0, 0, 0, 0]), chord_parent, color = 'g')
-eulerBernoulle = euler_bernoulle(bp, bc.concentrated_load[0][2], 'concentrated',
-                                 curve_child)
-eulerBernoulle.analytical_solutions()
+curve_parent = CoordinateSystem.cylindrical([5], 5, chord = chord_parent, color = 'b')
+curve_child = CoordinateSystem.cylindrical([6], 6, chord = chord_parent, color = 'g')
 
 # Define shell
-beam = shell(curve_parent, eulerBernoulle.g, bp, bc)
+beam = shell(curve_parent, curve_child, bp, bc)
 
 # Kinematics
-beam.calculate_chord()
-beam.theta1 = np.linspace(0, 1, 10)
-beam.g_p.calculate_x1(beam.theta1)
-beam.g_c.calculate_x1(beam.theta1)
+bounds =  [[.001, beam.g_c.D[0]],]
+beam.calculate_chord(bounds = bounds)
+beam.theta1 = np.linspace(0, beam.g_p.arclength()[0], 10)
+beam.g_p.bounds = bounds
+beam.g_c.bounds = bounds
+print(beam.theta1)
+print('calculate x1')
+beam.g_p.calculate_x1(beam.theta1, bounds = bounds)
+beam.g_c.calculate_x1(beam.theta1, bounds = bounds)
 beam.g_p.basis()
 beam.g_c.basis()
 beam.g_p.metric_tensor()
@@ -63,6 +64,11 @@ beam.strain_energy()
 beam.work()
 beam.residual()
 
+print('lengths', beam.g_p.arclength(), beam.g_c.arclength())
+beam.g_p.plot(label='Parent', linestyle = '-', color = 'k')
+beam.g_c.plot(label='Child', linestyle = '--', color = '0.5')
+plt.legend()
+plt.show()
 # print(beam.g_c.D)
 
 # print('Parent vectors')
@@ -91,17 +97,17 @@ print('strain energy')
 print(beam.U)
 print(beam.W)
 print(beam.R)
-x, R = beam.minimum_potential()
+x, R = beam.minimum_potential(x0 = beam.g_p.D, bounds = [[.5*beam.g_p.D[0], 2*beam.g_p.D[0]],])
 print(x, R)
 plt.figure()
 beam.g_p.plot(label='Parent')
-beam.g_c.plot(label='Euler-Bernoulle', color = 'k')
-beam.g_c.D[2:] = x
+# beam.g_c.plot(label='Euler-Bernoulle', color = 'k')
+# beam.g_c.D[2:] = x
 beam.update_child()
 beam.g_c.plot(label='Minimum Potential', color = '.5', linestyle= '--')
 plt.legend()
 plt.show()
-# BRAKE
+BRAKE
 def DOE_function(inputs):
     beam.g_c.D[2] = inputs['D2']
     beam.g_c.D[3] = inputs['D3']

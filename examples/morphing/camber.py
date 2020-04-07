@@ -76,7 +76,7 @@ elif testing == 'structurally_consistent':
     # AC_u5 = 0.12840             #Adimensional
     
     # Passive shape coefficients for child
-    AC_u = [.25, .25, .25, .25, .25]
+    AC_u = [.25, .25, .25]
     
     # AC_u1 = 0.34468227138908186                #Adimensional
     # AC_u2 = 0.18125405377549103                 #Adimensional
@@ -84,7 +84,7 @@ elif testing == 'structurally_consistent':
     # AC_u4 = 0.2440815012119143                 #Adimensional
     # AC_u5 = 0.25724974995738387                 #Adimensional
     #Spar position for cruise (adiminesional because the chord will still be calculated)
-    psi_spars = [.2, .3, .5, .7, .9]
+    psi_spars =  [0.1, 0.2, 0.3]
 
     #==============================================================================
     # Calculate dependent coefficients

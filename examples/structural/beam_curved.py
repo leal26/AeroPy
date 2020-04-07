@@ -7,101 +7,64 @@ from optimization_tools.DOE import DOE
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
+import pickle
 import math
 
-bp = properties()
-bc = boundary_conditions(concentrated_load=np.array([[0, 0, -1], ]))
+
 # bc = boundary_conditions(distributed_load=1)
 
 # Define parent and child geometries
-straight = np.array([0, 0, 0, 0, 0])
 chord_parent = 1
+load = -1.0
+# Results from Abaqus
 
-curve_parent = CoordinateSystem.polynomial(np.copy(straight), chord_parent, 'b')
-curve_child = CoordinateSystem.polynomial(np.array([0, 0, 0, 0, 0]), chord_parent, color = 'g')
-eulerBernoulle = euler_bernoulle(bp, bc.concentrated_load[0][2], 'concentrated',
-                                 curve_child)
-eulerBernoulle.analytical_solutions()
+abaqus_x = [0, 0.050000664, 0.100002654, 0.150012404, 0.200025707, 0.250053465,
+            0.300086498, 0.350139558, 0.400199026, 0.450283021, 0.50037396,
+            0.550492764, 0.600618601, 0.650774479, 0.700936854, 0.751130462,
+            0.801329434, 0.851559758, 0.901793659, 0.952057898, 1.002323747]
+abaqus_y = [0, 0.001222659, 0.002391184, 0.006008377, 0.009577097, 0.015600263,
+            0.021580685, 0.030021306, 0.038424935, 0.049294505, 0.060132839,
+            0.073442832, 0.086727314, 0.102489136, 0.118231162, 0.136456192,
+            0.154667079, 0.175366625, 0.196057677, 0.219242975, 0.242425412]
+
+bp = properties()
+
+curve_parent = CoordinateSystem.polynomial([0,0,.25,0], chord_parent, 'b')
+
+bc = boundary_conditions(concentrated_load=np.array([[0, 0, load], ]),
+                         load_x = [chord_parent])
+curve_child = CoordinateSystem.polynomial([0,0,.25,0], chord_parent, color = '0.5')
 
 # Define shell
-beam = shell(curve_parent, eulerBernoulle.g, bp, bc)
+beam = shell(curve_parent, curve_child, bp, bc)
 
 # Kinematics
-beam.calculate_chord()
-beam.theta1 = np.linspace(0, 1, 10)
-beam.g_p.calculate_x1(beam.theta1)
-beam.g_c.calculate_x1(beam.theta1)
-beam.g_p.basis()
-beam.g_c.basis()
-beam.g_p.metric_tensor()
-beam.g_c.metric_tensor()
-beam.calculate_strains()
-# Calculate energy
-beam.g_p.basis(diff = 'theta')
-beam.g_c.basis(diff = 'theta')
-beam.g_p.metric_tensor(diff = 'theta')
-beam.g_c.metric_tensor(diff = 'theta')
-# print('parent')
-# print(beam.g_p.A)
-# print(beam.g_p.dA)
-# print('child')
-# print('a')
-# print(beam.g_c.a)
-# print('A')
-# print(beam.g_c.A)
-# print(beam.g_c.dA)
-beam.g_p.curvature_tensor()
-beam.g_c.curvature_tensor()
-beam.g_p.r()
-beam.g_c.r()
+chord_bounds = np.array([[0, 2*chord_parent],])
+beam.calculate_chord(bounds = chord_bounds)
+beam.theta1 = np.linspace(0, beam.g_p.arclength()[0], 10)
+beam.g_p.bounds = chord_bounds
+beam.g_c.bounds = chord_bounds
 
-
-beam.calculate_change_curvature()
-beam.CauchyGreen()
-beam.free_energy()
-beam.strain_energy()
-beam.work()
-beam.residual()
-
-# print(beam.g_c.D)
-
-# print('Parent vectors')
-# print(beam.g_p.A)
-# print('Child vector')
-# print(beam.g_c.A)
-# print('C')
-# print(beam.C)
-# print('rho')
-# print(beam.rho)
-# print('Child B')
-# print(beam.g_c.B)
-# print('Parent B')
-# print(beam.g_p.B)
-# print('All energy')
-# print(beam.phi)
-# print('Bending')
-# print(beam.phi_B)
-# print('Stretching')
-# print(beam.phi_M)
-# print('change of curvature')
-# print(beam.rho)
-# print('strain')
-# print(beam.gamma)
-print('strain energy')
-print(beam.U)
-print(beam.W)
-print(beam.R)
-x, R = beam.minimum_potential()
-print(x, R)
-plt.figure()
+beam.update_parent()
+# [-7E-05, .242,0.0014]
+# [0 ,.25,0]
+# coefficients, results = beam.stepped_loading(x0=[.25,0],
+#                                              input_function = lambda x: [0,0] + list(x),
+#                                              bounds = np.array([[0.1,0.4], [0,0.02]]))
+beam.minimum_potential(x0=[.25, 0], input_function = lambda x: [0,0] + list(x),
+                       bounds = np.array([[0.1,0.4], [0,0.02]]))
+# plt.figure()
+# plt.scatter(-1*np.array(results[:,0]), -1*np.array(results[:,1]))
+# plt.plot([0, 1], [0, 0.00757])
+# plt.show()
+print('Minimum D', beam.g_c.D, beam.R, beam.W, beam.U)
+# beam.g_p.plot(label='Parent', linestyle = '-', color = 'k')
 beam.g_p.plot(label='Parent')
-beam.g_c.plot(label='Euler-Bernoulle', color = 'k')
-beam.g_c.D[2:] = x
-beam.update_child()
-beam.g_c.plot(label='Minimum Potential', color = '.5', linestyle= '--')
+beam.g_c.plot(label='Child', linestyle = '--')
+plt.scatter(abaqus_x, abaqus_y, c='g', label='FEA', edgecolors='k', zorder = 10)
 plt.legend()
 plt.show()
-# BRAKE
+BRAKE
 def DOE_function(inputs):
     beam.g_c.D[2] = inputs['D2']
     beam.g_c.D[3] = inputs['D3']
