@@ -54,7 +54,7 @@ class properties():
 
         if crosssection == 'square':
             self.area = dimensions[0]*dimensions[1]
-            self.inertia = dimensions[0]*dimensions[1]**3/12.
+            self.inertia = (dimensions[0]*dimensions[1]**3)/12.
         if young < 0 or poisson < 0 or poisson > 1 or self.area <= 0:
             raise Exception('Material properties need to make sense')
 

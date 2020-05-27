@@ -375,53 +375,53 @@ def shape_parameter_study(filename, n=5, solver='gradient', deltaz=None,
 
         # # Tranlating in y
         # if translate:
-            # LE_x = min(data['x'])
-            # LE_index = data['x'].index(LE_x)
-            # LE_y = data['y'][LE_index]
-            for i in range(len(data['x'])):
-                data['y'][i] -= LE_y
+            # # LE_x = min(data['x'])
+            # # LE_index = data['x'].index(LE_x)
+            # # LE_y = data['y'][LE_index]
+            # for i in range(len(data['x'])):
+                # data['y'][i] -= LE_y
 
-        # plt.scatter(data['x'], data['y'])
-        # plt.show()
+        # # plt.scatter(data['x'], data['y'])
+        # # plt.show()
 
-        if rotate:
-            x_TE = (data['x'][0] + data['x'][-1])/2.
-            y_TE = (data['y'][0] + data['y'][-1])/2.
+        # if rotate:
+            # x_TE = (data['x'][0] + data['x'][-1])/2.
+            # y_TE = (data['y'][0] + data['y'][-1])/2.
 
-            # Rotating airfoil
-            theta_TE = math.atan(-y_TE/x_TE)
+            # # Rotating airfoil
+            # theta_TE = math.atan(-y_TE/x_TE)
 
-            # position trailing edge at the x-axis
-            processed_data = {'x': [], 'y': []}
-            for i in range(len(data['x'])):
-                x = data['x'][i]
-                y = data['y'][i]
-                c_theta = math.cos(theta_TE)
-                s_theta = math.sin(theta_TE)
-                x_rotated = c_theta*x - s_theta*y
-                y_rotated = s_theta*x + c_theta*y
-                processed_data['x'].append(x_rotated)
-                processed_data['y'].append(y_rotated)
-            data = processed_data
+            # # position trailing edge at the x-axis
+            # processed_data = {'x': [], 'y': []}
+            # for i in range(len(data['x'])):
+                # x = data['x'][i]
+                # y = data['y'][i]
+                # c_theta = math.cos(theta_TE)
+                # s_theta = math.sin(theta_TE)
+                # x_rotated = c_theta*x - s_theta*y
+                # y_rotated = s_theta*x + c_theta*y
+                # processed_data['x'].append(x_rotated)
+                # processed_data['y'].append(y_rotated)
+            # data = processed_data
 
-        # Reduce number of points
-        if filter_size != 1:
-            processed_data = {'x': [], 'y': []}
-            for i in range(len(data['x'])):
-                for key in data.keys():
-                    if i % filter_size == 0:
-                        processed_data[key].append(data[key][i])
-                    elif i == len(data['x']) - 1:
-                        processed_data[key].append(data[key][i])
-            data = processed_data
+        # # Reduce number of points
+        # if filter_size != 1:
+            # processed_data = {'x': [], 'y': []}
+            # for i in range(len(data['x'])):
+                # for key in data.keys():
+                    # if i % filter_size == 0:
+                        # processed_data[key].append(data[key][i])
+                    # elif i == len(data['x']) - 1:
+                        # processed_data[key].append(data[key][i])
+            # data = processed_data
 
-        for key in data.keys():
-            data[key] = list(reversed(data[key]))
+        # for key in data.keys():
+            # data[key] = list(reversed(data[key]))
 
-        deltaz = (data['y'][0] - data['y'][-1])/2.
+        # deltaz = (data['y'][0] - data['y'][-1])/2.
 
-        upper, lower = separate_upper_lower(data)
-        return upper, lower
+        # upper, lower = separate_upper_lower(data)
+        # return upper, lower
 
     def find_values(order, solver):
         bounds = [[0., 1.]] + order*[[0., 1.], ] + [[0., 1.]] + order*[[-1., 1.], ]

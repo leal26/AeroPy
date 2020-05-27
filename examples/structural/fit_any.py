@@ -7,7 +7,7 @@ import pickle
 def poly(x, c2, c3):
     return c2*x**2 + c3*x**3
 
-df = pd.read_excel('curved_data.xlsx', sheet_name = 'FEA (3D, c3=0.25)')
+df = pd.read_excel('curved_data.xlsx', sheet_name = 'FEA (3D, c3=0.25, F=-10)')
 
 skip_lines = 0 # -1 of what you think it should be
 

@@ -41,11 +41,11 @@ class shell():
             length_current, err = self.g_c.arclength(c_c)
             return abs(length_target - length_current)
         if length_target is None:
-            length_target, err = self.g_p.arclength()
+            length_target= self.arc_length
         if bounds is None:
-            self.g_c.chord = optimize.minimize(f, self.g_p.chord).x[0]
+            self.g_c.chord = optimize.minimize(f, self.g_c.chord).x[0]
         else:
-            self.g_c.chord = optimize.minimize(f, self.g_p.chord,
+            self.g_c.chord = optimize.minimize(f, self.g_c.chord,
                                                method='L-BFGS-B',
                                                bounds = bounds).x[0]
         # In case the calculated chord is really close to the original
@@ -57,6 +57,8 @@ class shell():
 
     def calculate_change_curvature(self):
         self.rho = -(self.g_c.B - self.g_p.B)
+        print('parent', self.g_p.B)
+        print('child', self.g_c.B)
         self.rho[1,1,:] = -self.properties.poisson*self.rho[0,0,:]
 
     def CauchyGreen(self):
@@ -67,13 +69,15 @@ class shell():
               are inverted (coordinate system assumed orthogonal)"""
         self.C = np.zeros([2,2,2,2,len(self.g_c.x1_grid)])
         c0 = self.properties.young/2/(1+self.properties.poisson)
+        A =  np.linalg.inv(self.g_c.A.T).T
+
         for alpha in range(2):
             for beta in range(2):
                 for gamma in range(2):
                     for eta in range(2):
-                        a1 = self.g_c.A[alpha, gamma]*self.g_c.A[beta, eta]
-                        a2 = self.g_c.A[alpha, eta]*self.g_c.A[beta, gamma]
-                        a3 = self.g_c.A[alpha, beta]*self.g_c.A[gamma, eta]
+                        a1 = A[alpha, gamma]*A[beta, eta]
+                        a2 = A[alpha, eta]*A[beta, gamma]
+                        a3 = A[alpha, beta]*A[gamma, eta]
                         c3 = (2*self.properties.poisson)/(1-self.properties.poisson)
                         self.C[alpha, beta, gamma, eta, :] = c0*(a1 + a2 + c3*a3)
                         # self.C[alpha, beta, gamma, eta, :] = self.properties.young
@@ -82,12 +86,26 @@ class shell():
         self.phi_M = (self.h/2)*np.einsum('ijklm,ijm,klm->m',self.C,self.gamma,self.gamma)
         self.phi_B = (self.h**3/24)*np.einsum('ijklm,ijm,klm->m',self.C,self.rho,self.rho)
 
+        # # print all terms of phi
+        # c0 = self.properties.young/(1+self.properties.poisson)/(1-self.properties.poisson)
+        # A =  np.linalg.inv(self.g_c.A.T).T
+        # print('a00', A[0,0]*A[0,0])
+        # for alpha in range(2):
+        #     for beta in range(2):
+        #         for gamma in range(2):
+        #             for eta in range(2):
+        #                 print(alpha+1, beta+1, gamma+1, eta+1)
+        #                 print(self.C[alpha, beta, gamma, eta, :]*self.rho[alpha, beta]*self.rho[gamma, eta])
+        # print(np.einsum('ijklm,ijm,klm->m',self.C,self.rho,self.rho))
         self.phi =  self.phi_B + self.phi_M
 
 
     def strain_energy(self):
         # print('M', self.phi_M)
         # print('B', self.phi_B)
+        print('U_theta1: ', self.width*np.trapz(self.phi, self.theta1))
+        print('U_g_p: ', self.width*np.trapz(self.phi, self.g_p.x1_grid))
+        print('U_g_c: ', self.width*np.trapz(self.phi, self.g_c.x1_grid))
         self.U = self.width*np.trapz(self.phi, self.theta1)
 
     def work(self):
@@ -111,8 +129,8 @@ class shell():
             # Calculating energy
             energy_u  = loads[0] * u[0][0]
             energy_w = loads[2] * u[0][2]
-            energy += energy_w + energy_u
-            # energy += self.bc.concentrated_load[i][2]*u[0][2]
+            # energy += energy_w + energy_u
+            energy += self.bc.concentrated_load[i][2]*u[0][2]
 
         self.W = energy
         self.u = u
@@ -129,7 +147,8 @@ class shell():
         self.g_p.curvature_tensor()
 
     def update_child(self, steps=False):
-        self.calculate_chord(length_target = self.arc_length, bounds = self.g_c.bounds)
+        self.calculate_chord(length_target = self.arc_length,
+                             bounds = self.g_c.bounds)
         self.g_c.calculate_x1(self.theta1, bounds = self.g_c.bounds)
         self.g_c.basis()
         self.g_c.metric_tensor()
@@ -152,7 +171,7 @@ class shell():
             x = (bounds[:,1] - bounds[:,0])*n_x + bounds[:,0]
             self.g_c.D = input_function(x)
             self.update_child()
-            print(self.u[0], self.R) #, self.W, self.U)
+            print(self.u, self.R) #, self.W, self.U)
             return self.R
 
         if input_function is None:
@@ -165,7 +184,14 @@ class shell():
         x = (bounds[:,1] - bounds[:,0])*res.x + bounds[:,0]
         self.g_c.D = input_function(x)
         self.R = res.fun
+
         self.update_child()
+
+        theta1 = self.g_p.arclength(self.bc.concentrated_x[0])[0]
+        x1_c = np.array(self.g_c.calculate_x1([theta1], output = True))
+        # if self.g_c.arc_length()[1] < 1e-3:
+        #     return(x, res.fun*100)
+        # else:
         return(x, res.fun)
 
     def stepped_loading(self, x0=[0,0], input_function = None,
@@ -185,10 +211,10 @@ class shell():
         print('loads', loads)
         for i in range(1,N):
             load_i = loads[i]
-            print('load', i, load_i, self.u0, self.W0, self.load0)
+            # print('load', i, load_i, self.u0, self.W0, self.load0)
             self.bc.concentrated_load[0][2] = load_i
-            print(load)
-            print(self.bc.concentrated_load)
+            # print(load)
+            # print(self.bc.concentrated_load)
             xi, residual = self.minimum_potential(x0 = x0,
                                                   input_function = input_function,
                                                   bounds = bounds)
@@ -196,7 +222,9 @@ class shell():
             results[i,0] = load_i
             results[i,1] = self.u[0][2]
             arc_lengths[i,0] = load_i
-            arc_lengths[i,1] = self.g_c.arclength(1)[0]
+            theta1 = self.g_p.arclength(self.bc.concentrated_x[0])[0]
+            x1_c = np.array(self.g_c.calculate_x1([theta1], output = True))
+            arc_lengths[i,1] = self.g_c.arclength(x1_c)[0]
             x0 = xi
             print(results)
             print('x0', x0)

@@ -151,16 +151,16 @@ class CoordinateSystem(object):
             #  a1 diff theta1
             self.da[0,0,:,:] = np.einsum('ij,i->ij', self.r(x1, 'x11'), self.x1(x1, 'theta1')**2) + \
                                np.einsum('ij,i->ij', self.r(x1, 'theta1'), self.x1(x1, 'theta11'))
-            #  a3 diff theta1
-            self.da[0,2,:,:] = np.einsum('ij,i->ij', self.r(x1, 'x11'), self.x1(x1, 'theta1')**2) + \
-                               np.einsum('ij,i->ij', self.r(x1, 'theta3'), self.x1(x1, 'theta33'))
 
     def christoffel(self, i, j, k, order=1):
         if order == 1:
             gik_j = self.dA[i,k,j]
             gjk_i = self.dA[j,k,i]
             gij_k = self.dA[i,j,k]
-            return .5*(gik_j + gjk_i - gij_k)
+            # print('dA', i,k,j, gik_j)
+            # print('dA', j,k,i, gjk_i)
+            # print('dA', i,j,k, gij_k)
+            return .5*(gik_j + gjk_i)# - gij_k)
         elif order == 2:
             raise NotImplementedError
 
@@ -186,6 +186,8 @@ class CoordinateSystem(object):
         self.B = np.zeros([2,2,len(self.x1_grid)])
         for alpha in range(2):
             for beta in range(2):
+                # print(alpha, beta)
+                # print(self.christoffel(alpha, beta, 2))
                 self.B[alpha, beta] = self.christoffel(alpha, beta, 2)
 
     def arclength(self, chord = None):
@@ -199,7 +201,7 @@ class CoordinateSystem(object):
                 return np.sqrt(np.inner(dr, dr)[0,0])
         if chord is None:
             chord = self.chord
-        return integrate.quad(integrand, 0, chord, limit=100)
+        return integrate.quad(integrand, 0, chord, limit=500)
 
     def calculate_x1(self, length_target, bounds = None, output = False):
         def f(c_c):
@@ -207,6 +209,7 @@ class CoordinateSystem(object):
             return abs(target - length_current)
         x0 = 0
         x1 = []
+
         for target in length_target:
             # print(target, x0)
             if bounds is None:
