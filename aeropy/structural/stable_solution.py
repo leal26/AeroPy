@@ -63,8 +63,8 @@ class loads():
                        distributed_function = 0):
         self.concentrated_load = concentrated_load
         self.concentrated_s = load_s
+        self.concentrated_x = None
         self.distributed_function = distributed_function
-
 
 class boundary_conditions():
     def __init__(self, concentrated_load=np.array([[0, 0, 0], ]), load_x=[1],

@@ -106,16 +106,17 @@ class beam_chen():
 
     def G(self, x):
         c = 1/self.p.young/self.p.inertia
-        # print(x)
-        # return c*(quad(self.M, 0, x)[0])
-        c = self.g.chord
-        return self.l.concentrated_load[0][-1]/self.p.young/self.p.inertia*(c*x-x**2/2)
+        print('x', x)
+        return c*(quad(self.M, 0, x)[0])
+        # c = self.g.chord
+        # return self.l.concentrated_load[0][-1]/self.p.young/self.p.inertia*(c*x-x**2/2)
 
     def M(self, x):
         c = self.g.chord
-        for i in range(len(self.l.concentrated_s)):
-            concentrated_x_i = self._x(self.l.concentrated_s[i])
-            return self.l.concentrated_load[0][-1]*(concentrated_x_i*-x)
+        M_i = 0
+        for i in range(len(self.l.concentrated_x)):
+            M_i -= self.l.concentrated_load[i][-1]*(self.l.concentrated_x[i]-x)
+        return M_i
 
     def s_to_x(self):
         self.x = np.zeros(len(self.s))
@@ -134,6 +135,11 @@ class beam_chen():
             current_L = quad(_to_integrate, 0, l)[0]
             return abs(s-current_L)
         return minimize(_to_minimize, s, method = 'Nelder-Mead',).x[0]
+
+    def update_moment_x(self):
+        self.l.concentrated_x = np.zeros(len(self.l.concentrated_s))
+        for i in range(len(self.l.concentrated_s)):
+            self.l.concentrated_x[i] = self._x(self.l.concentrated_s[i])
 
     def find_deflection(self):
         def _to_integrate(x):

@@ -14,9 +14,15 @@ l = loads()
 s = np.linspace(0, 1, 10)
 
 b = beam_chen(g, p, l, s)
+b.update_moment_x()
+print(b.l.concentrated_x)
 b.s_to_x()
 b.find_deflection()
 
+M = b.M(b.x)
+plt.figure()
+plt.plot(b.x, M)
+plt.show()
 # Results from Abaqus
 abaqus_data = pickle.load(open('neutral_line.p', 'rb'))
 
