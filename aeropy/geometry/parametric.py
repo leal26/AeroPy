@@ -40,16 +40,31 @@ class CoordinateSystem(object):
             return np.ones(len(x1))
         elif diff == 'x11':
             return np.zeros(len(x1))
-        elif diff == 'theta3' or diff == 'theta33':
-            return np.zeros(len(x1))
+        elif diff == 'theta3':
+            return(self.a[2,:,0])
         elif diff == 'theta1':
             dr = self.r(x1, diff='x1')
             return 1/np.sqrt(np.einsum('ij,ij->i',dr, dr))
+            # return np.ones(len(x1))
         elif diff == 'theta11':
-            return -self.x1(x1, 'theta1')**4*self.x3(x1, 'x1')*self.x3(x1, 'x11')
+            # return -self.x1(x1, 'theta1')**4*self.x3(x1, 'x1')*self.x3(x1, 'x11')
+            dr = self.r(x1, diff='x1')
+            ddr = self.r(x1, diff='x11')
+            a1 = 1/np.sqrt(np.einsum('ij,ij->i',dr, dr))**3
+            a2 = np.einsum('ij,ij->i',dr, ddr)
+            return np.multiply(a1, a2)*self.x1(x1, 'theta1')
+            # return np.zeros(len(x1))
+        elif diff == 'theta31' or diff == 'theta13':
+            return(-self.x3(x1, 'theta11'))
+            # return(np.zeros(len(x1)))
+        else:
+            return(np.zeros(len(x1)))
 
-    def x2(self, x1, diff=None):
-        return np.zeros(len(x1))
+    def x2(self, x1, x2_value = 0, diff=None):
+        if diff is None:
+            return np.zeros(len(x1))
+        if diff is 'x2' or diff is 'theta2':
+            return np.ones(len(x1))
 
     @classmethod
     def polynomial(cls, D, chord=1, color='b'):
@@ -83,6 +98,12 @@ class CoordinateSystem(object):
         elif diff == 'x111':
             return(24*D[4]*x1 + 6*D[3])
         elif diff == 'theta3':
+            return(self.a[2,:,2])
+            # return(np.ones(len(x1)))
+        elif diff == 'theta31' or diff == 'theta13':
+            return(self.x1(x1, 'theta11'))
+            # return(np.zeros(len(x1)))
+        else:
             return(np.zeros(len(x1)))
 
     def _x3_CST(self, x1, diff=None):
@@ -142,6 +163,9 @@ class CoordinateSystem(object):
             self.a[0,:,:] = np.array([self.x1(x1, 'x1')*self.x1(x1, 'theta1'),
                                      [0]*len(x1),
                                       self.x3(x1, 'x1')*self.x1(x1, 'theta1')]).T
+            # self.a[0,:,:] = np.array([[1]*len(x1),
+            #                          [0]*len(x1),
+            #                           [0]*len(x1)]).T
             self.a[1,:,:]  = np.array([[0,1,0],]*len(x1))
             self.a[2,:,:]  = np.cross(self.a[0,:,:], self.a[1,:,:])
 
@@ -149,9 +173,41 @@ class CoordinateSystem(object):
             # Most components are null
             self.da = np.zeros([3,3,len(x1),3])
             #  a1 diff theta1
-            self.da[0,0,:,:] = np.einsum('ij,i->ij', self.r(x1, 'x11'), self.x1(x1, 'theta1')**2) + \
-                               np.einsum('ij,i->ij', self.r(x1, 'theta1'), self.x1(x1, 'theta11'))
+            for i in range(3):
+                for j in range(3):
+                    # print('index1',i+1,j+1)
+                    # print(self.r(x1, 'x11'))
+                    # print(self.x1(x1, 'theta%d' % (i+1)))
+                    # print(self.x1(x1, 'theta%d' % (j+1)))
+                    # print(self.r(x1, 'x1'))
+                    # print(self.x1(x1, 'theta%d%d' % (i+1,j+1)))
+                    # print('index2')
+                    # print(self.r(x1, 'x22'))
+                    # print(self.x2(x1, 'theta%d' % (i+1)))
+                    # print(self.x2(x1, 'theta%d' % (j+1)))
+                    # print(self.r(x1, 'x2'))
+                    # print(self.x2(x1, 'theta%d%d' % (i+1,j+1)))
 
+                    # cross terms are null for 2D case
+                    x11_1 = np.einsum('ij,i->ij', self.r(x1, 'x11'), self.x1(x1, 'theta%d' % (i+1))*self.x1(x1, 'theta%d' % (j+1)))
+                    x11_2 = np.einsum('ij,i->ij', self.r(x1, 'x1'), self.x1(x1, 'theta%d%d' % (i+1,j+1)))
+                    x22_1 = np.einsum('ij,i->ij', self.r(x1, 'x22'), self.x2(x1, 'theta%d' % (i+1))*self.x1(x1, 'theta%d' % (j+1)))
+                    x22_2 = np.einsum('ij,i->ij', self.r(x1, 'x2'), self.x2(x1, 'theta%d%d' % (i+1,j+1)))
+                    self.da[i,j,:,:] = x11_1+x11_2 + x22_1+x22_2
+            # i=0
+            # j=0
+            # print(i+1,j+1)
+            # print(self.r(x1, 'x11'))
+            # print(self.x2(x1, 'theta%d' % (j+1))**2)
+            # print(self.r(x1, 'x1'))
+            # print(self.x1(x1, 'theta%d%d' % (j+1,j+1)))
+            # print('real')
+            # print(self.r(x1, 'x11'))
+            # print(self.x2(x1, 'theta%d' % (j+1))**2)
+            # print(self.r(x1, 'x1'))
+            # print(self.x1(x1, 'theta%d%d' % (1,1)))
+            # self.da[0,0,:,:] = np.einsum('ij,i->ij', self.r(x1, 'x11'), self.x1(x1, 'theta1')**2) + \
+            #                    np.einsum('ij,i->ij', self.r(x1, 'x1'), self.x1(x1, 'theta11'))
     def christoffel(self, i, j, k, order=1):
         if order == 1:
             gik_j = self.dA[i,k,j]
@@ -160,7 +216,7 @@ class CoordinateSystem(object):
             # print('dA', i,k,j, gik_j)
             # print('dA', j,k,i, gjk_i)
             # print('dA', i,j,k, gij_k)
-            return .5*(gik_j + gjk_i)# - gij_k)
+            return .5*(gik_j + gjk_i - gij_k)
         elif order == 2:
             raise NotImplementedError
 
@@ -181,6 +237,12 @@ class CoordinateSystem(object):
                                                         self.a[j,:]) + \
                                              np.einsum('ij,ij->i',self.a[i,:],
                                                         self.da[j,k,:])
+                            # if self.dA[i,j,k,0] !=0:
+                            #     print(i,j,k)
+                            #     print(self.da[i,k,:])
+                            #     print(self.a[j,:])
+                            #     print(self.a[i,:])
+                            #     print(self.da[j,k,:])
 
     def curvature_tensor(self):
         self.B = np.zeros([2,2,len(self.x1_grid)])
@@ -196,7 +258,7 @@ class CoordinateSystem(object):
             # If function is not well defined everywhere, resulting in a nan
             # penalize it
             if np.isnan(np.sqrt(np.inner(dr, dr))):
-                return(100000)
+                return(100)
             else:
                 return np.sqrt(np.inner(dr, dr)[0,0])
         if chord is None:

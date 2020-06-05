@@ -59,7 +59,7 @@ beam.calculate_chord(bounds = chord_bounds)
 # print('arcs', beam.arc_length, beam.g_c.arclength()[0])
 # BRAKE
 
-beam.theta1 = np.linspace(0, beam.g_p.arclength()[0], 100)
+beam.theta1 = np.linspace(0, beam.g_p.arclength()[0], 10)
 beam.g_p.bounds = chord_bounds
 beam.g_c.bounds = chord_bounds
 

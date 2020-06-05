@@ -1,4 +1,4 @@
-from aeropy.geometry.parametric import polynomial
+from aeropy.geometry.parametric import CoordinateSystem
 from aeropy.structural.shell import shell
 from aeropy.structural.stable_solution import (mesh_1D, properties,
                                                boundary_conditions,
@@ -10,11 +10,16 @@ import numpy as np
 
 # Analytical solution
 bp = properties()
-curve_child = polynomial([0, 0, 0, 0, 0], color = 'k')
-x1 = np.linspace(0, 1, 100)
+curve_child = CoordinateSystem.polynomial([0, 0, 0, 0, 0], color = 'k')
+x1 = np.linspace(0, 1, 10)
 eulerBernoulle = euler_bernoulle(bp, -1, 'concentrated', curve_child, x1)
 eulerBernoulle.analytical_solutions()
+eulerBernoulle.work()
+eulerBernoulle.free_energy()
+eulerBernoulle.strain_energy()
+eulerBernoulle.residual()
 print(eulerBernoulle.g.D)
+print(eulerBernoulle.U)
 eulerBernoulle.g.r()
 eulerBernoulle.g.plot(label='Analytical')
 
@@ -28,6 +33,7 @@ eulerBernoulle.minimum_potential()
 print('Numerical:  ', eulerBernoulle.g.D, eulerBernoulle.R)
 eulerBernoulle.g.r()
 print(eulerBernoulle.g.position)
+print('Energy', eulerBernoulle.U)
 eulerBernoulle.g.plot(label='Numerical', linestyle = '--', color = '.5')
 plt.legend()
 plt.show()

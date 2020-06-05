@@ -30,7 +30,7 @@ beam = shell(curve_parent, curve_child, bp, bc)
 chord_bounds = [[0., 2],]
 beam.g_p.bounds = chord_bounds
 beam.g_c.bounds = chord_bounds
-beam.theta1 = np.linspace(0, beam.g_p.arclength()[0], 10)
+beam.theta1 = np.linspace(0, beam.g_p.arclength()[0], 20)
 beam.update_parent()
 beam.update_child()
 eulerBernoulle = beam.g_c.r(beam.g_c.x1_grid)
@@ -39,7 +39,7 @@ eulerBernoulle = beam.g_c.r(beam.g_c.x1_grid)
 bounds = np.array(((-0.02,0.02),
                   (-0.02,0.02)))
 
-
+print(EB_solution[2:4])
 beam.minimum_potential(x0=[0,0], input_function = lambda x: [0,0] + list(x),
                        bounds = bounds)
 # coefficients, results, arc_length = beam.stepped_loading(x0=[0,0],
@@ -67,6 +67,7 @@ beam.minimum_potential(x0=[0,0], input_function = lambda x: [0,0] + list(x),
 # print('Residual', beam.residual(x, input_type = 'Geometry',
 #                                 loading_condition = 'plane_stress',
 #                                 input_function = input_function))
+print('Strain energy for min: ', beam.U)
 [x,y,z] = eulerBernoulle.T
 beam.g_p.plot(label='Parent')
 plt.plot(x,z, 'k', lw = 3, label='Euler-Bernoulle', linestyle = '-', zorder=0)

@@ -58,6 +58,13 @@ class properties():
         if young < 0 or poisson < 0 or poisson > 1 or self.area <= 0:
             raise Exception('Material properties need to make sense')
 
+class loads():
+    def __init__(self, concentrated_load=np.array([[0, -1], ]), load_s=[1],
+                       distributed_function = 0):
+        self.concentrated_load = concentrated_load
+        self.concentrated_s = load_s
+        self.distributed_function = distributed_function
+
 
 class boundary_conditions():
     def __init__(self, concentrated_load=np.array([[0, 0, 0], ]), load_x=[1],
@@ -130,7 +137,10 @@ class euler_bernoulle():
 
         res = minimize(to_optimize, x0, bounds=bounds)
         self.g.D = [0,0] + list(res.x)
-        self.R = res.fun
+        self.work()
+        self.free_energy()
+        self.strain_energy()
+        self.residual()
         return(res.x, res.fun)
 
 class structure():

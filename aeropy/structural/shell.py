@@ -26,16 +26,6 @@ class shell():
         self.properties = properties
         self.arc_length = self.g_p.arclength()[0]
 
-    def kinematics_p(self, x1):
-        self.g_p.basis(x1)
-
-    def kinematics_c(self, x1):
-        # define new chord
-        chord = aeropy.CST_2D.calculate_c_baseline(c_L, Au_C, Au_L, deltaz)
-        x1 = chord*x1
-        # calculate basis vectors
-        self.g_c.basis(x1)
-
     def calculate_chord(self, length_target = None, bounds = None):
         def f(c_c):
             length_current, err = self.g_c.arclength(c_c)
@@ -57,8 +47,8 @@ class shell():
 
     def calculate_change_curvature(self):
         self.rho = -(self.g_c.B - self.g_p.B)
-        print('parent', self.g_p.B)
-        print('child', self.g_c.B)
+        # print('parent', self.g_p.B)
+        # print('child', self.g_c.B)
         self.rho[1,1,:] = -self.properties.poisson*self.rho[0,0,:]
 
     def CauchyGreen(self):
@@ -85,6 +75,7 @@ class shell():
     def free_energy(self):
         self.phi_M = (self.h/2)*np.einsum('ijklm,ijm,klm->m',self.C,self.gamma,self.gamma)
         self.phi_B = (self.h**3/24)*np.einsum('ijklm,ijm,klm->m',self.C,self.rho,self.rho)
+        # self.phi_B = (self.h**3/24)*self.properties.young*(self.g_c.r(self.g_c.x1_grid, 'x11')[:,2])**2
 
         # # print all terms of phi
         # c0 = self.properties.young/(1+self.properties.poisson)/(1-self.properties.poisson)
@@ -101,12 +92,7 @@ class shell():
 
 
     def strain_energy(self):
-        # print('M', self.phi_M)
-        # print('B', self.phi_B)
-        print('U_theta1: ', self.width*np.trapz(self.phi, self.theta1))
-        print('U_g_p: ', self.width*np.trapz(self.phi, self.g_p.x1_grid))
-        print('U_g_c: ', self.width*np.trapz(self.phi, self.g_c.x1_grid))
-        self.U = self.width*np.trapz(self.phi, self.theta1)
+        self.U = self.width*np.trapz(self.phi, self.g_c.x1_grid)
 
     def work(self):
         energy = 0
@@ -150,13 +136,14 @@ class shell():
         self.calculate_chord(length_target = self.arc_length,
                              bounds = self.g_c.bounds)
         self.g_c.calculate_x1(self.theta1, bounds = self.g_c.bounds)
+        # self.g_c.x1_grid = self.g_p.x1_grid
         self.g_c.basis()
+        self.g_c.basis(diff = 'theta')
         self.g_c.metric_tensor()
+        self.g_c.metric_tensor(diff = 'theta')
         self.calculate_strains()
 
         # Calculate energy
-        self.g_c.basis(diff = 'theta')
-        self.g_c.metric_tensor(diff = 'theta')
         self.g_c.curvature_tensor()
         self.calculate_change_curvature()
         self.CauchyGreen()
@@ -171,7 +158,7 @@ class shell():
             x = (bounds[:,1] - bounds[:,0])*n_x + bounds[:,0]
             self.g_c.D = input_function(x)
             self.update_child()
-            print(self.u, self.R) #, self.W, self.U)
+            print(x, self.U) #, self.W, self.U)
             return self.R
 
         if input_function is None:
@@ -180,15 +167,15 @@ class shell():
         # With bounds
         n_bounds = np.array(len(bounds)*[[0,1],])
         n_x0 = (x0 - bounds[:,0])/(bounds[:,1] - bounds[:,0])
-        res = optimize.minimize(to_optimize, n_x0, bounds=n_bounds, method = 'SLSQP' ) #, options = {'eps':1e-7, 'ftol':1e-7})
+        res = optimize.minimize(to_optimize, n_x0 ) #, options = {'eps':1e-7, 'ftol':1e-7})
         x = (bounds[:,1] - bounds[:,0])*res.x + bounds[:,0]
         self.g_c.D = input_function(x)
         self.R = res.fun
 
         self.update_child()
 
-        theta1 = self.g_p.arclength(self.bc.concentrated_x[0])[0]
-        x1_c = np.array(self.g_c.calculate_x1([theta1], output = True))
+        # theta1 = self.g_p.arclength(self.bc.concentrated_x[0])[0]
+        # x1_c = np.array(self.g_c.calculate_x1([theta1], output = True))
         # if self.g_c.arc_length()[1] < 1e-3:
         #     return(x, res.fun*100)
         # else:

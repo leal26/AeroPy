@@ -62,7 +62,7 @@ for i in range(len(loads)):
     # Kinematics
     bounds = np.array([[0, 1.5*chord_parent],])
     beam.calculate_chord(bounds = bounds)
-    beam.theta1 = np.linspace(0, beam.g_p.arclength()[0], 10)
+    beam.theta1 = np.linspace(0, beam.g_p.arclength()[0], 20)
     beam.g_p.bounds = bounds
     beam.g_c.bounds = bounds
 
