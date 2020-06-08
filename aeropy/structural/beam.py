@@ -2,7 +2,7 @@ import aeropy
 import math
 
 import numpy as np
-from scipy.integrate import quad
+from scipy.integrate import quad, trapz
 from scipy.optimize import minimize
 
 class euler_bernoulle_curvilinear():
@@ -102,55 +102,69 @@ class beam_chen():
         self.p = properties
         self.l = load
         self.s = s
-        self.length = self.g.arclength()
+        self.length = self.g.arclength()[0]
 
-    def G(self, x):
-        c = 1/self.p.young/self.p.inertia
-        print('x', x)
-        return c*(quad(self.M, 0, x)[0])
-        # c = self.g.chord
-        # return self.l.concentrated_load[0][-1]/self.p.young/self.p.inertia*(c*x-x**2/2)
+    def calculate_M(self):
+        self.M = np.zeros(len(self.x))
+        for i in range(len(self.M)):
+            self.M[i] = self._M(self.x[i], self.s[i])
 
-    def M(self, x):
-        c = self.g.chord
+    def _M(self, x, s):
         M_i = 0
-        for i in range(len(self.l.concentrated_x)):
-            M_i -= self.l.concentrated_load[i][-1]*(self.l.concentrated_x[i]-x)
+        if self.l.concentrated_load is not None:
+            for i in range(len(self.l.concentrated_s)):
+                index = np.where(self.s == self.l.concentrated_s[i])[0][0]
+                M_i += self.l.concentrated_load[i][-1]*(self.x[index]-x)
+
+        if self.l.distributed_load is not None:
+            index = np.where(self.s == s)[0][0]
+            M_i -= trapz(self.l.distributed_load(self.s[index:])*(self.x[index:]-x), self.x[index:])
         return M_i
 
-    def s_to_x(self):
-        self.x = np.zeros(len(self.s))
+    def calculate_G(self):
+        self.G = np.zeros(len(self.x))
+        for i in range(len(self.G)):
+            self.G[i] = self._G(self.x[i], self.s[i])
+
+    def _G(self, x, s):
+        c = 1/self.p.young/self.p.inertia
+        index = np.where(self.x == x)[0][0]
+        return c*trapz(self.M[:index+1], self.x[:index+1])
+
+    def calculate_x(self):
         for i in range(len(self.s)):
             self.x[i] = self._x(self.s[i])
 
     def _x(self, s):
         def _to_minimize(l):
-            def _to_integrate(x):
-                den = np.sqrt(1-self.G(x)**2)
-                if np.isnan(den):
-                    return 100
-                else:
-                    return 1/den
-            l = l[0]
-            current_L = quad(_to_integrate, 0, l)[0]
+            index = np.where(self.s == s)[0][0]
+            x = self.x[:index+1]
+            x[-1] = l
+            current_L = trapz(np.sqrt(1-self.G[:index+1]**2), x)
             return abs(s-current_L)
         return minimize(_to_minimize, s, method = 'Nelder-Mead',).x[0]
 
-    def update_moment_x(self):
-        self.l.concentrated_x = np.zeros(len(self.l.concentrated_s))
-        for i in range(len(self.l.concentrated_s)):
-            self.l.concentrated_x[i] = self._x(self.l.concentrated_s[i])
+    def calculate_deflection(self):
+        self.y = np.zeros(len(self.x))
+        for i in range(len(self.x)):
+            dydx = self.G[:i+1]/(1-self.G[:i+1]**2)
+            y_i =  trapz(dydx, self.x[:i+1])
+            self.y[i] = y_i
 
-    def find_deflection(self):
-        def _to_integrate(x):
-            G = self.G(x)
-            den = np.sqrt(1-G**2)
-            if np.isnan(den):
-                return 100
-            else:
-                return G/den
+    def iterative_solver(self):
 
-        self.y = []
-        for x_i in self.x:
-            y_i = current_L = quad(_to_integrate, 0, x_i)[0]
-            self.y.append(y_i)
+        # Calculate Moment for undeformed
+        self.x = np.copy(self.s)
+        x_before= np.copy(self.x)
+        y_before = self.g.x3(self.x)
+
+        error = 1000
+        while error > 1e-8:
+            self.calculate_M()
+            self.calculate_G()
+            self.calculate_x()
+            self.calculate_deflection()
+            error = np.linalg.norm((self.x-x_before)**2 + (self.y-y_before)**2)
+            x_before = np.copy(self.x)
+            y_before = np.copy(self.y)
+            print(error)

@@ -59,12 +59,12 @@ class properties():
             raise Exception('Material properties need to make sense')
 
 class loads():
-    def __init__(self, concentrated_load=np.array([[0, -1], ]), load_s=[1],
-                       distributed_function = 0):
+    def __init__(self, concentrated_load=None, load_s=None,
+                       distributed_load = None):
         self.concentrated_load = concentrated_load
         self.concentrated_s = load_s
         self.concentrated_x = None
-        self.distributed_function = distributed_function
+        self.distributed_load = distributed_load
 
 class boundary_conditions():
     def __init__(self, concentrated_load=np.array([[0, 0, 0], ]), load_x=[1],
