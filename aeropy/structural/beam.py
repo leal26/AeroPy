@@ -127,8 +127,10 @@ class beam_chen():
             self.G[i] = self._G(self.x[i], self.s[i])
 
     def _G(self, x, s):
+        # deformed curvature radius
         c = 1/self.p.young/self.p.inertia
         index = np.where(self.x == x)[0][0]
+        # return c*trapz(self.M[:index+1]*, self.s[:index+1])
         return c*trapz(self.M[:index+1], self.x[:index+1])
 
     def calculate_x(self):
@@ -151,8 +153,25 @@ class beam_chen():
             y_i =  trapz(dydx, self.x[:i+1])
             self.y[i] = y_i
 
-    def iterative_solver(self):
+    def calculate_residual(self):
+        self.r = np.zeros(len(self.x))
+        for i in range(len(self.x)):
+            rhs = self.G[i]/(1-self.G[i]**2)
+            lhs = self.g.x3(self.x[i], diff='x1')
+            self.r[i] = lhs - rhs
+        self.R = np.linalg.norm(self.r)
+    # def calculate_Pho(self):
+    #     self.g.calculate_x1(self.theta1, bounds = self.g_p.bounds)
+    #     self.g.basis()
+    #     self.g.basis(diff = 'theta')
+    #     self.g.metric_tensor()
+    #     self.g.metric_tensor(diff = 'theta')
+    #     self.g.curvature_tensor()
+    #     self.Pho = self.B[0][0]
 
+    def iterative_solver(self):
+        # Calculated undeformed properties
+        # self.calculate_Pho()
         # Calculate Moment for undeformed
         self.x = np.copy(self.s)
         x_before= np.copy(self.x)
@@ -168,3 +187,21 @@ class beam_chen():
             x_before = np.copy(self.x)
             y_before = np.copy(self.y)
             print(error)
+
+    def parameterized_solver(self):
+        def _residual(A):
+            self.calculate_M()
+            self.calculate_G()
+            self.calculate_x()
+            self.calculate_M()
+
+            self.g.D = [0,0] + list(A)
+            self.calculate_residual()
+            return self.R
+
+        self.x = np.copy(self.s)
+        sol = minimize(_residual, self.g.D[2:4])
+        print(sol.x, sol.fun)
+        self.g.D = [0,0] + list(sol.x)
+        self.y = self.g.x3(self.x)
+        return
