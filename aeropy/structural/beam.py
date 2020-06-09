@@ -153,13 +153,24 @@ class beam_chen():
             y_i =  trapz(dydx, self.x[:i+1])
             self.y[i] = y_i
 
+    # def calculate_residual(self):
+    #     self.r = np.zeros(len(self.x))
+    #     for i in range(len(self.x)):
+    #         rhs = self.G[i]/(1-self.G[i]**2)
+    #         lhs = self.g.x3(self.x[i], diff='x1')
+    #         self.r[i] = lhs - rhs
+    #     self.R = np.linalg.norm(self.r)
+
     def calculate_residual(self):
         self.r = np.zeros(len(self.x))
         for i in range(len(self.x)):
-            rhs = self.G[i]/(1-self.G[i]**2)
-            lhs = self.g.x3(self.x[i], diff='x1')
+            rhs = self.g.x3(self.x[i], diff='theta11')
+            lhs = self.M[i]/self.p.young/self.p.inertia
             self.r[i] = lhs - rhs
         self.R = np.linalg.norm(self.r)
+        if np.isnan(self.R):
+            self.R = 100
+        print('R: ', self.R)
     # def calculate_Pho(self):
     #     self.g.calculate_x1(self.theta1, bounds = self.g_p.bounds)
     #     self.g.basis()

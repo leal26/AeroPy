@@ -37,23 +37,32 @@ class CoordinateSystem(object):
         if diff is None:
             return x1
         elif diff == 'x1':
-            return np.ones(len(x1))
+            try:
+                return np.ones(len(x1))
+            except:
+                return 1
         elif diff == 'x11':
-            return np.zeros(len(x1))
+            try:
+                return np.zeros(len(x1))
+            except:
+                return 0
         elif diff == 'theta3':
             return(self.a[2,:,0])
         elif diff == 'theta1':
-            dr = self.r(x1, diff='x1')
-            return 1/np.sqrt(np.einsum('ij,ij->i',dr, dr))
+            # dr = self.r(x1, diff='x1')
+            # print(dr)
+            # print(self.x3(x1, 'x1'))
+            return 1/np.sqrt(1 + self.x3(x1, 'x1'))
             # return np.ones(len(x1))
         elif diff == 'theta11':
             # return -self.x1(x1, 'theta1')**4*self.x3(x1, 'x1')*self.x3(x1, 'x11')
-            dr = self.r(x1, diff='x1')
-            ddr = self.r(x1, diff='x11')
-            a1 = 1/np.sqrt(np.einsum('ij,ij->i',dr, dr))**3
-            a2 = np.einsum('ij,ij->i',dr, ddr)
-            return np.multiply(a1, a2)*self.x1(x1, 'theta1')
+            # dr = self.r(x1, diff='x1')
+            # ddr = self.r(x1, diff='x11')
+            # a1 = 1/np.sqrt(np.einsum('ij,ij->i',dr, dr))**3
+            # a2 = np.einsum('ij,ij->i',dr, ddr)
+            # return np.multiply(a1, a2)*self.x1(x1, 'theta1')
             # return np.zeros(len(x1))
+            return self.x1(x1, 'theta1')**4*self.x3(x1, 'x1')*self.x3(x1, 'x11')
         elif diff == 'theta31' or diff == 'theta13':
             return(-self.x3(x1, 'theta11'))
             # return(np.zeros(len(x1)))
@@ -97,6 +106,15 @@ class CoordinateSystem(object):
             return(12*D[4]*x1**2 + 6*D[3]*x1 + 2*D[2])
         elif diff == 'x111':
             return(24*D[4]*x1 + 6*D[3])
+        elif diff == 'theta1':
+            return self.x3(x1, 'x1')*self.x1(x1, 'theta1')
+        elif diff == 'theta11':
+            # print('x3/x11: ', self.x3(x1, 'x11'))
+            # print('x1/t1: ', self.x1(x1, 'theta1'))
+            # print('x3/x1: ', self.x3(x1, 'x1'))
+            # print('x1/t1: ', self.x1(x1, 'theta11'))
+            return self.x3(x1, 'x11')*self.x1(x1, 'theta1')**2 + \
+                   self.x3(x1, 'x1')*self.x1(x1, 'theta11')
         elif diff == 'theta3':
             return(self.a[2,:,2])
             # return(np.ones(len(x1)))
@@ -144,12 +162,10 @@ class CoordinateSystem(object):
                 x1 = np.array([x1])
         if diff == 'theta1':
             output = np.array([self.x1(x1, 'x1'),
-                               self.x2(x1, 'x1'),
                                self.x3(x1, 'x1')]).T
             output = np.einsum('ij,i->ij',output, self.x1(x1, 'theta1'))
         else:
             output = np.array([self.x1(x1, diff),
-                               self.x2(x1, diff),
                                self.x3(x1, diff)]).T
             self.position = output
         return (output)

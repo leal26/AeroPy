@@ -31,8 +31,8 @@ curve_EB = CoordinateSystem.polynomial(D=EB_solution, chord = 1, color  ='0.5')
 curve_EB.calculate_x1(b.s)
 eulerBernoulle = curve_EB.r(b.s)
 
-[x,y,z] = eulerBernoulle.T
-plt.plot(x,z, '.5', lw = 3, label='Euler-Bernoulle', linestyle = '-', zorder=0)
+[x,y] = eulerBernoulle.T
+plt.plot(x,y, '.5', lw = 3, label='Euler-Bernoulle', linestyle = '-', zorder=0)
 plt.plot(b.x, b.y, 'b', label='Chen', linestyle = '--', lw = 3)
 plt.scatter(abaqus_data['coord'][0:401:40,0], abaqus_data['coord'][0:401:40,1], c='g', label='FEA', edgecolors='k', zorder = 10)
 plt.legend()
