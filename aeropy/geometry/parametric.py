@@ -52,7 +52,7 @@ class CoordinateSystem(object):
             # dr = self.r(x1, diff='x1')
             # print(dr)
             # print(self.x3(x1, 'x1'))
-            return 1/np.sqrt(1 + self.x3(x1, 'x1'))
+            return 1/np.sqrt(1 + self.x3(x1, 'x1')**2)
             # return np.ones(len(x1))
         elif diff == 'theta11':
             # return -self.x1(x1, 'theta1')**4*self.x3(x1, 'x1')*self.x3(x1, 'x11')
@@ -62,7 +62,7 @@ class CoordinateSystem(object):
             # a2 = np.einsum('ij,ij->i',dr, ddr)
             # return np.multiply(a1, a2)*self.x1(x1, 'theta1')
             # return np.zeros(len(x1))
-            return self.x1(x1, 'theta1')**4*self.x3(x1, 'x1')*self.x3(x1, 'x11')
+            return -self.x1(x1, 'theta1')**4*self.x3(x1, 'x1')*self.x3(x1, 'x11')
         elif diff == 'theta31' or diff == 'theta13':
             return(-self.x3(x1, 'theta11'))
             # return(np.zeros(len(x1)))
@@ -310,14 +310,14 @@ class CoordinateSystem(object):
 
         if scatter:
             if label is None:
-                plt.scatter(r[:,0], r[:,2], c = color)
+                plt.scatter(r[:,0], r[:,1], c = color)
             else:
-                plt.scatter(r[:,0], r[:,2], c = color, label=label, zorder = 2, edgecolors='k')
+                plt.scatter(r[:,0], r[:,1], c = color, label=label, zorder = 2, edgecolors='k')
         else:
             if label is None:
-                plt.plot(r[:,0], r[:,2], color, linestyle = linestyle, lw = 4)
+                plt.plot(r[:,0], r[:,1], color, linestyle = linestyle, lw = 4)
             else:
-                plt.plot(r[:,0], r[:,2], color, linestyle = linestyle, lw = 4,
+                plt.plot(r[:,0], r[:,1], color, linestyle = linestyle, lw = 4,
                          label=label, zorder = 1)
         if basis:
             plt.quiver(r[:,0], r[:,2],

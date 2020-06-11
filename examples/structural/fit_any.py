@@ -7,16 +7,17 @@ import pickle
 def poly(x, c2, c3):
     return c2*x**2 + c3*x**3
 
-df = pd.read_excel('curved_data.xlsx', sheet_name = 'FEA (3D, c3=0.25, F=-10)')
+df = pd.read_excel('curved_data.xlsx', sheet_name = 'Chen (2010)')
 
-skip_lines = 0 # -1 of what you think it should be
+skip_lines = 1 # -1 of what you think it should be
 
 plt.figure()
-for i in range(1): #range(int(len(df.columns)/2)):
+for i in range(int(len(df.columns)/2)):
     ii = 2*i
     x = np.array(df.values[skip_lines:, ii])
     y = np.array(df.values[skip_lines:, ii+1])
     # Remove NaN
+    print(x)
     x = np.array(list(x[~np.isnan(list(x))]))
     y = np.array(list(y[~np.isnan(list(y))]))
 

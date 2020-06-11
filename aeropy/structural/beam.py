@@ -1,5 +1,6 @@
 import aeropy
 import math
+import copy
 
 import numpy as np
 from scipy.integrate import quad, trapz
@@ -98,7 +99,10 @@ class euler_bernoulle_curvilinear():
 
 class beam_chen():
     def __init__(self, geometry, properties, load, s):
-        self.g = geometry
+        self.g = copy.deepcopy(geometry)
+        self.g_p = copy.deepcopy(geometry)
+        self.g_p.calculate_x1(s)
+        self.Rho = self.g_p.x3(self.g_p.x1_grid, diff='theta11')
         self.p = properties
         self.l = load
         self.s = s
@@ -109,7 +113,7 @@ class beam_chen():
         for i in range(len(self.M)):
             self.M[i] = self._M(self.x[i], self.s[i])
 
-    def _M(self, x, s):
+    def _M(self, x, s, y=None):
         M_i = 0
         if self.l.concentrated_load is not None:
             for i in range(len(self.l.concentrated_s)):
@@ -118,7 +122,11 @@ class beam_chen():
 
         if self.l.distributed_load is not None:
             index = np.where(self.s == s)[0][0]
-            M_i -= trapz(self.l.distributed_load(self.s[index:])*(self.x[index:]-x), self.x[index:])
+
+            # M_x = self.l.distributed_load(self.s[index:])*self.cos[index:]*(self.x[index:]-x)
+            # M_y = self.l.distributed_load(self.s[index:])*self.sin[index:]*(self.y[index:]-y)
+            # print(index, self.x[index:], x, self.s[index:])
+            M_i -= trapz(self.l.distributed_load(self.s[index:])*(self.x[index:]-x), self.s[index:]) #  M_x + M_y
         return M_i
 
     def calculate_G(self):
@@ -146,6 +154,10 @@ class beam_chen():
             return abs(s-current_L)
         return minimize(_to_minimize, s, method = 'Nelder-Mead',).x[0]
 
+    def calculate_angles(self):
+        self.cos = self.g.x1(self.g.x1_grid, 'theta1')
+        self.sin = self.g.x3(self.g.x1_grid, 'theta1')
+
     def calculate_deflection(self):
         self.y = np.zeros(len(self.x))
         for i in range(len(self.x)):
@@ -164,7 +176,7 @@ class beam_chen():
     def calculate_residual(self):
         self.r = np.zeros(len(self.x))
         for i in range(len(self.x)):
-            rhs = self.g.x3(self.x[i], diff='theta11')
+            rhs = self.g.x3(self.x[i], diff='theta11') #- self.Rho[i]
             lhs = self.M[i]/self.p.young/self.p.inertia
             self.r[i] = lhs - rhs
         self.R = np.linalg.norm(self.r)
@@ -193,25 +205,29 @@ class beam_chen():
             self.calculate_M()
             self.calculate_G()
             self.calculate_x()
+            self.calculate_M()
             self.calculate_deflection()
             error = np.linalg.norm((self.x-x_before)**2 + (self.y-y_before)**2)
             x_before = np.copy(self.x)
             y_before = np.copy(self.y)
             print(error)
 
-    def parameterized_solver(self):
+    def parameterized_solver(self, format_input = None):
         def _residual(A):
-            self.calculate_M()
-            self.calculate_G()
-            self.calculate_x()
-            self.calculate_M()
-
             self.g.D = [0,0] + list(A)
+            self.g.calculate_x1(self.s)
+            self.x = self.g.x1_grid
+            self.y = self.g.x3(self.x)
+            # self.calculate_angles()
+            self.calculate_M()
+            # self.calculate_G()
+            # self.calculate_x()
+            # self.calculate_M()
             self.calculate_residual()
             return self.R
 
-        self.x = np.copy(self.s)
-        sol = minimize(_residual, self.g.D[2:4])
+        # self.x = np.copy(self.s)
+        sol = minimize(_residual, format_input(self.g.D), method = 'BFGS', options={'gtol': 1e-04})
         print(sol.x, sol.fun)
         self.g.D = [0,0] + list(sol.x)
         self.y = self.g.x3(self.x)

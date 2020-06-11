@@ -6,7 +6,8 @@ from aeropy.structural.beam import beam_chen
 from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
-
+def format_input(input):
+    return input[2:4]
 
 g = CoordinateSystem.polynomial(D=[0, 0, 0, 0], chord = 1, color = 'b')
 p = properties()
@@ -14,7 +15,7 @@ l = loads(concentrated_load = [[0, -1]], load_s = [1])
 s = np.linspace(0, 1, 10)
 
 b = beam_chen(g, p, l, s)
-b.parameterized_solver()
+b.parameterized_solver(format_input)
 
 plt.figure()
 plt.plot(b.x, b.M)
