@@ -7,21 +7,23 @@ from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
 
-
+def format_input(input):
+    return input[2:4]
 # Ghuku paper
 # distributed_load = None
 # chord_parent = 0.4385
 # width = 0.0385
 # thickness = 0.00625
+# clamped_load = 20.9634
 # experiment = {0: [0.,0.,0.5492,0.2000],
-#               138.321: [0., 0., 0.3746, 0.1753],
-#               211.896: [0., 0., 0.2475, 0.2864],}
+#               138.321+clamped_load: [0., 0., 0.3746, 0.1753],
+#               211.896+clamped_load: [0., 0., 0.2475, 0.2864],}
 #               # 287.433: [0., 0., 0.1287, 0.3582],
 #               # 460.089: [0., 0., -0.1891, 0.6087],}
 # p = properties(young=200e9, dimensions=[width, thickness])
 # exp_F = [0.000, 20.9634, 83.7474, 159.2844, 232.8594, 308.3964, 382.9542, 459.4704, 481.0524]
 # exp_delta = [0, 0.0047, 0.0135, 0.03098, 0.0451, 0.0622, 0.0793, 0.0977, 0.103]
-# g = CoordinateSystem.polynomial(D=experiment[0], chord = chord_parent, color = 'b')
+# g = CoordinateSystem.polynomial(D=experiment[list(experiment.keys())[0]], chord = chord_parent, color = 'b')
 
 # Chen
 def distributed_load(s):
@@ -30,9 +32,6 @@ def distributed_load(s):
         return 0.758*np.ones(len(s))
     except:
         return 0.758
-
-def format_input(input):
-    return input[2:4]
 
 chord_parent = 0.4
 width = 0.025
@@ -63,11 +62,11 @@ for i in range(len(load_keys)):
     b = beam_chen(g, p, l, s)
     # b.iterative_solver()
     b.parameterized_solver(format_input = format_input)
-    plt.plot(b.x, b.y, colors[i], label='Model: %f N' % load, linestyle = '--',
+    plt.plot(b.x, b.y, colors[i], label='Model: %.3f N' % load, linestyle = '--',
              lw = 3)
 
     gg = CoordinateSystem.polynomial(D=experiment[load_keys[i]], chord = chord_parent, color = 'b')
     gg.calculate_x1(s)
-    gg.plot(label='Experiment: %f N' % load_keys[i], color = colors[i], scatter = True)
+    gg.plot(label='Experiment: %.3f N' % load_keys[i], color = colors[i], scatter = True)
 plt.legend()
 plt.show()

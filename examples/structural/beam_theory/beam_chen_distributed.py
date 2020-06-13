@@ -20,19 +20,13 @@ def format_input(input):
 
 g = CoordinateSystem.polynomial(D=[0, 0, 0, 0], chord = 1, color = 'b')
 p = properties()
-
+plt.figure()
 l = loads(distributed_load = distributed_load)
 s = np.linspace(0, 1, 10)
 
 b = beam_chen(g, p, l, s)
-# b.iterative_solver()
 b.parameterized_solver(format_input = format_input)
-# b.update_moment_x()
-# b.s_to_x()
-# b.find_deflection()
-plt.figure()
-plt.plot(b.x, b.M)
-plt.show()
+
 # Results from Abaqus
 # abaqus_data = pickle.load(open('neutral_line.p', 'rb'))
 
@@ -48,8 +42,13 @@ curve_EB.calculate_x1(b.s)
 eulerBernoulle = curve_EB.r(b.s)
 
 [x,y] = eulerBernoulle.T
-plt.plot(x,y, '.5', lw = 3, label='Euler-Bernoulle', linestyle = '-', zorder=0)
-plt.plot(b.x, b.y, 'b', label='Chen', linestyle = '--', lw = 3)
+
+g0 = CoordinateSystem.polynomial(D=[0, 0, 0, 0], chord = 1, color = 'k')
+g0.calculate_x1(s)
+g0.plot(label = 'Parent', zorder=0)
+plt.plot(b.x, b.y, '.5', label='Child: %.3f N/m' % w, linestyle = '--', lw =3, zorder=1)
+plt.scatter(x,y, c='.5', label='Euler-Bernoulle: %.3f N/m' % w, edgecolors='k', zorder=2)
+plt.xlim([0,1])
 # plt.scatter(abaqus_data['coord'][0:401:40,0], abaqus_data['coord'][0:401:40,1], c='g', label='FEA', edgecolors='k', zorder = 10)
 plt.legend()
 plt.show()

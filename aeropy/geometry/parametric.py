@@ -290,18 +290,14 @@ class CoordinateSystem(object):
 
         for target in length_target:
             # print(target, x0)
-            if bounds is None:
-                x1.append(optimize.minimize(f, x0).x[0])
-            else:
-                x1.append(optimize.minimize(f, x0, method='L-BFGS-B',
-                                            bounds = bounds).x[0])
+            x1.append(optimize.fsolve(f, x0)[0])
             x0 = x1[-1]
         if output:
             return np.array(x1)
         else:
             self.x1_grid = np.array(x1)
 
-    def plot(self, basis=False, r = None, label=None, linestyle = '-', color = None, scatter = False):
+    def plot(self, basis=False, r = None, label=None, linestyle = '-', color = None, scatter = False, zorder=0):
         if r is None:
             r = self.r(self.x1_grid)
 
@@ -315,10 +311,11 @@ class CoordinateSystem(object):
                 plt.scatter(r[:,0], r[:,1], c = color, label=label, zorder = 2, edgecolors='k')
         else:
             if label is None:
-                plt.plot(r[:,0], r[:,1], color, linestyle = linestyle, lw = 4)
+                plt.plot(r[:,0], r[:,1], color, linestyle = linestyle, lw = 3,
+                         zorder = zorder)
             else:
-                plt.plot(r[:,0], r[:,1], color, linestyle = linestyle, lw = 4,
-                         label=label, zorder = 1)
+                plt.plot(r[:,0], r[:,1], color, linestyle = linestyle, lw = 3,
+                         label=label, zorder = zorder)
         if basis:
             plt.quiver(r[:,0], r[:,2],
                        self.a[0,:,0], self.a[0,:,2],

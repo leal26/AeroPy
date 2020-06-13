@@ -28,13 +28,16 @@ EB_solution = l.concentrated_load[0][-1]/(6*p.young*p.inertia) * \
     np.array([0, 0, 3, -1])
 print('EB', EB_solution)
 curve_EB = CoordinateSystem.polynomial(D=EB_solution, chord = 1, color  ='0.5')
-
 curve_EB.calculate_x1(b.s)
 eulerBernoulle = curve_EB.r(b.s)
 
+g0 = CoordinateSystem.polynomial(D=[0,0,0,0], chord = 1, color  ='k')
+g0.calculate_x1(b.s)
+g0.plot(label='Parent')
 [x,y] = eulerBernoulle.T
-plt.plot(x,y, '.5', lw = 3, label='Euler-Bernoulle', linestyle = '-', zorder=0)
-plt.plot(b.x, b.y, 'b', label='Chen', linestyle = '--', lw = 3)
-plt.scatter(abaqus_data['coord'][0:401:40,0], abaqus_data['coord'][0:401:40,1], c='g', label='FEA', edgecolors='k', zorder = 10)
+plt.scatter(x,y, c='.5', label='Euler-Bernoulle', linestyle = '-', zorder=1, edgecolors='k')
+plt.scatter(abaqus_data['coord'][0:401:40,0], abaqus_data['coord'][0:401:40,1], c='.5', label='FEA', edgecolors='k', zorder = 2, marker="^")
+plt.plot(b.x, b.y, '.5', label='Child: %.3f N' % -l.concentrated_load[0][1], lw = 3, zorder=0)
+
 plt.legend()
 plt.show()

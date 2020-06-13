@@ -102,7 +102,8 @@ class beam_chen():
         self.g = copy.deepcopy(geometry)
         self.g_p = copy.deepcopy(geometry)
         self.g_p.calculate_x1(s)
-        self.Rho = self.g_p.x3(self.g_p.x1_grid, diff='theta11')
+        # self.Rho = self.g_p.x3(self.g_p.x1_grid, diff='theta11')
+        self.Rho = self.g_p.x3(self.g_p.x1_grid, diff='x11')/(1+(self.g_p.x3(self.g_p.x1_grid, diff='x1'))**2)**(3/2)
         self.p = properties
         self.l = load
         self.s = s
@@ -126,6 +127,7 @@ class beam_chen():
             # M_x = self.l.distributed_load(self.s[index:])*self.cos[index:]*(self.x[index:]-x)
             # M_y = self.l.distributed_load(self.s[index:])*self.sin[index:]*(self.y[index:]-y)
             # print(index, self.x[index:], x, self.s[index:])
+            # M_i -= trapz(M_x, self.s[index:])
             M_i -= trapz(self.l.distributed_load(self.s[index:])*(self.x[index:]-x), self.s[index:]) #  M_x + M_y
         return M_i
 
@@ -176,7 +178,8 @@ class beam_chen():
     def calculate_residual(self):
         self.r = np.zeros(len(self.x))
         for i in range(len(self.x)):
-            rhs = self.g.x3(self.x[i], diff='theta11') #- self.Rho[i]
+            # rhs = self.g.x3(self.x[i], diff='theta11') - self.Rho[i]
+            rhs = self.g.x3(self.x[i], diff='x11')/(1+(self.g.x3(self.x[i], diff='x1'))**2)**(3/2) - self.Rho[i]
             lhs = self.M[i]/self.p.young/self.p.inertia
             self.r[i] = lhs - rhs
         self.R = np.linalg.norm(self.r)
@@ -218,7 +221,7 @@ class beam_chen():
             self.g.calculate_x1(self.s)
             self.x = self.g.x1_grid
             self.y = self.g.x3(self.x)
-            # self.calculate_angles()
+            self.calculate_angles()
             self.calculate_M()
             # self.calculate_G()
             # self.calculate_x()
