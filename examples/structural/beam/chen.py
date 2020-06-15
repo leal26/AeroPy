@@ -55,18 +55,24 @@ s = np.zeros(len(x))
 for i in range(len(x)):
     s[i] = g.arclength(x[i])[0]
 
+
 for i in range(len(load_keys)):
     print('Load: ', load_keys[i])
     load = load_keys[i]
     l = loads(concentrated_load = [[0, -load]], load_s = [s[-1]], distributed_load = distributed_load)
     b = beam_chen(g, p, l, s)
+    if i == 0:
+        b.g.calculate_x1(b.s)
+        b.x = b.g.x1_grid
+        b.y = b.g.x3(b.x)
+        plt.plot(b.x, b.y, colors[i], label='Parent', linestyle = '-', lw = 3, zorder=0)
     # b.iterative_solver()
     b.parameterized_solver(format_input = format_input)
-    plt.plot(b.x, b.y, colors[i], label='Model: %.3f N' % load, linestyle = '--',
-             lw = 3)
+    plt.plot(b.x, b.y, colors[i+1], label='Child: %.3f N' % load, linestyle = '-',
+             lw = 3, zorder=1)
 
-    gg = CoordinateSystem.polynomial(D=experiment[load_keys[i]], chord = chord_parent, color = 'b')
+    gg = CoordinateSystem.polynomial(D=experiment[load_keys[i]], chord = chord_parent)
     gg.calculate_x1(s)
-    gg.plot(label='Experiment: %.3f N' % load_keys[i], color = colors[i], scatter = True)
+    gg.plot(label='Experiment: %.3f N' % load_keys[i], color = colors[i+1], scatter = True, marker="D")
 plt.legend()
 plt.show()

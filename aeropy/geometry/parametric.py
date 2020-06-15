@@ -297,7 +297,7 @@ class CoordinateSystem(object):
         else:
             self.x1_grid = np.array(x1)
 
-    def plot(self, basis=False, r = None, label=None, linestyle = '-', color = None, scatter = False, zorder=0):
+    def plot(self, basis=False, r = None, label=None, linestyle = '-', color = None, scatter = False, zorder=0, marker = '.'):
         if r is None:
             r = self.r(self.x1_grid)
 
@@ -306,9 +306,9 @@ class CoordinateSystem(object):
 
         if scatter:
             if label is None:
-                plt.scatter(r[:,0], r[:,1], c = color)
+                plt.scatter(r[:,0], r[:,1], c = color, zorder = 2, marker = marker)
             else:
-                plt.scatter(r[:,0], r[:,1], c = color, label=label, zorder = 2, edgecolors='k')
+                plt.scatter(r[:,0], r[:,1], c = color, label=label, zorder = 2, edgecolors='k', marker=marker)
         else:
             if label is None:
                 plt.plot(r[:,0], r[:,1], color, linestyle = linestyle, lw = 3,

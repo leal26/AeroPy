@@ -112,23 +112,32 @@ class beam_chen():
     def calculate_M(self):
         self.M = np.zeros(len(self.x))
         for i in range(len(self.M)):
-            self.M[i] = self._M(self.x[i], self.s[i])
+            self.M[i] = self._M(self.x[i], self.s[i], self.y[i])
 
     def _M(self, x, s, y=None):
         M_i = 0
         if self.l.concentrated_load is not None:
-            for i in range(len(self.l.concentrated_s)):
-                index = np.where(self.s == self.l.concentrated_s[i])[0][0]
-                M_i += self.l.concentrated_load[i][-1]*(self.x[index]-x)
+            if self.l.follower:
+                raise(NotImplementedError)
+            else:
+                for i in range(len(self.l.concentrated_s)):
+                    index = np.where(self.s == self.l.concentrated_s[i])[0][0]
+                    M_i += self.l.concentrated_load[i][-1]*(self.x[index]-x)
 
         if self.l.distributed_load is not None:
             index = np.where(self.s == s)[0][0]
 
-            # M_x = self.l.distributed_load(self.s[index:])*self.cos[index:]*(self.x[index:]-x)
-            # M_y = self.l.distributed_load(self.s[index:])*self.sin[index:]*(self.y[index:]-y)
-            # print(index, self.x[index:], x, self.s[index:])
-            # M_i -= trapz(M_x, self.s[index:])
-            M_i -= trapz(self.l.distributed_load(self.s[index:])*(self.x[index:]-x), self.s[index:]) #  M_x + M_y
+            if not self.l.follower:
+                M_i -= trapz(self.l.distributed_load(self.s[index:])*(self.x[index:]-x), self.s[index:]) #  M_x + M_y
+            else:
+                w = self.l.distributed_load(self.s[index:])
+                M_x = w*self.cos[index:]*(self.x[index:]-x)
+                M_y = w*self.sin[index:]*(self.y[index:]-y)
+                M_i -= trapz(M_x + M_y, self.s[index:])
+                # print('cos', self.cos[index:])
+                # print('sin', self.sin[index:])
+                # print('x', self.x[index:])
+                # print('y', self.y[index:])
         return M_i
 
     def calculate_G(self):
@@ -221,7 +230,8 @@ class beam_chen():
             self.g.calculate_x1(self.s)
             self.x = self.g.x1_grid
             self.y = self.g.x3(self.x)
-            self.calculate_angles()
+            if self.l.follower:
+                self.calculate_angles()
             self.calculate_M()
             # self.calculate_G()
             # self.calculate_x()

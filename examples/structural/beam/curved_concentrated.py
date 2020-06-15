@@ -28,8 +28,8 @@ b.parameterized_solver(format_input = format_input)
 
 g_p.calculate_x1(s)
 g_p.plot(label='Parent')
-plt.plot(b.x, b.y, 'b', label='Chen', linestyle = '--', lw = 3)
-plt.scatter(abaqus_x, abaqus_y, c='g', label='FEA', edgecolors='k', zorder = 10)
+plt.plot(b.x, b.y, '.5', label='Child: %.3f N' % -l.concentrated_load[0][-1], lw = 3)
+plt.scatter(abaqus_x, abaqus_y, c='.5', label='FEA: %.3f N' % -l.concentrated_load[0][-1], edgecolors='k', zorder = 10, marker="^")
 
 plt.legend()
 plt.show()

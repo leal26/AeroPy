@@ -60,11 +60,12 @@ class properties():
 
 class loads():
     def __init__(self, concentrated_load=None, load_s=None,
-                       distributed_load = None):
+                       distributed_load = None, follower = False):
         self.concentrated_load = concentrated_load
         self.concentrated_s = load_s
         self.concentrated_x = None
         self.distributed_load = distributed_load
+        self.follower = follower
 
 class boundary_conditions():
     def __init__(self, concentrated_load=np.array([[0, 0, 0], ]), load_x=[1],
@@ -72,7 +73,6 @@ class boundary_conditions():
         self.concentrated_load = concentrated_load
         self.concentrated_x = load_x
         self.concentrated_n = len(concentrated_load)
-        self.distributed_load = None
 
         self.distributed_load = distributed_load
 
