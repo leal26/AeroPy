@@ -14,14 +14,15 @@ import math
 import shutil  # Modules necessary for saving multiple plots
 import datetime
 import time
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                           Core Functions
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0,  # noqa C901
+def call(airfoil, alfas=None, output='Cp', Reynolds=0, Mach=0,  # noqa C901
          plots=False, NACA=True, GDES=False, iteration=10, flap=None,
-         PANE=False, NORM=True):
+         PANE=False, NORM=True, dir=""):
     """Call xfoil through Python.
 
     The input variables are:
@@ -137,7 +138,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0,  # noqa C901
                                 output, airfoil, alfa))
             if output == 'Cp':
                 # Creating the file with the Pressure Coefficients
-                filename = file_name(airfoil, alfas, output)
+                filename = file_name(airfoil, alfas, reynolds=Reynolds, output=output)
                 try:
                     os.remove(filename)
                 except OSError:
@@ -147,7 +148,7 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0,  # noqa C901
 
             if output == 'Dump':
                 # Creating the file with the Pressure Coefficients
-                filename = file_name(airfoil, alfas, output)
+                filename = file_name(airfoil, alfas, reynolds=Reynolds, output=output)
                 try:
                     os.remove(filename)
                 except OSError:
@@ -163,18 +164,18 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0,  # noqa C901
     if Reynolds != 0:
         Viscid = True
     # Is alpha given or not?(in case of Alfa_L_0, then alfas=False)
-    if alfas != 'none':
+    if alfas is not None:
         # Single or multiple runs?
         if type(alfas) == list or type(alfas) == np.ndarray:
             Multiple = True
         elif type(alfas) == int or type(alfas) == float or \
                 type(alfas) == np.float64 or type(alfas) == np.float32:
             Multiple = False
-    elif (output == "Alfa_L_0" or output == "Coordinates") and alfas == 'none':
+    elif (output == "Alfa_L_0" or output == "Coordinates") and alfas == None:
         Multiple = False
-    elif output == "Alfa_L_0" and alfas != 'none':
+    elif output == "Alfa_L_0" and alfas != None:
         raise Exception("To find alpha_L_0, alfas must not be defined")
-    elif output != "Alfa_L_0" and alfas == 'none':
+    elif output != "Alfa_L_0" and alfas == None:
         raise Exception("To find anything except alpha_L_0, you need to "
                         "define the values for alfa")
 
@@ -196,24 +197,59 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0,  # noqa C901
     # The following keys avoid the xfoil pop-up
     # source: http://stackoverflow.com/questions/1765078/how-to-avoid-
     # console-window-with-pyw-file-containing-os-system-call
-    startupinfo = sp.STARTUPINFO()
-    startupinfo.dwFlags |= sp.STARTF_USESHOWWINDOW
+
+    #Checks if kernel is Posix or Windows NT
+
+    posix = True
+
+    if os.name == "nt":
+        posix = False
+
     # Random output variable to avoid writing stuff from xfoil on the
     # console
-    sout = 0
-    # Calling xfoil with Poper
-    ps = sp.Popen(['xfoil.exe'],
-                  stdin=sp.PIPE,
-                  stdout=sout,
-                  stderr=None,
-                  startupinfo=startupinfo,
-                  encoding='utf8')
+
+
+    if posix:
+        with open(os.devnull, 'w') as fp:
+            # Calling xfoil with Popen
+            ps = sp.Popen(["xfoil"],
+                        stdin=sp.PIPE,
+                        stdout=fp,
+                        stderr=None,
+                        encoding='utf8')
+
+
+    else:
+        startupinfo = sp.STARTUPINFO()
+        startupinfo.dwFlags |= sp.STARTF_USESHOWWINDOW
+        # Random output variable to avoid writing stuff from xfoil on the
+        # console
+        sout = 0
+        # Calling xfoil with Popen
+        ps = sp.Popen(['xfoil.exe'],
+                        stdin=sp.PIPE,
+                        stdout=sout,
+                        stderr=None,
+                        startupinfo=startupinfo,
+                        encoding='utf8')
+            
+
+    
+
+
+    #Preventing XFOIL from opening XPLOT11-Windows, therfore being able to run aeroPy in a
+    #command-line only Linux 
+    if posix:
+        issueCmd('PLOP')
+        issueCmd('G F')
+        issueCmd('')
+
 
     # Loading geometry
     if NORM is True:
         issueCmd('NORM')
     if NACA is False:
-        issueCmd('load %s' % airfoil)
+        issueCmd('load %s%s' % (dir,airfoil))
     else:
         issueCmd('%s' % airfoil)
 
@@ -286,13 +322,14 @@ def call(airfoil, alfas='none', output='Cp', Reynolds=0, Mach=0,  # noqa C901
             issueCmd('PACC')
             # All file names in this library are generated by the
             # filename functon.
-            filename = file_name(airfoil, alfas, output)
+            filename = file_name(airfoil, alfas, reynolds=Reynolds, output=output, dir="")
+            #print(filename)
             try:
                 os.remove(filename)
             except OSError:
                 pass
 
-            issueCmd('%s' % filename)
+            issueCmd('%s%s' % (dir, filename))
             issueCmd('')
 
         # For several angles of attack
@@ -494,7 +531,7 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,  # noqa C901
                                                     - rotated_x_LE)
                     Rotated_Coordinates['y'].append(rot_y)
 
-                All_Rotated_Coordinates['%s' % count] = Rotated_Coordinates
+                All_Rotated_Coordinates['%s' % count] = Rotated_Coordinatesdeinemutt
                 count += 1
         return All_Rotated_Coordinates['0'], All_Rotated_Coordinates['1']
 
@@ -861,7 +898,7 @@ def alfa_for_file(alfa):
     return alfa
 
 
-def file_name(airfoil, alfas='none', output='Cp'):
+def file_name(airfoil, alfas=None, reynolds=0, output='Cp', dir=""):
     """Create standard name for the files generated by XFOIL.
 
     :param airfoil: the name of the plain file where the airfoil
@@ -878,7 +915,7 @@ def file_name(airfoil, alfas='none', output='Cp'):
                  desired alfas
            - Dump: generates file with Velocity along surface, Delta
                    star and theta and Cf vs s,x,y for several alfas
-           - Polar: generates file with CL, CD, CM, CDp, Top_Xtr,
+           - Polar: generates file with CL, CD, CM, CDp, Top_Xtr,deinemutt
                     Bot_Xtr
            - Alpha_L_0: calculate the angle of attack that lift is
                         zero
@@ -901,15 +938,15 @@ def file_name(airfoil, alfas='none', output='Cp'):
     @author: Pedro Leal
     """
     # At first verify if alfas was defined
-    if alfas == 'none':
+    if alfas is None:
         filename = '%s_%s' % (output, airfoil)
-    elif alfas != 'none':
+    elif alfas is not None:
         if output == 'Cp' or output == 'Dump':
             if type(alfas) == list:
                 alfas = alfas[0]
             alfa = alfa_for_file(alfas)
 
-            filename = '%s_%s_%s' % (output, airfoil, alfa)
+            filename = '%s_%s_%s_%s' % (output, airfoil, reynolds, alfa)
 
         if output == 'Polar':
             # In case it is only for one angle of attack, the same
@@ -924,8 +961,8 @@ def file_name(airfoil, alfas='none', output='Cp'):
             else:
                 alfa_i = alfas[0]
                 alfa_f = alfas[-1]
-            filename = '%s_%s_%s_%s' % (output, airfoil, alfa_i, alfa_f)
-    return filename
+            filename = '%s_%s_%s_%s_%s' % (output, airfoil, reynolds, alfa_i, alfa_f)
+    return dir + filename
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                           Utility functions
@@ -934,29 +971,29 @@ def file_name(airfoil, alfas='none', output='Cp'):
 
 def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10,
                       NACA=True, delete=False, PANE=False,
-                      GDES=False):
+                      GDES=False, dir=""):
 
     """Calculate the coefficients of an airfoil.
 
     Includes lift, drag, moment, friction etc coefficients.
     """
-    filename = file_name(airfoil, alpha, output='Polar')
+    filename = file_name(airfoil, alpha, reynolds=Reynolds, output='Polar')
     # If file already exists, there is no need to recalculate it.
-    if not os.path.isfile(filename):
+    if not os.path.isfile(dir + filename):
         call(airfoil, alpha, Reynolds=Reynolds,
              output='Polar', iteration=iteration, NACA=NACA,
-             PANE=PANE, GDES=GDES)
+             PANE=PANE, GDES=GDES, dir=dir)
 
     coefficients = {}
     # Data from file
-    Data = output_reader(filename, output='Polar', delete=False)
+    Data = output_reader(dir + filename, output='Polar', delete=False)
     for key in Data:
         try:
             coefficients[key] = Data[key][0]
         except:  #noqa E722
             coefficients[key] = None
     if delete:
-        os.remove(filename)
+        os.remove(dir + filename)
     return coefficients
 
 
@@ -964,7 +1001,7 @@ def find_pressure_coefficients(airfoil, alpha, Reynolds=0, iteration=10,
                                NACA=True, use_previous=False, chord=1.,
                                PANE=False, delete=False, GDES=False):
     """Calculate the pressure coefficients of an airfoil."""
-    filename = file_name(airfoil, alpha, output='Cp')
+    filename = file_name(airfoil, alpha, reynolds=Reynolds, output='Cp')
 
     # If file already exists, there is no need to recalculate it.
     if not use_previous:
@@ -993,7 +1030,7 @@ def find_alpha_L_0(airfoil, Reynolds=0, iteration=10, NACA=True):
     Calculate the angle of attack where the lift coefficient
     is equal to zero.
     """
-    filename = file_name(airfoil, output='Alfa_L_0')
+    filename = file_name(airfoil, reynolds=Reynolds, output='Alfa_L_0')
     # If file already exists, there no need to recalculate it.
     if not os.path.isfile(filename):
         call(airfoil, output='Alfa_L_0', NACA=NACA)
