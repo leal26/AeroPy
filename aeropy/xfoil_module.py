@@ -531,7 +531,7 @@ def prepare_xfoil(Coordinates_Upper, Coordinates_Lower, chord,  # noqa C901
                                                     - rotated_x_LE)
                     Rotated_Coordinates['y'].append(rot_y)
 
-                All_Rotated_Coordinates['%s' % count] = Rotated_Coordinatesdeinemutt
+                All_Rotated_Coordinates['%s' % count] = Rotated_Coordinates
                 count += 1
         return All_Rotated_Coordinates['0'], All_Rotated_Coordinates['1']
 
@@ -915,7 +915,7 @@ def file_name(airfoil, alfas=None, reynolds=0, output='Cp', dir=""):
                  desired alfas
            - Dump: generates file with Velocity along surface, Delta
                    star and theta and Cf vs s,x,y for several alfas
-           - Polar: generates file with CL, CD, CM, CDp, Top_Xtr,deinemutt
+           - Polar: generates file with CL, CD, CM, CDp, Top_Xtr,
                     Bot_Xtr
            - Alpha_L_0: calculate the angle of attack that lift is
                         zero
@@ -977,24 +977,47 @@ def find_coefficients(airfoil, alpha, Reynolds=0, iteration=10,
 
     Includes lift, drag, moment, friction etc coefficients.
     """
-    filename = file_name(airfoil, alpha, reynolds=Reynolds, output='Polar')
-    # If file already exists, there is no need to recalculate it.
-    if not os.path.isfile(dir + filename):
-        call(airfoil, alpha, Reynolds=Reynolds,
-             output='Polar', iteration=iteration, NACA=NACA,
-             PANE=PANE, GDES=GDES, dir=dir)
+    # Single or multiple reynolds numbers?
+    if type(Reynolds) == list or type(Reynolds) == np.ndarray:
+        multipleReynolds = True
+    elif type(Reynolds) == int or type(Reynolds) == float or \
+            type(Reynolds) == np.float64 or type(Reynolds) == np.float32:
+        multipleReynolds = False#
+    else:
+        Exception("Wrong input data type for Reynolds")
 
-    coefficients = {}
-    # Data from file
-    Data = output_reader(dir + filename, output='Polar', delete=False)
-    for key in Data:
-        try:
-            coefficients[key] = Data[key][0]
-        except:  #noqa E722
-            coefficients[key] = None
-    if delete:
-        os.remove(dir + filename)
-    return coefficients
+
+    def singleIteration(airfoil, alpha, Reynolds, iteration,
+                      NACA, delete, PANE,
+                      GDES, dir):
+
+        filename = file_name(airfoil, alpha, reynolds=Reynolds, output='Polar')
+        # If file already exists, there is no need to recalculate it.
+        if not os.path.isfile(dir + filename):
+            call(airfoil, alpha, Reynolds=Reynolds,
+                output='Polar', iteration=iteration, NACA=NACA,
+                PANE=PANE, GDES=GDES, dir=dir)
+
+        coefficients = {}
+        # Data from file
+        Data = output_reader(dir + filename, output='Polar', delete=False)
+        for key in Data:
+            try:
+                coefficients[key] = Data[key][0]
+            except:  #noqa E722
+                coefficients[key] = None
+        if delete:
+            os.remove(dir + filename)
+        return coefficients
+
+
+    if multipleReynolds:
+        for currentReynolds in Reynolds:
+            singleIteration(airfoil=airfoil, alpha=alpha, Reynolds=currentReynolds,
+                            iteration=iteration, NACA=NACA, delete=delete, PANE=PANE, GDES=GDES, dir=dir)
+    else:
+        singleIteration(airfoil=airfoil, alpha=alpha, Reynolds=Reynolds,
+                            iteration=iteration, NACA=NACA, delete=delete, PANE=PANE, GDES=GDES, dir=dir)
 
 
 def find_pressure_coefficients(airfoil, alpha, Reynolds=0, iteration=10,
