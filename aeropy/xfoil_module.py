@@ -97,7 +97,15 @@ def call(airfoil, alfas=None, output='Cp', Reynolds=0, Mach=0,  # noqa C901
     Last update Fr Jul 13 15:38:40 2015
 
     @author: Pedro Leal (Based on Hakan Tiftikci's code)
+    
     """
+    #Create the directory if it does not already exist (only needet
+    # naca airfoil is generated directly form XFOIL, if foil is loaded
+    # from file into xfoil, directory must exist)
+
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
+
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #                               Functions
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
