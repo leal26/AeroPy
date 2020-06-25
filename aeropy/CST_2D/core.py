@@ -62,7 +62,7 @@ def dxi_u(psi, Au, delta_xi, N1=0.5, N2=1):
         #     Au[i]*K(i, n)*(psi**i)*((1-psi)**(n-i))*(i+N1-psi*(n+N1+N2))
         dS1 = (N1+i)/psi
         dS2 = (i-n-N2)/(1-psi)
-        diff += C_i*S_i*(dS1+dS2)
+        diff += Au[i]*C_i*S_i*(dS1+dS2)
     return diff
 
 # Lower surface differential
@@ -81,15 +81,15 @@ def dxi_l(psi, Al, delta_xi):
 # Upper surface second differential
 
 
-def ddxi_u(psi, Au, abs_output=False):
+def ddxi_u(psi, Au, abs_output=False, N1=0.5, N2=1):
     """Calculate upper second derivate of xi for a given psi"""
     n = len(Au)-1
 
-    C = C(N1, N2, psi)
+    C_i = C(N1, N2, psi)
     xi_0 = CST(psi, 1, 0, Au, N1=N1, N2=N2)
-    diff = -delta_xi/2.
+    diff = 0
     for i in range(n+1):
-        S = (i,n,psi)
+        S_i = S(i,n,psi)
         # print N1-1., N2-1.
         # print psi**(N1-1.), (1-psi)**(N2-1.)
         # print Au[i]*K(i,n)*(psi**i)*((1-psi)**(n-i))*(i+N1-psi*(n+N1+N2))
@@ -100,7 +100,7 @@ def ddxi_u(psi, Au, abs_output=False):
 
         dS11 = -(N1+1)/psi**2
         dS22 = (i-n-N2)/(1-psi)**2
-        diff += S*((dS1+dS2)**2 + (dS11+dS22))
+        diff += Au[i]*C_i*S_i*((dS1+dS2)**2 + (dS11+dS22))
     return diff
 
 # Lower surface second differential

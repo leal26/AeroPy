@@ -17,33 +17,46 @@ g = CoordinateSystem.polynomial(D=[0, 0, 3, -3, 0, 0], chord = 1, color = 'b', n
 g_p = CoordinateSystem.polynomial(D=[0, 0, 3, -3, 0, 0], chord = 1, color = 'k', n =6)
 
 s_tip = g.arclength(g.chord)[0]
-s = np.linspace(0, s_tip, 101)
+s = np.linspace(0, s_tip, 21)
 
 p = properties()
 l = loads(concentrated_load = [[0, -1]], load_s = [s[-1]])
 # s = np.linspace(0, 1, 10)
 b = beam_chen(g, p, l, s)
 
-plt.subplot(4, 1, 1)
-plt.ylabel('y')
-y = b.g_p.x3(b.g_p.x1_grid)
-plt.plot(b.g_p.x1_grid, y, label='y')
 
-plt.subplot(4, 1, 2)
-plt.ylabel('dy')
-y = b.g_p.x3(b.g_p.x1_grid, diff='x1')
-plt.plot(b.g_p.x1_grid, y, label='dy')
+# b.g.D = [0, 0, 3.03040918, -3.29131145, 0.55964773, -0.31282177]
+# b.g_p.calculate_x1(b.s)
+# b.g.calculate_x1(b.s)
+# b.g.radius_curvature(b.g.x1_grid)
+#
+# plt.subplot(4, 1, 1)
+# plt.ylabel('y')
+# y_p = b.g_p.x3(b.g_p.x1_grid)
+# y = b.g.x3(b.g_p.x1_grid)
+# plt.plot(b.g_p.x1_grid, y_p, 'k', label='y')
+# plt.plot(b.g.x1_grid, y, '0.5',label='y')
+#
+# plt.subplot(4, 1, 2)
+# plt.ylabel('dy')
+# y_p = b.g_p.x3(b.g_p.x1_grid, diff='x1')
+# y = b.g.x3(b.g.x1_grid, diff='x1')
+# plt.plot(b.g_p.x1_grid, y_p, 'k', label='y')
+# plt.plot(b.g.x1_grid, y, '0.5',label='y')
+#
+# plt.subplot(4, 1, 3)
+# plt.ylabel('ddy')
+# y = b.g_p.x3(b.g_p.x1_grid, diff='x11')
+# y = b.g.x3(b.g.x1_grid, diff='x11')
+# plt.plot(b.g_p.x1_grid, y_p, 'k', label='ddy')
+# plt.plot(b.g.x1_grid, y, '0.5', label='ddy')
+#
+# plt.subplot(4, 1, 4)
+# plt.ylabel('curvature')
+# plt.plot(b.g_p.x1_grid, b.g_p.rho, 'k', label='curvature')
+# plt.plot(b.g.x1_grid, b.g.rho, '0.5',label='curvature')
+# plt.show()
 
-plt.subplot(4, 1, 3)
-plt.ylabel('ddy')
-y = b.g_p.x3(b.g_p.x1_grid, diff='x11')
-plt.plot(b.g_p.x1_grid, y, label='ddy')
-
-plt.subplot(4, 1, 4)
-plt.ylabel('curvature')
-plt.plot(b.g_p.x1_grid, b.g_p.rho, label='curvature')
-plt.show()
-BREAK
 # b.g.D = [0, 0, 3.03040918, -3.29131145, 0.55964773, -0.31282177]
 # b.g.calculate_x1(b.s)
 # b.y = b.g.x3(b.g.x1_grid)
