@@ -41,8 +41,8 @@ for i in range(len(load_keys)):
     # b.iterative_solver()
     b.parameterized_solver(format_input = format_input)
 
-    if i > 0:
-        plt.plot(b.x, b.y, colors[i], label='Parent' % load, linestyle = '-',
+    if i == 0:
+        plt.plot(b.x, b.y, colors[i], label='Parent', linestyle = '-',
                  lw = 3, zorder =1)
     if i > 0:
         plt.plot(b.x, b.y, colors[i], label='Child: %.3f N' % load, linestyle = '-',

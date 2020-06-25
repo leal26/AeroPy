@@ -27,6 +27,7 @@ class CoordinateSystem(object):
         if self.n == 1 and (isinstance(values, float) or isinstance(values, np.float64)):
             self._D = values
         else:
+            print(values, self.n, len(values))
             if len(values) != self.n:
                 self._D = np.zeros(self.n)
                 self._D[:len(values)] = values
@@ -76,14 +77,14 @@ class CoordinateSystem(object):
             return np.ones(len(x1))
 
     @classmethod
-    def polynomial(cls, D, chord=1, color='b'):
-        c = cls(D, chord = chord, color = color, n = 5)
+    def polynomial(cls, D, chord=1, color='b', n=6):
+        c = cls(D, chord = chord, color = color, n = n)
         c.x3 = c._x3_poly
         return c
 
     @classmethod
     def CST(cls, D, chord, color):
-        c = cls(D, chord = chord, color = color)
+        c = cls(D, chord = chord, color = color, n=len(D))
         c.x3 = c._x3_CST
         return c
 
@@ -97,15 +98,14 @@ class CoordinateSystem(object):
         """ z2 (checked)"""
         if D is None:
             D = self.D
-
         if diff is None:
-            return(D[4]*x1**4 + D[3]*x1**3 + D[2]*x1**2 + D[1]*x1 + D[0])
+            return(D[5]*x1**5 + D[4]*x1**4 + D[3]*x1**3 + D[2]*x1**2 + D[1]*x1 + D[0])
         elif diff == 'x1':
-            return(4*D[4]*x1**3 + 3*D[3]*x1**2 + 2*D[2]*x1 + D[1])
+            return(5*D[5]*x1**4 + 4*D[4]*x1**3 + 3*D[3]*x1**2 + 2*D[2]*x1 + D[1])
         elif diff == 'x11':
-            return(12*D[4]*x1**2 + 6*D[3]*x1 + 2*D[2])
+            return(20*D[5]*x1**3 + 12*D[4]*x1**2 + 6*D[3]*x1 + 2*D[2])
         elif diff == 'x111':
-            return(24*D[4]*x1 + 6*D[3])
+            return(60*D[5]*x1**2 + 24*D[4]*x1 + 6*D[3])
         elif diff == 'theta1':
             return self.x3(x1, 'x1')*self.x1(x1, 'theta1')
         elif diff == 'theta11':
@@ -124,17 +124,19 @@ class CoordinateSystem(object):
         else:
             return(np.zeros(len(x1)))
 
-    def _x3_CST(self, x1, diff=None):
+    def _x3_CST(self, x1, diff=None, ):
             N1 = 1.
             N2 = 1.
-            A0 = self.tip_displacement/max(x1)
-            A = [A0] + list(self.D)
+            chord = self.chord
+            A0 = self.D[-1]
+            A = [A0] + list(self.D[:-2])
+            deltaz = self.D[-1]
+            psi = x1 / max(x1)
             if diff is None:
-                return(CST(x1, max(x1), deltasz=self.tip_displacement, Au=A,
+                return(CST(x1, max(x1), deltasz=deltaz, Au=A,
                        N1=N1, N2=N2))
             elif diff == 'x1':
-                psi = x1 / max(x1)
-                return(dxi_u(psi, A, delta_xi, N1=N1, N2=N2))
+                return(dxi_u(psi, A, deltaz/chord, N1=N1, N2=N2))
             elif diff == 'x11':
                 return(ddxi_u(psi, A, N1 = N1, N2=N2))
             elif diff == 'theta3':
@@ -191,18 +193,6 @@ class CoordinateSystem(object):
             #  a1 diff theta1
             for i in range(3):
                 for j in range(3):
-                    # print('index1',i+1,j+1)
-                    # print(self.r(x1, 'x11'))
-                    # print(self.x1(x1, 'theta%d' % (i+1)))
-                    # print(self.x1(x1, 'theta%d' % (j+1)))
-                    # print(self.r(x1, 'x1'))
-                    # print(self.x1(x1, 'theta%d%d' % (i+1,j+1)))
-                    # print('index2')
-                    # print(self.r(x1, 'x22'))
-                    # print(self.x2(x1, 'theta%d' % (i+1)))
-                    # print(self.x2(x1, 'theta%d' % (j+1)))
-                    # print(self.r(x1, 'x2'))
-                    # print(self.x2(x1, 'theta%d%d' % (i+1,j+1)))
 
                     # cross terms are null for 2D case
                     x11_1 = np.einsum('ij,i->ij', self.r(x1, 'x11'), self.x1(x1, 'theta%d' % (i+1))*self.x1(x1, 'theta%d' % (j+1)))
@@ -210,20 +200,7 @@ class CoordinateSystem(object):
                     x22_1 = np.einsum('ij,i->ij', self.r(x1, 'x22'), self.x2(x1, 'theta%d' % (i+1))*self.x1(x1, 'theta%d' % (j+1)))
                     x22_2 = np.einsum('ij,i->ij', self.r(x1, 'x2'), self.x2(x1, 'theta%d%d' % (i+1,j+1)))
                     self.da[i,j,:,:] = x11_1+x11_2 + x22_1+x22_2
-            # i=0
-            # j=0
-            # print(i+1,j+1)
-            # print(self.r(x1, 'x11'))
-            # print(self.x2(x1, 'theta%d' % (j+1))**2)
-            # print(self.r(x1, 'x1'))
-            # print(self.x1(x1, 'theta%d%d' % (j+1,j+1)))
-            # print('real')
-            # print(self.r(x1, 'x11'))
-            # print(self.x2(x1, 'theta%d' % (j+1))**2)
-            # print(self.r(x1, 'x1'))
-            # print(self.x1(x1, 'theta%d%d' % (1,1)))
-            # self.da[0,0,:,:] = np.einsum('ij,i->ij', self.r(x1, 'x11'), self.x1(x1, 'theta1')**2) + \
-            #                    np.einsum('ij,i->ij', self.r(x1, 'x1'), self.x1(x1, 'theta11'))
+
     def christoffel(self, i, j, k, order=1):
         if order == 1:
             gik_j = self.dA[i,k,j]
@@ -325,3 +302,6 @@ class CoordinateSystem(object):
                        angles='xy', color = color, scale_units='xy')
         plt.xlabel('x (m)')
         plt.ylabel('y (m)')
+
+    def radius_curvature(self, x):
+        self.rho = self.x3(x, diff='x11')/(1+(self.x3(x, diff='x1'))**2)**(3/2)

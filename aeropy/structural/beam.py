@@ -103,7 +103,7 @@ class beam_chen():
         self.g_p = copy.deepcopy(geometry)
         self.g_p.calculate_x1(s)
         # self.Rho = self.g_p.x3(self.g_p.x1_grid, diff='theta11')
-        self.Rho = self.g_p.x3(self.g_p.x1_grid, diff='x11')/(1+(self.g_p.x3(self.g_p.x1_grid, diff='x1'))**2)**(3/2)
+        self.g_p.radius_curvature(self.g_p.x1_grid)
         self.p = properties
         self.l = load
         self.s = s
@@ -122,7 +122,8 @@ class beam_chen():
             else:
                 for i in range(len(self.l.concentrated_s)):
                     index = np.where(self.s == self.l.concentrated_s[i])[0][0]
-                    M_i += self.l.concentrated_load[i][-1]*(self.x[index]-x)
+                    M_i += self.l.concentrated_load[i][0]*(self.y[index]-y)
+                    M_i += self.l.concentrated_load[i][1]*(self.x[index]-x)
 
         if self.l.distributed_load is not None:
             index = np.where(self.s == s)[0][0]
@@ -188,10 +189,11 @@ class beam_chen():
         self.r = np.zeros(len(self.x))
         for i in range(len(self.x)):
             # rhs = self.g.x3(self.x[i], diff='theta11') - self.Rho[i]
-            rhs = self.g.x3(self.x[i], diff='x11')/(1+(self.g.x3(self.x[i], diff='x1'))**2)**(3/2) - self.Rho[i]
+            rhs = self.g.rho[i] - self.g_p.rho[i]
             lhs = self.M[i]/self.p.young/self.p.inertia
-            self.r[i] = lhs - rhs
-        self.R = np.linalg.norm(self.r)
+            self.r[i] = np.abs(lhs - rhs)
+        # self.R = np.linalg.norm(self.r)
+        self.R = trapz(self.r, self.s)
         if np.isnan(self.R):
             self.R = 100
         print('R: ', self.R)
@@ -225,23 +227,25 @@ class beam_chen():
             print(error)
 
     def parameterized_solver(self, format_input = None):
-        def _residual(A):
-            self.g.D = [0,0] + list(A)
-            self.g.calculate_x1(self.s)
-            self.x = self.g.x1_grid
-            self.y = self.g.x3(self.x)
-            if self.l.follower:
-                self.calculate_angles()
-            self.calculate_M()
-            # self.calculate_G()
-            # self.calculate_x()
-            # self.calculate_M()
-            self.calculate_residual()
-            return self.R
-
         # self.x = np.copy(self.s)
-        sol = minimize(_residual, format_input(self.g.D), method = 'BFGS', options={'gtol': 1e-04})
-        print(sol.x, sol.fun)
+        sol = minimize(self._residual, [3.03040918, -3.29131145, 0.55964773, -0.31282177], method = 'SLSQP')
         self.g.D = [0,0] + list(sol.x)
         self.y = self.g.x3(self.x)
+        print(self.g.D, sol.fun)
         return
+
+    def _residual(self, A):
+        self.g.D = [0,0] + list(A)
+        self.g.calculate_x1(self.s)
+        self.g.chord = self.g.x1_grid[-1]
+        self.x = self.g.x1_grid
+        self.y = self.g.x3(self.x)
+        if self.l.follower:
+            self.calculate_angles()
+        self.calculate_M()
+        # self.calculate_G()
+        # self.calculate_x()
+        # self.calculate_M()
+        self.g.radius_curvature(self.g.x1_grid)
+        self.calculate_residual()
+        return self.R
