@@ -6,9 +6,10 @@ import numpy as np
 from scipy.integrate import quad, trapz
 from scipy.optimize import minimize
 
+
 class euler_bernoulle_curvilinear():
     def __init__(self, geometry_parent, geometry_child, properties,
-                       load, load_type, theta1):
+                 load, load_type, theta1):
         self.properties = properties
         self.load = load
         self.load_type = load_type
@@ -23,28 +24,27 @@ class euler_bernoulle_curvilinear():
         self.g_c.calculate_x1(self.theta1)
         self.arc_length = self.g_p.arclength()[0]
 
-    def update_chord(self, length_target = None, bounds = None):
+    def update_chord(self, length_target=None, bounds=None):
         def f(c_c):
             length_current, err = self.g_c.arclength(c_c)
             return abs(length_target - length_current)
         if length_target is None:
-            length_target= self.arc_length
+            length_target = self.arc_length
         if bounds is None:
             self.g_c.chord = minimize(f, self.g_c.chord).x[0]
         else:
             self.g_c.chord = minimize(f, self.g_c.chord,
-                                               method='L-BFGS-B',
-                                               bounds = bounds).x[0]
+                                      method='L-BFGS-B',
+                                      bounds=bounds).x[0]
         # In case the calculated chord is really close to the original
         if abs(self.g_p.chord - self.g_c.chord) < 1e-7:
             self.g_c.chord = self.g_p.chord
-
 
     def analytical_solutions(self):
         if self.load_type == 'concentrated':
             bp = self.properties
             self.g_c.D = self.load/(6*bp.young*bp.inertia) * \
-                            np.array([0, 0, 3, -1, 0])
+                np.array([0, 0, 3, -1, 0])
         elif self.load_type == 'distributed':
             bp = self.properties
             c2 = 6*(bp.length**2)*self.load/(24*bp.young*bp.inertia)
@@ -54,7 +54,7 @@ class euler_bernoulle_curvilinear():
 
     def bending_strain(self):
         self.B = self.g_c.x3(self.g_c.x1_grid, 'x11') - \
-                 self.g_p.x3(self.g_p.x1_grid, 'x11')
+            self.g_p.x3(self.g_p.x1_grid, 'x11')
 
     def free_energy(self):
         bp = self.properties
@@ -68,14 +68,14 @@ class euler_bernoulle_curvilinear():
         if self.load_type == 'concentrated':
             self.W = self.load*u[-1]
         elif self.load_type == 'distributed':
-            self.W = np.trapz(np.multiply(self.load,u), self.g_c.x1_grid)
+            self.W = np.trapz(np.multiply(self.load, u), self.g_c.x1_grid)
 
     def residual(self):
         self.R = self.U - self.W
 
-    def minimum_potential(self, x0=[0,0]):
+    def minimum_potential(self, x0=[0, 0]):
         def to_optimize(x):
-            self.g_c.D = [0,0] + list(x)
+            self.g_c.D = [0, 0] + list(x)
             self.update_chord()
             self.g_c.calculate_x1(self.theta1)
             self.work()
@@ -87,15 +87,16 @@ class euler_bernoulle_curvilinear():
             return self.R
 
         # With bounds
-        bounds = np.array(((-0.01,0.01),)*len(x0))
+        bounds = np.array(((-0.01, 0.01),)*len(x0))
 
         res = minimize(to_optimize, x0)
-        self.g_c.D = [0,0] + list(res.x)
+        self.g_c.D = [0, 0] + list(res.x)
         self.work()
         self.free_energy()
         self.strain_energy()
         self.residual()
         return(res.x, res.fun)
+
 
 class beam_chen():
     def __init__(self, geometry, properties, load, s):
@@ -129,10 +130,13 @@ class beam_chen():
             index = np.where(self.s == s)[0][0]
 
             if not self.l.follower:
-                M_i -= trapz(self.l.distributed_load(self.s[index:])*(self.x[index:]-x), self.s[index:]) #  M_x + M_y
+                # M_x + M_y
+                M_i -= trapz(self.l.distributed_load(self.s[index:])
+                             * (self.x[index:]-x), self.s[index:])
             else:
                 w = self.l.distributed_load(self.s[index:])
                 M_x = w*self.cos[index:]*(self.x[index:]-x)
+                print(self.sin)
                 M_y = w*self.sin[index:]*(self.y[index:]-y)
                 M_i -= trapz(M_x + M_y, self.s[index:])
                 # print('cos', self.cos[index:])
@@ -164,7 +168,7 @@ class beam_chen():
             x[-1] = l
             current_L = trapz(np.sqrt(1-self.G[:index+1]**2), x)
             return abs(s-current_L)
-        return minimize(_to_minimize, s, method = 'Nelder-Mead',).x[0]
+        return minimize(_to_minimize, s, method='Nelder-Mead',).x[0]
 
     def calculate_angles(self):
         self.cos = self.g.x1(self.g.x1_grid, 'theta1')
@@ -174,7 +178,7 @@ class beam_chen():
         self.y = np.zeros(len(self.x))
         for i in range(len(self.x)):
             dydx = self.G[:i+1]/(1-self.G[:i+1]**2)
-            y_i =  trapz(dydx, self.x[:i+1])
+            y_i = trapz(dydx, self.x[:i+1])
             self.y[i] = y_i
 
     # def calculate_residual(self):
@@ -185,7 +189,7 @@ class beam_chen():
     #         self.r[i] = lhs - rhs
     #     self.R = np.linalg.norm(self.r)
 
-    def calculate_residual(self):
+    def calculate_residual(self, ignore_ends=False):
         self.r = np.zeros(len(self.x))
         for i in range(len(self.x)):
             # rhs = self.g.x3(self.x[i], diff='theta11') - self.Rho[i]
@@ -193,9 +197,14 @@ class beam_chen():
             lhs = self.M[i]/self.p.young/self.p.inertia
             self.r[i] = np.abs(lhs - rhs)
         # self.R = np.linalg.norm(self.r)
-        self.R = trapz(self.r, self.s)
+        if ignore_ends:
+            self.R = trapz(self.r[1:-1], self.s[1:-1])
+        else:
+            self.R = trapz(self.r, self.s)
+        # print('r', self.r)
         if np.isnan(self.R):
             self.R = 100
+        # print('r', self.r)
         print('R: ', self.R)
     # def calculate_Pho(self):
     #     self.g.calculate_x1(self.theta1, bounds = self.g_p.bounds)
@@ -211,7 +220,7 @@ class beam_chen():
         # self.calculate_Pho()
         # Calculate Moment for undeformed
         self.x = np.copy(self.s)
-        x_before= np.copy(self.x)
+        x_before = np.copy(self.x)
         y_before = self.g.x3(self.x)
 
         error = 1000
@@ -226,16 +235,20 @@ class beam_chen():
             y_before = np.copy(self.y)
             print(error)
 
-    def parameterized_solver(self, format_input = None):
-        # self.x = np.copy(self.s)
-        sol = minimize(self._residual, [3.03040918, -3.29131145, 0.55964773, -0.31282177], method = 'SLSQP')
-        self.g.D = [0,0] + list(sol.x)
+    def parameterized_solver(self, format_input=None, x0=None,
+                             ignore_ends=False):
+        def formatted_residual(A):
+            A = format_input(A)
+            return self._residual(A, ignore_ends=ignore_ends)
+
+        sol = minimize(formatted_residual, x0, method='SLSQP')
+        self.g.D = format_input(sol.x)
         self.y = self.g.x3(self.x)
-        print(self.g.D, sol.fun)
+        print('sol', self.g.D, sol.fun)
         return
 
-    def _residual(self, A):
-        self.g.D = [0,0] + list(A)
+    def _residual(self, A, ignore_ends=False):
+        self.g.D = A
         self.g.calculate_x1(self.s)
         self.g.chord = self.g.x1_grid[-1]
         self.x = self.g.x1_grid
@@ -247,5 +260,5 @@ class beam_chen():
         # self.calculate_x()
         # self.calculate_M()
         self.g.radius_curvature(self.g.x1_grid)
-        self.calculate_residual()
+        self.calculate_residual(ignore_ends)
         return self.R

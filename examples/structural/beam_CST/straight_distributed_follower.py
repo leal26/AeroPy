@@ -29,10 +29,11 @@ def distributed_load(s):
 
 
 def format_input(input):
-    return [0, 0] + list(input)
+    # COnsidering BC for zero derivative at the root
+    return list(input) + [-input[0]]
 
 
-g = CoordinateSystem.polynomial(D=[0, 0, 0, 0], chord=1, color='b')
+g = CoordinateSystem.CST(D=[0, 0, 0, 0, 0], chord=1, color='b', N1=1, N2=1)
 p = properties()
 w = p.young*p.inertia*lamda/p.length**3
 s = np.linspace(0, 1, 10)
@@ -42,16 +43,17 @@ g0 = CoordinateSystem.polynomial(D=[0, 0, 0, 0], chord=1, color='k')
 g0.calculate_x1(s)
 g0.plot(label='Parent', zorder=0)
 
-l = loads(distributed_load=distributed_load, follower=False)
-b = beam_chen(g, p, l, s)
-b.parameterized_solver(format_input=format_input, x0=b.g.D[2:5])
-plt.plot(b.x, b.y, '.3', label=r'Child: %.3f N/m, $\beta=0$' % w, linestyle='-', lw=3, zorder=1)
-plt.scatter(x_B0, y_B0, c='.3', label=r'Rao: %.3f N/m, $\beta=0$' %
-            w, edgecolors='k', zorder=2, marker='s')
+# l = loads(distributed_load=distributed_load, follower=False)
+# b = beam_chen(g, p, l, s)
+# b.parameterized_solver(format_input=format_input, x0=g.D[:-1], ignore_ends=True)
+# plt.plot(b.x, b.y, '.3', label=r'Child: %.3f N/m, $\beta=0$' % w, linestyle='-', lw=3, zorder=1)
+# plt.scatter(x_B0, y_B0, c='.3', label=r'Rao: %.3f N/m, $\beta=0$' %
+#             w, edgecolors='k', zorder=2, marker='s')
 
+print('CASE 2')
 l = loads(distributed_load=distributed_load, follower=True)
 b = beam_chen(g, p, l, s)
-b.parameterized_solver(format_input=format_input, x0=b.g.D[2:5])
+b.parameterized_solver(format_input=format_input, x0=g.D[:-1], ignore_ends=True)
 plt.plot(b.x, b.y, '.5', label=r'Child: %.3f N/m, $\beta=1$' % w, linestyle='-', lw=3, zorder=1)
 plt.scatter(x_B1, y_B1, c='.5', label=r'Rao: %.3f N/m, $\beta=1$' %
             w, edgecolors='k', zorder=2, marker='s')

@@ -18,17 +18,18 @@ def distributed_load(s):
 
 
 def format_input(input):
-    return [0, 0] + list(input)
+    # COnsidering BC for zero derivative at the root
+    return list(input) + [-input[0]]
 
 
-g = CoordinateSystem.polynomial(D=[0, 0, 0, 0], chord=1, color='b')
+g = CoordinateSystem.CST(D=[0, 0, 0, 0, 0], chord=1, color='b', N1=1, N2=1)
 p = properties()
 plt.figure()
 l = loads(distributed_load=distributed_load)
 s = np.linspace(0, 1, 10)
 
 b = beam_chen(g, p, l, s)
-b.parameterized_solver(format_input=format_input, x0=b.g.D[2:5])
+b.parameterized_solver(format_input=format_input, x0=g.D[:-1], ignore_ends=True)
 
 # Results from Abaqus
 # abaqus_data = pickle.load(open('neutral_line.p', 'rb'))

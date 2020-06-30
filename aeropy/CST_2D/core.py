@@ -35,50 +35,45 @@ def K(r, n):
     K = math.factorial(n)/(math.factorial(r)*math.factorial(n-r))
     return K
 
+
 def S(r, n, psi):
     S = K(r, n)*(psi**r)*(1.-psi)**(n-r)
     return S
 
 # Class Function
+
+
 def C(N1, N2, psi):
     C = ((psi)**N1)*((1.-psi)**N2)
     return C
-# Upper surface differential
 
 
 def dxi_u(psi, Au, delta_xi, N1=0.5, N2=1):
     """Calculate upper derivate of xi for a given psi"""
     n = len(Au)-1
-
+    # print(delta_xi)
     C_i = C(N1, N2, psi)
-    print('C', C_i, psi)
-    diff = -delta_xi/2.
+    diff = delta_xi
     for i in range(n+1):
-        S_i = S(i,n,psi)
-        # print N1-1., N2-1.
-        # print psi**(N1-1.), (1-psi)**(N2-1.)
-        # print Au[i]*K(i,n)*(psi**i)*((1-psi)**(n-i))*(i+N1-psi*(n+N1+N2))
-        # diff += (psi**(N1-1))*((1-psi)**(N2-1)) * \
-        #     Au[i]*K(i, n)*(psi**i)*((1-psi)**(n-i))*(i+N1-psi*(n+N1+N2))
+        S_i = S(i, n, psi)
         dS1 = (N1+i)/psi
         dS2 = (i-n-N2)/(1-psi)
         diff += Au[i]*C_i*S_i*(dS1+dS2)
     return diff
 
-# Lower surface differential
 
-
-def dxi_l(psi, Al, delta_xi):
+def dxi_l(psi, Al, delta_xi, N1=0.5, N2=1):
     """Calculate lower derivate of xi for a given psi"""
     n = len(Al)-1
-    diff = -delta_xi/2.
-    for i in range(n+1):
-        print(Al[i])
-        diff -= Al[i] * K(i, n) * psi**i*(1-psi)**(n-i) / (2*psi**0.5) * \
-            (-(3+2*n)*psi + 2*i + 1)
-    return diff
 
-# Upper surface second differential
+    C_i = C(N1, N2, psi)
+    diff = -delta_xi
+    for i in range(n+1):
+        S_i = S(i, n, psi)
+        dS1 = (N1+i)/psi
+        dS2 = (i-n-N2)/(1-psi)
+        diff += Al[i]*C_i*S_i*(dS1+dS2)
+    return diff
 
 
 def ddxi_u(psi, Au, abs_output=False, N1=0.5, N2=1):
@@ -86,33 +81,33 @@ def ddxi_u(psi, Au, abs_output=False, N1=0.5, N2=1):
     n = len(Au)-1
 
     C_i = C(N1, N2, psi)
-    xi_0 = CST(psi, 1, 0, Au, N1=N1, N2=N2)
     diff = 0
     for i in range(n+1):
-        S_i = S(i,n,psi)
-        # print N1-1., N2-1.
-        # print psi**(N1-1.), (1-psi)**(N2-1.)
-        # print Au[i]*K(i,n)*(psi**i)*((1-psi)**(n-i))*(i+N1-psi*(n+N1+N2))
-        # diff += (psi**(N1-1))*((1-psi)**(N2-1)) * \
-        #     Au[i]*K(i, n)*(psi**i)*((1-psi)**(n-i))*(i+N1-psi*(n+N1+N2))
-        dS1 = (N1+1)/psi
+        S_i = S(i, n, psi)
+        dS1 = (N1+i)/psi
         dS2 = (i-n-N2)/(1-psi)
-
-        dS11 = -(N1+1)/psi**2
+        dS11 = -(N1+i)/psi**2
         dS22 = (i-n-N2)/(1-psi)**2
         diff += Au[i]*C_i*S_i*((dS1+dS2)**2 + (dS11+dS22))
-    return diff
+    if abs_output:
+        return abs(diff)
+    else:
+        return diff
 
-# Lower surface second differential
 
-
-def ddxi_l(psi, Al, abs_output=False):
+def ddxi_l(psi, Al, abs_output=False, N1=0.5, N2=1):
     """Calculate lower second derivate of xi for a given psi"""
     n = len(Al)-1
+
+    C_i = C(N1, N2, psi)
     diff = 0
     for i in range(n+1):
-        diff += Al[i]*K(i, n)*(psi**i)*((1-psi)**(n-i-1))/(4*psi**1.5) * \
-            ((4*n**2 + 8*n + 3)*psi**2+(-4*(2*i+1)*n-4*i-2)*psi + 4*i**2 - 1)
+        S_i = S(i, n, psi)
+        dS1 = (N1+i)/psi
+        dS2 = (i-n-N2)/(1-psi)
+        dS11 = -(N1+i)/psi**2
+        dS22 = (i-n-N2)/(1-psi)**2
+        diff -= Al[i]*C_i*S_i*((dS1+dS2)**2 + (dS11+dS22))
     if abs_output:
         return abs(diff)
     else:
