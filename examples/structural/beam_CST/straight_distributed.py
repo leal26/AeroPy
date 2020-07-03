@@ -28,8 +28,8 @@ plt.figure()
 l = loads(distributed_load=distributed_load)
 s = np.linspace(0, 1, 10)
 
-b = beam_chen(g, p, l, s)
-b.parameterized_solver(format_input=format_input, x0=g.D[:-1], ignore_ends=True)
+b = beam_chen(g, p, l, s, ignore_ends=True)
+b.parameterized_solver(format_input=format_input, x0=g.D[:-1])
 
 # Results from Abaqus
 # abaqus_data = pickle.load(open('neutral_line.p', 'rb'))
@@ -46,7 +46,6 @@ curve_EB.calculate_x1(b.s)
 eulerBernoulle = curve_EB.r(b.s)
 
 [x, y] = eulerBernoulle.T
-
 g0 = CoordinateSystem.polynomial(D=[0, 0, 0, 0], chord=1, color='k')
 g0.calculate_x1(s)
 g0.plot(label='Parent', zorder=0)

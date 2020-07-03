@@ -10,6 +10,7 @@ from aeropy.geometry.parametric import CoordinateSystem
 def format_input(input):
     # COnsidering BC for zero derivative at the root
     return list(input) + [-input[0]]
+    # return input
 
 
 g = CoordinateSystem.CST(D=[0, 0, 0, 0], chord=1, color='b', N1=1, N2=1)
@@ -17,12 +18,9 @@ p = properties()
 l = loads(concentrated_load=[[0, -1]], load_s=[1])
 s = np.linspace(0, 1, 10)
 
-b = beam_chen(g, p, l, s)
-print('D', b.g.D)
-print('n', b.g.n)
-b.parameterized_solver(format_input, x0=[0, 0, 0], ignore_ends=True)
-print('x', b.x)
-print('y', b.y)
+b = beam_chen(g, p, l, s, ignore_ends=True)
+b.parameterized_solver(format_input, x0=g.D[:-1])
+
 
 # Results from Abaqus
 abaqus_data = pickle.load(open('neutral_line.p', 'rb'))

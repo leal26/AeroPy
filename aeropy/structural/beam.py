@@ -99,16 +99,18 @@ class euler_bernoulle_curvilinear():
 
 
 class beam_chen():
-    def __init__(self, geometry, properties, load, s):
+    def __init__(self, geometry, properties, load, s, ignore_ends=False):
         self.g = copy.deepcopy(geometry)
-        self.g_p = copy.deepcopy(geometry)
-        self.g_p.calculate_x1(s)
-        # self.Rho = self.g_p.x3(self.g_p.x1_grid, diff='theta11')
-        self.g_p.radius_curvature(self.g_p.x1_grid)
         self.p = properties
         self.l = load
         self.s = s
         self.length = self.g.arclength()[0]
+        self.ignore_ends = ignore_ends
+
+        self.integral_ends()
+        self.g_p = copy.deepcopy(geometry)
+        self.g_p.calculate_x1(self.s)
+        self.g_p.radius_curvature(self.g_p.x1_grid)
 
     def calculate_M(self):
         self.M = np.zeros(len(self.x))
@@ -129,20 +131,18 @@ class beam_chen():
         if self.l.distributed_load is not None:
             index = np.where(self.s == s)[0][0]
 
-            if not self.l.follower:
-                # M_x + M_y
-                M_i -= trapz(self.l.distributed_load(self.s[index:])
-                             * (self.x[index:]-x), self.s[index:])
+            if self.ignore_ends:
+                i_end = -1
             else:
-                w = self.l.distributed_load(self.s[index:])
-                M_x = w*self.cos[index:]*(self.x[index:]-x)
-                print(self.sin)
-                M_y = w*self.sin[index:]*(self.y[index:]-y)
-                M_i -= trapz(M_x + M_y, self.s[index:])
-                # print('cos', self.cos[index:])
-                # print('sin', self.sin[index:])
-                # print('x', self.x[index:])
-                # print('y', self.y[index:])
+                i_end = len(self.s)
+            if not self.l.follower:
+                M_i -= trapz(self.l.distributed_load(self.s[index:i_end])
+                             * (self.x[index:i_end]-x), self.s[index:i_end])
+            else:
+                w = self.l.distributed_load(self.s[index:i_end])
+                M_x = w*self.cos[index:i_end]*(self.x[index:i_end]-x)
+                M_y = w*self.sin[index:i_end]*(self.y[index:i_end]-y)
+                M_i -= trapz(M_x + M_y, self.s[index:i_end])
         return M_i
 
     def calculate_G(self):
@@ -181,44 +181,23 @@ class beam_chen():
             y_i = trapz(dydx, self.x[:i+1])
             self.y[i] = y_i
 
-    # def calculate_residual(self):
-    #     self.r = np.zeros(len(self.x))
-    #     for i in range(len(self.x)):
-    #         rhs = self.G[i]/(1-self.G[i]**2)
-    #         lhs = self.g.x3(self.x[i], diff='x1')
-    #         self.r[i] = lhs - rhs
-    #     self.R = np.linalg.norm(self.r)
-
-    def calculate_residual(self, ignore_ends=False):
+    def calculate_residual(self):
         self.r = np.zeros(len(self.x))
         for i in range(len(self.x)):
-            # rhs = self.g.x3(self.x[i], diff='theta11') - self.Rho[i]
             rhs = self.g.rho[i] - self.g_p.rho[i]
             lhs = self.M[i]/self.p.young/self.p.inertia
             self.r[i] = np.abs(lhs - rhs)
-        # self.R = np.linalg.norm(self.r)
-        if ignore_ends:
+
+        if self.ignore_ends:
             self.R = trapz(self.r[1:-1], self.s[1:-1])
         else:
             self.R = trapz(self.r, self.s)
-        # print('r', self.r)
         if np.isnan(self.R):
             self.R = 100
-        # print('r', self.r)
+
         print('R: ', self.R)
-    # def calculate_Pho(self):
-    #     self.g.calculate_x1(self.theta1, bounds = self.g_p.bounds)
-    #     self.g.basis()
-    #     self.g.basis(diff = 'theta')
-    #     self.g.metric_tensor()
-    #     self.g.metric_tensor(diff = 'theta')
-    #     self.g.curvature_tensor()
-    #     self.Pho = self.B[0][0]
 
     def iterative_solver(self):
-        # Calculated undeformed properties
-        # self.calculate_Pho()
-        # Calculate Moment for undeformed
         self.x = np.copy(self.s)
         x_before = np.copy(self.x)
         y_before = self.g.x3(self.x)
@@ -235,22 +214,24 @@ class beam_chen():
             y_before = np.copy(self.y)
             print(error)
 
-    def parameterized_solver(self, format_input=None, x0=None,
-                             ignore_ends=False):
+    def parameterized_solver(self, format_input=None, x0=None):
         def formatted_residual(A):
             A = format_input(A)
-            return self._residual(A, ignore_ends=ignore_ends)
+            return self._residual(A)
 
-        sol = minimize(formatted_residual, x0, method='SLSQP')
+        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-10, 10]])
         self.g.D = format_input(sol.x)
+        self.g.internal_variables(self.length)
+        self.g.calculate_x1(self.s)
+        self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)
         print('sol', self.g.D, sol.fun)
         return
 
-    def _residual(self, A, ignore_ends=False):
+    def _residual(self, A):
         self.g.D = A
+        self.g.internal_variables(self.length)
         self.g.calculate_x1(self.s)
-        self.g.chord = self.g.x1_grid[-1]
         self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)
         if self.l.follower:
@@ -260,5 +241,18 @@ class beam_chen():
         # self.calculate_x()
         # self.calculate_M()
         self.g.radius_curvature(self.g.x1_grid)
-        self.calculate_residual(ignore_ends)
+        self.calculate_residual()
         return self.R
+
+    def integral_ends(self, eps=1e-4):
+        # Correct point
+        origin = np.array([0])
+        tip = np.array([self.g.chord])
+        if np.isnan(self.g.x3(origin, diff='x1')[0]) or \
+                np.isnan(self.g.x3(origin, diff='x11')[0]):
+            self.s = np.insert(self.s, 1, eps)
+
+        if np.isnan(self.g.x3(tip, diff='x1')[0]) or \
+                np.isnan(self.g.x3(tip, diff='x11')[0]):
+            self.s = np.insert(self.s, -1, self.s[-1] - eps)
+        self.g.calculate_x1(self.s)

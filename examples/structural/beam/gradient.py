@@ -17,20 +17,35 @@ def format_input(input):
 
 g_fit = CoordinateSystem.CST(D=[0.00571427, 0.00428572,
                                 0.00285719, -0.00571429],
-                             chord=1, color='b')
+                             chord=1, color='b', N1=1, N2=1)
 g_sol = CoordinateSystem.CST(D=[5.71484605e-03, 4.28497408e-03,
                                 2.85818149e-03, - 4.90351205e-08],
-                             chord=1, color='b')
-x = np.linspace(0.0, 1, 21)
-# s = np.zeros(len(x))
-# for i in range(len(x)):
-#     s[i] = g.arclength(x[i])[0]
+                             chord=1, color='b', N1=1, N2=1)
 
-g_fit.x1_grid = x
-d_fit = dxi_u(x, g_fit.D[:-1], g_fit.D[-1])
-dd_fit = ddxi_u(x, g_fit.D[:-1])
-d_sol = dxi_u(x, g_fit.D[:-1], g_fit.D[-1])
-dd_sol = ddxi_u(x, g_sol.D[:-1])
+s = np.linspace(0, 1, 10)
+p = properties()
+l = loads(concentrated_load=[[0, -1]], load_s=[1])
+b_fit = beam_chen(g_fit, p, l, s, ignore_ends=True)
+b_fit.g.internal_variables(b_fit.length)
+b_fit.g.calculate_x1(b_fit.s)
+b_fit.integral_ends()
+b_fit.x = b_fit.g.x1_grid
+b_fit.y = b_fit.g.x3(b_fit.x)
+
+b_sol = beam_chen(g_sol, p, l, s, ignore_ends=True)
+b_sol.g.internal_variables(b_sol.length)
+b_sol.g.calculate_x1(b_fit.s)
+b_sol.integral_ends()
+b_sol.x = b_sol.g.x1_grid
+b_sol.y = b_sol.g.x3(b_fit.x)
+
+x = b_fit.g.x1_grid
+print(x)
+d_fit = b_fit.g.x3(x, diff='x1')
+print(d_fit)
+dd_fit = b_fit.g.x3(x, diff='x11')
+d_sol = b_sol.g.x3(x, diff='x1')
+dd_sol = b_sol.g.x3(x, diff='x11')
 
 plt.figure()
 plt.plot(x, d_fit, label='dFit')

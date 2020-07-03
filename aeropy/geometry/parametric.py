@@ -50,10 +50,9 @@ class CoordinateSystem(object):
         elif diff == 'theta3':
             return(self.a[2, :, 0])
         elif diff == 'theta1':
-            # dr = self.r(x1, diff='x1')
-            # print(dr)
-            # print(self.x3(x1, 'x1'))
-            return 1/np.sqrt(1 + self.x3(x1, 'x1')**2)
+            output = 1/np.sqrt(1 + self.x3(x1, 'x1')**2)
+            output[np.isnan(output)] = 0
+            return output
             # return np.ones(len(x1))
         elif diff == 'theta11':
             # return -self.x1(x1, 'theta1')**4*self.x3(x1, 'x1')*self.x3(x1, 'x11')
@@ -83,8 +82,9 @@ class CoordinateSystem(object):
         return c
 
     @classmethod
-    def CST(cls, D, chord, color, N1=.5, N2=1.0):
-        c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2)
+    def CST(cls, D, chord, color, N1=.5, N2=1.0, deltaz=0):
+        c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2,
+                deltaz=deltaz)
         c.x3 = c._x3_CST
         return c
 
@@ -125,19 +125,16 @@ class CoordinateSystem(object):
             return(np.zeros(len(x1)))
 
     def _x3_CST(self, x1, diff=None):
-        N1 = self.N1
-        N2 = self.N2
-        chord = self.chord
         A = self.D[:-1]
-        deltaz = chord*self.D[-1]
-        psi = x1 / chord
+        psi = x1 / self.chord
         if diff is None:
-            return(CST(x1, chord, deltasz=deltaz, Au=A,
-                       N1=N1, N2=N2))
+            return(CST(x1, self.chord, deltasz=self.deltaz, Au=A,
+                       N1=self.N1, N2=self.N2))
         elif diff == 'x1':
-            return(dxi_u(psi, A, deltaz/chord, N1=N1, N2=N2))
+            return(dxi_u(psi, A, self.deltaz/self.chord,
+                         N1=self.N1, N2=self.N2))
         elif diff == 'x11':
-            return(ddxi_u(psi, A, N1=N1, N2=N2))
+            return(ddxi_u(psi, A, N1=self.N1, N2=self.N2))
         elif diff == 'theta1':
             return self.x3(x1, 'x1')*self.x1(x1, 'theta1')
         elif diff == 'theta11':
@@ -181,7 +178,7 @@ class CoordinateSystem(object):
             x1 = self.x1_grid
 
         if diff is None:
-            self.a = np.zeros([3,  len(x1), 3])
+            self.a = np.zeros([3, len(x1), 3])
             self.a[0, :, :] = np.array([self.x1(x1, 'x1')*self.x1(x1, 'theta1'),
                                         [0]*len(x1),
                                         self.x3(x1, 'x1')*self.x1(x1, 'theta1')]).T
@@ -255,13 +252,19 @@ class CoordinateSystem(object):
 
     def arclength(self, chord=None):
         def integrand(x1):
-            dr = self.r(x1, 'x1')
-            # If function is not well defined everywhere, resulting in a nan
-            # penalize it
-            if np.isnan(np.sqrt(np.inner(dr, dr))):
-                return(100)
-            else:
-                return np.sqrt(np.inner(dr, dr)[0, 0])
+            # dr = self.r(x1, 'x1')
+            # if np.isnan(np.sqrt(np.inner(dr, dr))):
+            #     return(100)
+            # else:
+            #     return np.sqrt(np.inner(dr, dr)[0, 0])
+            dr = self.x3(np.array([x1]), 'x1')
+            if np.isnan(dr):
+                # print('NaN', x1)
+                if x1 == 0:
+                    dr = self.x3(np.array([1e-6]), 'x1')
+                else:
+                    dr = self.x3(np.array([x1-1e-6]), 'x1')
+            return np.sqrt(1 + dr**2)
         if chord is None:
             chord = self.chord
         return integrate.quad(integrand, 0, chord, limit=500)
@@ -314,3 +317,11 @@ class CoordinateSystem(object):
 
     def radius_curvature(self, x):
         self.rho = self.x3(x, diff='x11')/(1+(self.x3(x, diff='x1'))**2)**(3/2)
+
+    def internal_variables(self, target_length):
+        # At first we utilize the non-dimensional trailing edge thickness
+        self.deltaz = self.D[-1]
+        self.chord = 1
+        nondimensional_length, err = self.arclength(chord=1.)
+        self.chord = target_length/nondimensional_length
+        self.deltaz = self.deltaz*self.chord
