@@ -36,8 +36,8 @@ def format_input(input):
 g = CoordinateSystem.CST(D=[0, 0, 0, 0, 0], chord=1, color='b', N1=1, N2=1)
 p = properties()
 w = p.young*p.inertia*lamda/p.length**3
-s = np.linspace(0, 1, 10)
-print('w', w)
+s = np.linspace(0, 1, 11)
+
 plt.figure()
 g0 = CoordinateSystem.polynomial(D=[0, 0, 0, 0], chord=1, color='k')
 g0.calculate_x1(s)
@@ -45,23 +45,22 @@ g0.plot(label='Parent', zorder=0)
 
 l = loads(distributed_load=distributed_load, follower=False)
 b = beam_chen(g, p, l, s, ignore_ends=True)
-b.parameterized_solver(format_input=format_input, x0=[0.475708, 0.359857,
-                                                      0.250499, 0.176188])
+b.parameterized_solver(format_input=format_input, x0=g.D[:-1])
 print('x', b.x)
 print('y', b.y)
-print('chord', b.chord)
-print('deltaz', b.deltaz)
+print('chord', b.g.chord)
+print('deltaz', b.g.deltaz)
 plt.plot(b.x, b.y, '.3', label=r'Child: %.3f N/m, $\beta=0$' % w, linestyle='-', lw=3, zorder=1)
 plt.scatter(x_B0, y_B0, c='.3', label=r'Rao: %.3f N/m, $\beta=0$' %
             w, edgecolors='k', zorder=2, marker='s')
 
-# print('CASE 2')
-# l = loads(distributed_load=distributed_load, follower=True)
-# b = beam_chen(g, p, l, s, ignore_ends=True)
-# b.parameterized_solver(format_input=format_input, x0=g.D[:-1])
-# plt.plot(b.x, b.y, '.5', label=r'Child: %.3f N/m, $\beta=1$' % w, linestyle='-', lw=3, zorder=1)
-# plt.scatter(x_B1, y_B1, c='.5', label=r'Rao: %.3f N/m, $\beta=1$' %
-#             w, edgecolors='k', zorder=2, marker='s')
+print('CASE 2')
+l = loads(distributed_load=distributed_load, follower=True)
+b = beam_chen(g, p, l, s, ignore_ends=True)
+b.parameterized_solver(format_input=format_input, x0=g.D[:-1])
+plt.plot(b.x, b.y, '.5', label=r'Child: %.3f N/m, $\beta=1$' % w, linestyle='-', lw=3, zorder=1)
+plt.scatter(x_B1, y_B1, c='.5', label=r'Rao: %.3f N/m, $\beta=1$' %
+            w, edgecolors='k', zorder=2, marker='s')
 plt.xlim([0, 1])
 # plt.scatter(abaqus_data['coord'][0:401:40,0], abaqus_data['coord'][0:401:40,1], c='g', label='FEA', edgecolors='k', zorder = 10)
 plt.legend()

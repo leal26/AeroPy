@@ -134,7 +134,7 @@ class CoordinateSystem(object):
             return(dxi_u(psi, A, self.deltaz/self.chord,
                          N1=self.N1, N2=self.N2))
         elif diff == 'x11':
-            return(ddxi_u(psi, A, N1=self.N1, N2=self.N2))
+            return((1/self.chord)*ddxi_u(psi, A, N1=self.N1, N2=self.N2))
         elif diff == 'theta1':
             return self.x3(x1, 'x1')*self.x1(x1, 'theta1')
         elif diff == 'theta11':

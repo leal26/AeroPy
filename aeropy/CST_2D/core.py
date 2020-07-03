@@ -95,6 +95,14 @@ def ddxi_u(psi, Au, abs_output=False, N1=0.5, N2=1):
         dS11 = -(N1+i)/psi**2
         dS22 = (i-n-N2)/(1-psi)**2
         diff += Au[i]*C_i*S_i*((dS1+dS2)**2 + (dS11+dS22))
+        a = Au
+        b = C_i*S_i*((dS1+dS2)**2 + (dS11+dS22))
+        c = C_i*S_i*(dS1)**2
+        d = C_i*S_i*(dS1*dS2)
+        e = C_i*S_i*(dS2)**2
+        f = C_i*S_i*(dS11)
+        g = C_i*S_i*(dS22)
+        print(i, diff[1], a[i], b[1], c[1], d[1], e[1], f[1], g[1])
     if abs_output:
         return abs(diff)
     else:

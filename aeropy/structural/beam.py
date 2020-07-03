@@ -187,7 +187,9 @@ class beam_chen():
             rhs = self.g.rho[i] - self.g_p.rho[i]
             lhs = self.M[i]/self.p.young/self.p.inertia
             self.r[i] = np.abs(lhs - rhs)
-
+        print('M', self.M)
+        print('rho', self.g.rho)
+        print('Rho', self.g_p.rho)
         if self.ignore_ends:
             self.R = trapz(self.r[1:-1], self.s[1:-1])
         else:
@@ -244,7 +246,7 @@ class beam_chen():
         self.calculate_residual()
         return self.R
 
-    def integral_ends(self, eps=1e-4):
+    def integral_ends(self, eps=1e-7):
         # Correct point
         origin = np.array([0])
         tip = np.array([self.g.chord])
