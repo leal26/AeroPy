@@ -8,7 +8,8 @@ from aeropy.geometry.parametric import CoordinateSystem
 
 
 def format_input(input):
-    return [0, 0] + list(input)
+    # COnsidering BC for zero derivative at the root
+    return list(input) + [-input[0]]
 
 
 abaqus_x = [0, 0.10398348, 0.20769666, 0.31089693, 0.4133383, 0.51480412,
@@ -16,8 +17,10 @@ abaqus_x = [0, 0.10398348, 0.20769666, 0.31089693, 0.4133383, 0.51480412,
 abaqus_y = [0, 0.0025992838, 0.010444776, 0.023406046, 0.041411132,
             0.064284593, 0.091835514, 0.12384841, 0.16006343, 0.20029253, 0.24419737]
 
-g = CoordinateSystem.polynomial(D=[0, 0, 0.25, 0], chord=1, color='b')
-g_p = CoordinateSystem.polynomial(D=[0, 0, 0.25, 0], chord=1, color='k')
+g = CoordinateSystem.CST(D=[-0.25, -0.25, -0.25, -0.25, 0.25], chord=1,
+                         color='b', N1=1, N2=1, deltaz=0.25)
+g_p = CoordinateSystem.CST(D=[-0.25, -0.25, -0.25, -0.25, 0.25], chord=1,
+                           color='k', N1=1, N2=1, deltaz=0.25)
 
 x = np.linspace(0, 1, 20)
 s = np.zeros(len(x))
@@ -27,8 +30,8 @@ for i in range(len(x)):
 p = properties()
 l = loads(concentrated_load=[[0, -1]], load_s=[s[-1]])
 # s = np.linspace(0, 1, 10)
-b = beam_chen(g, p, l, s)
-b.parameterized_solver(format_input=format_input, x0=b.g.D[2:])
+b = beam_chen(g, p, l, s, ignore_ends=True)
+b.parameterized_solver(format_input=format_input, x0=b.g.D[:-1])
 
 g_p.calculate_x1(s)
 g_p.plot(label='Parent')
