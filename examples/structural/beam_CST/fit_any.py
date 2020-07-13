@@ -4,15 +4,15 @@ import pandas as pd
 import numpy as np
 import pickle
 
-from aeropy.geometry.airfoil import CST
+from aeropy.geometry.airfoil import CST, rotate
 from aeropy.structural.beam import beam_chen
 from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
 
 def cst(x, A0, A1, A2, A3):
-    b.g.D = [A0, A1, A2, A3, -A0]
-    b.deltaz = b.g.D[-1]*chord
+    b.g.D = [A0, A1, A2, A3]
+    b.deltaz = 0
     b.length = b.g.arclength(chord=chord)[0]
     b.g.internal_variables(b.length)
     y = b.g.x3(x)
@@ -35,11 +35,11 @@ chord = 1
 #             0.06925207756232686, 0.08379501385041552, 0.09972299168975068, 0.11703601108033237, 0.13573407202216065, 0.15581717451523547, 0.17728531855955676, 0.2001385041551246, 0.22437673130193903, 0.25]
 
 # Ghuku
-chord = 0.4385
-abaqus_x = [0.0, 0.04872222222222222, 0.09744444444444444, 0.14616666666666667, 0.1948888888888889,
-            0.2436111111111111, 0.29233333333333333, 0.34105555555555556, 0.3897777777777778, 0.4385]
-abaqus_y = [0.0, 0.0013268530296639232, 0.0053999397089163235, 0.012358051423148147, 0.022339979557750342,
-            0.03548451549811386, 0.05193045062962963, 0.07181657633768862, 0.09528168400768175, 0.122464565025]
+# chord = 0.4385
+# abaqus_x = [0.0, 0.04872222222222222, 0.09744444444444444, 0.14616666666666667, 0.1948888888888889,
+#             0.2436111111111111, 0.29233333333333333, 0.34105555555555556, 0.3897777777777778, 0.4385]
+# abaqus_y = [0.0, 0.0013268530296639232, 0.0053999397089163235, 0.012358051423148147, 0.022339979557750342,
+#             0.03548451549811386, 0.05193045062962963, 0.07181657633768862, 0.09528168400768175, 0.122464565025]
 # EB
 # abaqus_x = [0.,  0.11111111, 0.22222222, 0.33333333, 0.44444444,
 #             0.55555556, 0.66666667, 0.77777778, 0.88888889, 1.]
@@ -65,10 +65,26 @@ abaqus_y = [0.0, 0.0013268530296639232, 0.0053999397089163235, 0.012358051423148
 # abaqus_data = pickle.load(open('neutral_line.p', 'rb'))
 # abaqus_x = abaqus_data['coord'][0:401:40, 0]
 # abaqus_y = abaqus_data['coord'][0:401:40, 1]
-x = np.array(abaqus_x)
-y = np.array(abaqus_y)
 
-g = CoordinateSystem.CST(D=[0, 0, 0, 0, 0], chord=chord, color='k', N1=1, N2=1, deltaz=0)
+# Airfoil (NACA0012) under 1 N
+abaqus_x = [0, 0.0046626413, 0.018402023, 0.048702486, 0.087927498, 0.12745513,
+            0.16709827, 0.20679522, 0.24651785, 0.28625035, 0.3259826,
+            0.36570814, 0.40542319, 0.44512612, 0.48481697, 0.52449685,
+            0.5641672, 0.60382956, 0.64348471, 0.68313259, 0.72277194,
+            0.76240051, 0.80201453, 0.84160942, 0.88117975, 0.92072034,
+            0.96022779, 0.99970293]
+abaqus_y = [0, 0.0080771167, 0.015637144, 0.024132574, 0.030406451,
+            0.034420185, 0.037082944, 0.038775206, 0.039692041, 0.039953224,
+            0.039647505, 0.038851682, 0.037638135, 0.036076538, 0.034232546,
+            0.032165118, 0.029923303, 0.027543247, 0.025045833, 0.022435322,
+            0.019699335, 0.016810443, 0.013729585, 0.010411576, 0.0068127746,
+            0.0029010926, -0.0013316774, -0.0058551501]
+rotated_abaqus = rotate({'x': abaqus_x, 'y': abaqus_y})
+x = np.array(rotated_abaqus['x'])
+y = np.array(rotated_abaqus['y'])
+
+g = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0],
+                         chord=chord, color='k', N1=.5, N2=1, deltaz=0)
 
 s = np.linspace(0, 1, 10)
 p = properties()
@@ -79,10 +95,10 @@ b = beam_chen(g, p, l, s)
 popt, pcov = curve_fit(cst, x, y, p0=[0, 0, 0, 0])
 print('Solution: ', popt)
 print('Error: ', np.sqrt(np.diag(pcov)))
-b.g.D = np.append(popt, -popt[:1])
+b.g.D = list(popt) + [0]
 # b.length = b.g.arclength()[0]
 # b.g.internal_variables(b.length)
-b.s = np.linspace(0, b.length, 20)
+b.s = np.linspace(0, b.length, 100)
 print('c0', b.g.chord)
 # b.g.chord = 0.889322917
 # print('c1', b.g.chord)

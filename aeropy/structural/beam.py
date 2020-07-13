@@ -99,18 +99,21 @@ class euler_bernoulle_curvilinear():
 
 
 class beam_chen():
-    def __init__(self, geometry, properties, load, s, ignore_ends=False):
+    def __init__(self, geometry, properties, load, s, ignore_ends=False, rotated=True):
         self.g = copy.deepcopy(geometry)
         self.p = properties
         self.l = load
         self.s = s
         self.length = self.g.arclength()[0]
         self.ignore_ends = ignore_ends
+        self.rotated = rotated
 
         self.integral_ends()
         self.g_p = copy.deepcopy(geometry)
         self.g_p.calculate_x1(self.s)
         self.g_p.radius_curvature(self.g_p.x1_grid)
+        if self.rotated:
+            self.g_p.calculate_angles()
 
     def calculate_M(self):
         self.M = np.zeros(len(self.x))
@@ -120,8 +123,23 @@ class beam_chen():
     def _M(self, x, s, y=None):
         M_i = 0
         if self.l.concentrated_load is not None:
-            if self.l.follower:
-                raise(NotImplementedError)
+            if self.l.follower and self.rotated:
+                for i in range(len(self.l.concentrated_s)):
+                    index = np.where(self.s == self.l.concentrated_s[i])[0][0]
+                    c = self.g_p.cos[index]*self.g.cos[index] + \
+                        self.g_p.sin[index]*self.g.sin[index]
+                    s = self.g_p.sin[index]*self.g.cos[index] - \
+                        self.g_p.cos[index]*self.g.sin[index]
+                    c = self.l.concentrated_direction[i][0]*self.g_p.cos[index] + \
+                        self.l.concentrated_direction[i][1]*self.g_p.sin[index]
+                    s = np.sqrt(1-c**2)
+
+                    f2 = c*self.g.sin[index] - s*self.g.cos[index]
+                    f1 = (c-self.g.sin[index]*f2)/self.g.cos[index]
+
+                    # print('f', f1, f2)
+                    M_i += self.l.concentrated_magnitude[i]*f1*(self.y[index]-y)
+                    M_i += self.l.concentrated_magnitude[i]*f2*(self.x[index]-x)
             else:
                 for i in range(len(self.l.concentrated_s)):
                     index = np.where(self.s == self.l.concentrated_s[i])[0][0]
@@ -140,8 +158,8 @@ class beam_chen():
                              * (self.x[index:i_end]-x), self.s[index:i_end])
             else:
                 w = self.l.distributed_load(self.s[index:i_end])
-                M_x = w*self.cos[index:i_end]*(self.x[index:i_end]-x)
-                M_y = w*self.sin[index:i_end]*(self.y[index:i_end]-y)
+                M_x = w*self.g.cos[index:i_end]*(self.x[index:i_end]-x)
+                M_y = w*self.g.sin[index:i_end]*(self.y[index:i_end]-y)
                 M_i -= trapz(M_x + M_y, self.s[index:i_end])
         return M_i
 
@@ -170,10 +188,6 @@ class beam_chen():
             return abs(s-current_L)
         return minimize(_to_minimize, s, method='Nelder-Mead',).x[0]
 
-    def calculate_angles(self):
-        self.cos = self.g.x1(self.g.x1_grid, 'theta1')
-        self.sin = self.g.x3(self.g.x1_grid, 'theta1')
-
     def calculate_deflection(self):
         self.y = np.zeros(len(self.x))
         for i in range(len(self.x)):
@@ -187,9 +201,10 @@ class beam_chen():
             rhs = self.g.rho[i] - self.g_p.rho[i]
             lhs = self.M[i]/self.p.young/self.p.inertia
             self.r[i] = np.abs(lhs - rhs)
-        print('M', self.M)
-        print('rho', self.g.rho)
-        print('Rho', self.g_p.rho)
+        # print('M', self.M)
+        # print('rho', self.g.rho)
+        # print('Rho', self.g_p.rho)
+        # print(self.r)
         if self.ignore_ends:
             self.R = trapz(self.r[1:-1], self.s[1:-1])
         else:
@@ -217,8 +232,8 @@ class beam_chen():
             print(error)
 
     def parameterized_solver(self, format_input=None, x0=None):
-        def formatted_residual(A):
-            A = format_input(A)
+        def formatted_residual(A, g=None):
+            A = format_input(A, g)
             return self._residual(A)
 
         sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-10, 10]])
@@ -237,7 +252,7 @@ class beam_chen():
         self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)
         if self.l.follower:
-            self.calculate_angles()
+            self.g.calculate_angles()
         self.calculate_M()
         # self.calculate_G()
         # self.calculate_x()
@@ -246,15 +261,15 @@ class beam_chen():
         self.calculate_residual()
         return self.R
 
-    def integral_ends(self, eps=1e-7):
+    def integral_ends(self):
         # Correct point
         origin = np.array([0])
         tip = np.array([self.g.chord])
         if np.isnan(self.g.x3(origin, diff='x1')[0]) or \
                 np.isnan(self.g.x3(origin, diff='x11')[0]):
-            self.s = np.insert(self.s, 1, eps)
+            self.s = np.insert(self.s, 1, self.g.tol)
 
         if np.isnan(self.g.x3(tip, diff='x1')[0]) or \
                 np.isnan(self.g.x3(tip, diff='x11')[0]):
-            self.s = np.insert(self.s, -1, self.s[-1] - eps)
+            self.s = np.insert(self.s, -1, self.s[-1] - self.g.tol)
         self.g.calculate_x1(self.s)

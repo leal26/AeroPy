@@ -58,18 +58,30 @@ class properties():
         if young < 0 or poisson < 0 or poisson > 1 or self.area <= 0:
             raise Exception('Material properties need to make sense')
 
+
 class loads():
     def __init__(self, concentrated_load=None, load_s=None,
-                       distributed_load = None, follower = False):
+                 distributed_load=None, follower=False):
         self.concentrated_load = concentrated_load
         self.concentrated_s = load_s
         self.concentrated_x = None
         self.distributed_load = distributed_load
         self.follower = follower
 
+        if self.concentrated_load is not None:
+            self.concentrated_direction = []
+            self.concentrated_magnitude = []
+            for load in self.concentrated_load:
+                norm = np.sqrt(load[0]**2 + load[1]**2)
+                direction = [load[0]/norm, load[1]/norm]
+                self.concentrated_direction.append(direction)
+                self.concentrated_magnitude.append(norm)
+            print('in', direction, norm)
+
+
 class boundary_conditions():
     def __init__(self, concentrated_load=np.array([[0, 0, 0], ]), load_x=[1],
-                       distributed_load = 0):
+                 distributed_load=0):
         self.concentrated_load = concentrated_load
         self.concentrated_x = load_x
         self.concentrated_n = len(concentrated_load)
@@ -79,9 +91,10 @@ class boundary_conditions():
         if len(concentrated_load) != len(load_x):
             raise Exception('load values and x lists have to match')
 
+
 class euler_bernoulle():
     def __init__(self, properties, load, load_type, geometry,
-                 x = np.linspace(0,1), boundaries = {'x':[], 'u':[]}):
+                 x=np.linspace(0, 1), boundaries={'x': [], 'u': []}):
         self.properties = properties
         self.load = load
         self.load_type = load_type
@@ -93,7 +106,7 @@ class euler_bernoulle():
         if self.load_type == 'concentrated':
             bp = self.properties
             self.g.D = self.load/(6*bp.young*bp.inertia) * \
-                            np.array([0, 0, 3, -1, 0])
+                np.array([0, 0, 3, -1, 0])
         elif self.load_type == 'distributed':
             bp = self.properties
             c2 = 6*(bp.length**2)*self.load/(24*bp.young*bp.inertia)
@@ -123,9 +136,9 @@ class euler_bernoulle():
     def residual(self):
         self.R = self.U - self.W
 
-    def minimum_potential(self, x0=[0,0,0]):
+    def minimum_potential(self, x0=[0, 0, 0]):
         def to_optimize(x):
-            self.g.D = [0,0] + list(x)
+            self.g.D = [0, 0] + list(x)
             self.work()
             self.free_energy()
             self.strain_energy()
@@ -133,15 +146,16 @@ class euler_bernoulle():
             return self.R
 
         # With bounds
-        bounds = np.array(((-0.01,0.01),)*len(x0))
+        bounds = np.array(((-0.01, 0.01),)*len(x0))
 
         res = minimize(to_optimize, x0, bounds=bounds)
-        self.g.D = [0,0] + list(res.x)
+        self.g.D = [0, 0] + list(res.x)
         self.work()
         self.free_energy()
         self.strain_energy()
         self.residual()
         return(res.x, res.fun)
+
 
 class structure():
     def __init__(self, geometry_parent, geometry_child, mesh, properties,
@@ -295,8 +309,8 @@ class structure():
                 energy += self.bc.concentrated_load[i][j] * u[j][0]
         return(energy)
 
-    def residual(self, input=None, input_type = 'Strain',
-                loading_condition = None, input_function = None):
+    def residual(self, input=None, input_type='Strain',
+                 loading_condition=None, input_function=None):
         if input is not None:
             if input_function is not None:
                 input = input_function(input)
@@ -308,47 +322,48 @@ class structure():
                 self.mesh.mesh_child()
                 self.calculate_position()
             self.strain()
-            self.stress(loading_condition = loading_condition)
+            self.stress(loading_condition=loading_condition)
         energy = self.strain_energy() - self.work()
         return(energy)
 
-    def find_stable(self, x0=[0], bounds=None, input_type = 'Strain',
-                    loading_condition = 'uniaxial', input_function = lambda x:x):
+    def find_stable(self, x0=[0], bounds=None, input_type='Strain',
+                    loading_condition='uniaxial', input_function=lambda x: x):
         def _callback(x):
-            input = (bounds[:,1]-bounds[:,0])*x + bounds[:,0]
+            input = (bounds[:, 1]-bounds[:, 0])*x + bounds[:, 0]
             self.opt_x.append(input)
-            self.opt_f.append(self.residual(input, input_type = input_type,
-                                 loading_condition = loading_condition,
-                                 input_function = input_function))
+            self.opt_f.append(self.residual(input, input_type=input_type,
+                                            loading_condition=loading_condition,
+                                            input_function=input_function))
+
         def to_optimize(x):
-            input = (bounds[:,1]-bounds[:,0])*x + bounds[:,0]
-            output = self.residual(input, input_type = input_type,
-                                 loading_condition = loading_condition,
-                                 input_function = input_function)
+            input = (bounds[:, 1]-bounds[:, 0])*x + bounds[:, 0]
+            output = self.residual(input, input_type=input_type,
+                                   loading_condition=loading_condition,
+                                   input_function=input_function)
 
             # print(output, input)
             return output
 
         # With bounds
         try:
-            x0_nd = (x0-bounds[:,0]) / (bounds[:,1]-bounds[:,0])
-            bounds_nd = np.array([[-1,1],]*len(x0))
+            x0_nd = (x0-bounds[:, 0]) / (bounds[:, 1]-bounds[:, 0])
+            bounds_nd = np.array([[-1, 1], ]*len(x0))
 
             self.opt_x = [x0]
             self.opt_f = [to_optimize(x0_nd)]
 
             res = minimize(to_optimize, x0_nd, bounds=bounds_nd, callback=_callback)
         except(TypeError):
-            bounds = np.array(((0,1),)*len(x0))
+            bounds = np.array(((0, 1),)*len(x0))
             self.opt_x = [x0]
             self.opt_f = [to_optimize(x0)]
 
             res = minimize(to_optimize, x0, callback=_callback)
-        x = (bounds[:,1]-bounds[:,0])*res.x + bounds[:,0]
+        x = (bounds[:, 1]-bounds[:, 0])*res.x + bounds[:, 0]
         return(x, res.fun)
 
     def sweep_strains(self, strains, strains_x, reorder=None,
-                      loading_condition = 'uniaxial'):
+                      loading_condition='uniaxial'):
         energy_list = []
         residual_list = []
         n = len(strains)
@@ -358,8 +373,8 @@ class structure():
             self.mesh.mesh_child()
             self.strain()
             self.stress()
-            residual_list.append(self.residual(input_type = 'Strain',
-                        loading_condition = loading_condition))
+            residual_list.append(self.residual(input_type='Strain',
+                                               loading_condition=loading_condition))
             energy_list.append(self.strain_energy())
         if reorder is not None:
             residual_list = np.resize(residual_list, reorder)
@@ -367,16 +382,16 @@ class structure():
         return(energy_list, residual_list)
 
     def sweep_geometries(self, geom_variables, input_function, reorder=None,
-                         loading_condition = 'plane_stress'):
+                         loading_condition='plane_stress'):
         energy_list = []
         residual_list = []
         n = len(geom_variables)
         for i in range(n):
             print(i)
             input = geom_variables[i]
-            residual_list.append(self.residual(input, input_type = 'Geometry',
-                                               input_function = input_function,
-                                               loading_condition = loading_condition))
+            residual_list.append(self.residual(input, input_type='Geometry',
+                                               input_function=input_function,
+                                               loading_condition=loading_condition))
             energy_list.append(self.strain_energy())
         if reorder is not None:
             residual_list = np.resize(residual_list, reorder)

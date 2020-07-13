@@ -53,7 +53,7 @@ def dxi_u(psi, Au, delta_xi, N1=0.5, N2=1):
     n = len(Au)-1
     # print(delta_xi)
     C_i = C(N1, N2, psi)
-    diff = delta_xi*np.ones(len(psi))
+    diff = delta_xi
     # print(0, diff)
     # print('C', C_i)
     for i in range(n+1):
@@ -95,6 +95,7 @@ def ddxi_u(psi, Au, abs_output=False, N1=0.5, N2=1):
         dS11 = -(N1+i)/psi**2
         dS22 = (i-n-N2)/(1-psi)**2
         diff += Au[i]*C_i*S_i*((dS1+dS2)**2 + (dS11+dS22))
+
     if abs_output:
         return abs(diff)
     else:
@@ -120,7 +121,7 @@ def ddxi_l(psi, Al, abs_output=False, N1=0.5, N2=1):
         return diff
 
 
-def calculate_c_baseline(c_L, Au_C, Au_L, deltaz):
+def calculate_c_baseline(c_L, Au_C, Au_L, deltaz_C, deltaz_L=None):
     """Equations in the New_CST.pdf. Calculates the upper chord in order for
        the cruise and landing airfoils ot have the same length."""
 
@@ -129,9 +130,14 @@ def calculate_c_baseline(c_L, Au_C, Au_L, deltaz):
 
     def f(c_C):
         """Function dependent of c_C and that outputs c_C."""
-        y_C, err = quad(integrand, 0, 1, args=(Au_C, deltaz/c_C))
-        y_L, err = quad(integrand, 0, 1, args=(Au_L, deltaz/c_L))
+        if hasattr(c_C, "__len__"):
+            c_C = c_C[0]
+        y_C, err = quad(integrand, 0, 1, args=(Au_C, deltaz_C/c_C))
+        y_L, err = quad(integrand, 0, 1, args=(Au_L, deltaz_L/c_L))
+        # print(c_C, y_L, y_C)
         return c_L*y_L/y_C
+    if deltaz_L is None:
+        deltaz_L = deltaz_C
     c_C = optimize.fixed_point(f, [c_L])
     # In case the calculated chord is really close to the original, but the
     # algorithm was not able to make them equal

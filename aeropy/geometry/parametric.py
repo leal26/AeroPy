@@ -76,15 +76,15 @@ class CoordinateSystem(object):
             return np.ones(len(x1))
 
     @classmethod
-    def polynomial(cls, D, chord=1, color='b', n=6):
-        c = cls(D, chord=chord, color=color, n=n)
+    def polynomial(cls, D, chord=1, color='b', n=6, tol=1e-6):
+        c = cls(D, chord=chord, color=color, n=n, tol=tol)
         c.x3 = c._x3_poly
         return c
 
     @classmethod
-    def CST(cls, D, chord, color, N1=.5, N2=1.0, deltaz=0):
+    def CST(cls, D, chord, color, N1=.5, N2=1.0, deltaz=0, tol=1e-6):
         c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2,
-                deltaz=deltaz)
+                deltaz=deltaz, tol=tol)
         c.x3 = c._x3_CST
         return c
 
@@ -261,24 +261,62 @@ class CoordinateSystem(object):
             if np.isnan(dr):
                 # print('NaN', x1)
                 if x1 == 0:
-                    dr = self.x3(np.array([1e-6]), 'x1')
+                    dr = self.x3(np.array([self.tol]), 'x1')
                 else:
-                    dr = self.x3(np.array([x1-1e-6]), 'x1')
+                    dr = self.x3(np.array([x1-self.tol]), 'x1')
             return np.sqrt(1 + dr**2)
         if chord is None:
             chord = self.chord
         return integrate.quad(integrand, 0, chord, limit=500)
 
+    def arclength_index(self, index):
+        x1 = self.x1_grid[index]
+        dr = self.x3(np.array([x1]), 'x1')
+        if np.isnan(dr):
+            # print('NaN', x1)
+            if x1 == 0:
+                dr = self.x3(np.array([self.tol]), 'x1')
+            else:
+                dr = self.x3(np.array([x1-self.tol]), 'x1')
+            # if x1 == 0:
+            #     dr = self.x3(np.array([self.x1_grid[1]]), 'x1')
+            # else:
+            #     dr = self.x3(np.array([self.x1_grid[-2]]), 'x1')
+        self.darc[index] = np.sqrt(1 + dr[0]**2)
+        # print('dr, darc', dr, self.darc[index])
+        # print('x', self.x1_grid[:index+1])
+        # print('darc', self.darc[:index+1])
+        return integrate.trapz(self.darc[:index+1], self.x1_grid[:index+1])
+
     def calculate_x1(self, length_target, bounds=None, output=False):
         def f(c_c):
             length_current, err = self.arclength(c_c[0])
             return abs(target - length_current)
+
+        def f_index(x):
+            # Penalize in case x goes negative
+            if x < 0:
+                return 100
+            else:
+                self.x1_grid[index] = x
+                length_current = self.arclength_index(index)
+                # print(index, x, length_current, target)
+                return abs(target - length_current)
         x0 = 0
         x1 = []
 
-        for target in length_target:
-            # print(target, x0)
+        if len(length_target) == 1:
+            target = length_target[0]
             x1.append(optimize.fsolve(f, x0)[0])
+
+        self.x1_grid = np.zeros(len(length_target))
+        self.darc = np.zeros(len(length_target))
+        for index in range(len(length_target)):
+
+            target = length_target[index]
+            # print(index, target)
+            # print('TARGET', target)
+            x1.append(optimize.fsolve(f_index, target)[0])
             x0 = x1[-1]
         if output:
             return np.array(x1)
@@ -288,7 +326,8 @@ class CoordinateSystem(object):
     def plot(self, basis=False, r=None, label=None, linestyle='-', color=None, scatter=False, zorder=0, marker='.'):
         if r is None:
             r = self.r(self.x1_grid)
-
+        print('x_p', r[:, 0])
+        print('y_p', r[:, 1])
         if color is None:
             color = self.color
 
@@ -325,3 +364,7 @@ class CoordinateSystem(object):
         nondimensional_length, err = self.arclength(chord=1.)
         self.chord = target_length/nondimensional_length
         self.deltaz = self.deltaz*self.chord
+
+    def calculate_angles(self):
+        self.cos = self.x1(self.x1_grid, 'theta1')
+        self.sin = self.x3(self.x1_grid, 'theta1')

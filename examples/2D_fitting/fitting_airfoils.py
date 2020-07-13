@@ -15,7 +15,7 @@ f = {'names': [], 'upper': [], 'lower': [], 'Au': [], 'Al': [], 'du': [], 'dl': 
 logfile = './log.txt'
 log = open(logfile, 'w')
 directory = "./airfoils/"
-file = "uag8814320.dat"
+file = "naca0008.dat"
 
 filename = os.path.join(directory, file)
 extracted_data = False
@@ -34,11 +34,11 @@ i_break = np.where(data[:, 0] == 0.)[0][0]
 data_upper = data[0:i_break+1, :]
 data_lower = data[i_break:, :]
 
-deltaz_l, Al = fitting_shape_coefficients(data_lower, n=4, surface='lower',
+deltaz_l, Al = fitting_shape_coefficients(data_lower, n=3, surface='lower',
                                           solver='differential_evolution',
                                           objective='squared_mean',
                                           deltaz=0)
-deltaz_u, Au = fitting_shape_coefficients(data_upper, n=4, surface='upper',
+deltaz_u, Au = fitting_shape_coefficients(data_upper, n=3, surface='upper',
                                           solver='differential_evolution',
                                           objective='squared_mean',
                                           deltaz=0)
