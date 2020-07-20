@@ -99,7 +99,7 @@ class euler_bernoulle_curvilinear():
 
 
 class beam_chen():
-    def __init__(self, geometry, properties, load, s, ignore_ends=False, rotated=True):
+    def __init__(self, geometry, properties, load, s, ignore_ends=False, rotated=False):
         self.g = copy.deepcopy(geometry)
         self.p = properties
         self.l = load
@@ -206,9 +206,9 @@ class beam_chen():
         # print('Rho', self.g_p.rho)
         # print(self.r)
         if self.ignore_ends:
-            self.R = trapz(self.r[1:-1], self.s[1:-1])
+            self.R = abs(trapz(self.r[1:-1], self.s[1:-1]))
         else:
-            self.R = trapz(self.r, self.s)
+            self.R = abs(trapz(self.r, self.s))
         if np.isnan(self.R):
             self.R = 100
 
@@ -231,13 +231,15 @@ class beam_chen():
             y_before = np.copy(self.y)
             print(error)
 
-    def parameterized_solver(self, format_input=None, x0=None):
-        def formatted_residual(A, g=None):
-            A = format_input(A, g)
+    def parameterized_solver(self, format_input=None, x0=None, g_switch=False,
+                             constraints=(),):
+        def formatted_residual(A):
+            A = format_input(A, self.g, self.g_p)
             return self._residual(A)
 
-        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-10, 10]])
-        self.g.D = format_input(sol.x)
+        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-1, 1]],
+                       constraints=constraints)
+        self.g.D = format_input(sol.x, self.g, self.g_p)
         self.g.internal_variables(self.length)
         self.g.calculate_x1(self.s)
         self.x = self.g.x1_grid

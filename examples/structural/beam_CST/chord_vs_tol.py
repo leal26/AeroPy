@@ -14,26 +14,26 @@ import cProfile
 import pstats
 
 
-def calculate_chord(tol):
+def calculate_chord(tol, N):
     g.tol = tol
     g_p.tol = tol
 
     s = np.linspace(0, g.arclength(1)[0], N)
-    l = loads(concentrated_load=[[0, -1]], load_s=[s[-1]], follower=True)
+    l = loads()
     g.s = s
 
     b = beam_chen(g, p, l, s, ignore_ends=True)
-    b.g.D = [0.1126956897257928, 0.10811631223364697,
-             0.09120680993172335, 0.10763228117522525, 0]
+    b.g.D = [0.1127, 0.1043, 0.0886, 0.1050, 0]
     b.g.internal_variables(b.length)
     b.g.calculate_x1(b.s)
     b.x = b.g.x1_grid
+    # print(np.sort(b.g.x1_grid))
     return(max(b.x), b.g.chord, b.g.x1_grid == np.sort(b.g.x1_grid))
 
 
 def residual(tol):
-    chord, max_x, valid = calculate_chord(tol)
-    return(chord - max_x)
+    max_x, chord, valid = calculate_chord(tol, N)
+    return(abs(chord - max_x))
 
 
 def format_input(input, g=None):
@@ -97,34 +97,27 @@ g_p = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0], chord=1,
 p = properties()
 
 
-orders_N = np.linspace(1, 3, 100)
+orders_N = np.linspace(1, 2, 2)
 Ns = np.around(10**orders_N)
-orders = np.linspace(-3, -1, 101)
+orders = np.linspace(-5, -1, 20)
 tolerances = 10**orders
 
 orders_tolerance = []
 optimal_tolerance = []
 maximum_tolerance = []
+N_list = []
 for j in range(len(Ns)):
     N = int(Ns[j])
     print(j, N)
     tol = fsolve(residual, 1e-3)
-    chord, max_x, valid = calculate_chord(tol)
+    max_x, chord, valid = calculate_chord(tol, N)
     if valid.all():
         orders_tolerance.append(N)
         optimal_tolerance.append(tol[0])
-    print(N, tol[0], valid.all())
-    # print(g.arclength(1)[0])
-    # chords = []
-    # max_x = []
-    # for i in range(len(tolerances)):
-    #     tol = tolerances[i]
-    #     sol = calculate_chord(tol)
-    #     max_x.append(sol)
-    #
-    # f = interp1d(max_x, tolerances)
-    # optimal_tolerance.append(f(1))
-data = np.array([orders_N, optimal_tolerance]).T
+        N_list.append(N)
+    print(N, tol[0], valid.all(), max_x, chord)
+
+data = np.array([N_list, optimal_tolerance]).T
 pickle.dump(data, open('tolerances.p', 'wb'))
 
 plt.figure()
@@ -134,33 +127,23 @@ plt.legend()
 plt.show()
 
 
-# N = 10
+# N = 100
 # # print(g.arclength(1)[0])
-# chords = []
-# max_x = []
+# chords = np.zeros(len(tolerances))
+# max_x = np.zeros(len(tolerances))
 # for i in range(len(tolerances)):
+#
 #     tol = tolerances[i]
-#     g.tol = tol
-#     g_p.tol = tol
-#
-#     s = np.linspace(0, g.arclength(1)[0], N)
-#     l = loads(concentrated_load=[[0, -1]], load_s=[s[-1]], follower=True)
-#     g.s = s
-#
-#     b = beam_chen(g, p, l, s, ignore_ends=True)
-#     b.g.D = [0.1126956897257928, 0.10811631223364697,
-#              0.09120680993172335, 0.10763228117522525, 0]
-#     b.g.internal_variables(b.length)
-#     b.g.calculate_x1(b.s)
-#     b.x = b.g.x1_grid
-#     chords.append(b.g.chord)
-#     max_x.append(max(b.x))
-#
+#     max_xi, chord, valid = calculate_chord(tol, N)
+#     print(tol, max_xi, g.arclength(1)[0], valid.all())
+#     chords[i] = chord
+#     max_x[i] = max_xi
+# print('max_x', max_x)
 # f = interp1d(max_x, tolerances)
-# print('Optimal tolerance: ', f(1))
+# # print('Optimal tolerance: ', f(1))
 # plt.figure()
 # plt.plot(tolerances, chords, 'b', label='chord')
 # plt.plot(tolerances, max_x, 'r', label='max_x')
-# plt.xlabel('Order of magnitude of tolerance')
+# plt.xlabel('Tolerance')
 # plt.legend()
-plt.show()
+# plt.show()

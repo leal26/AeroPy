@@ -7,7 +7,7 @@ from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
 
-def format_input(input):
+def format_input(input, g=None, g_p=None):
     # COnsidering BC for zero derivative at the root
     return list(input) + [-input[0]]
     # return input

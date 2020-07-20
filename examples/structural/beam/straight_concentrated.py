@@ -7,7 +7,7 @@ from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
 
-def format_input(input):
+def format_input(input, g=None, g_p=None):
     return [0, 0] + list(input)
 
 

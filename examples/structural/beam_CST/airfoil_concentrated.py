@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
+from scipy.optimize import fsolve
 
 from aeropy.structural.beam import beam_chen
 from aeropy.structural.stable_solution import properties, loads
@@ -9,25 +10,63 @@ from aeropy.CST_2D import calculate_c_baseline
 from aeropy.geometry.airfoil import create_x, rotate
 
 
-def format_input(input, g=None):
-    # print('input', input)
-    # nd_deltaz = input[-1]
-    # # COnsidering BC for zero derivative at the root
-    # error = 9999
-    # c_P = 1
-    # Au_P = [0.1127, 0.1043, 0.0886, 0.1050]
-    # AC_u0 = Au_P[0]
-    # deltaz_C = nd_deltaz*c_P
-    # while error > 1e-9:
-    #     before = AC_u0
-    #     Au_C = [AC_u0] + list(input[:-1])
-    #     # print('Au', Au_C)
-    #     c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz_C)
-    #     deltaz_C = nd_deltaz*c_C
-    #     AC_u0 = np.sqrt(c_P/c_C)*Au_P[0]
-    #     error = abs(AC_u0 - before)
-    # return list(Au_C) + [nd_deltaz]
-    return list(input) + [0]
+def format_input(input, g=None, g_p=None):
+    # def residual(deltaz):
+    #     g.D[-1] = deltaz[0]
+    #     g.internal_variables(target_length)
+    #     rho_p = (1/g_p.chord)*dd_p/(1+d_p**2)**(3/2)
+    #     dd = (2*n*g.D[-3] - 2*(g.N1+n)*g.D[-2])
+    #     d = -g.D[-2] + g.D[-1]
+    #     rho = (1/g.chord)*dd/(1+d**2)**(3/2)
+    #     g.radius_curvature(np.array([g.chord]))
+    #     rho_new = g_p.rho[0]
+    #     print(deltaz, rho, rho_new, rho_p, rho_p_new)
+    #     return(abs(rho_new-rho_p_new))
+
+    # print('D before', g.D)
+    g.D[:-1] = input
+    error = 9999
+    n = g.n - 2
+    dd_p = (2*n*g_p.D[-3] - 2*(g_p.N1+n)*g_p.D[-2])
+    d_p = -g_p.D[-2] + g_p.D[-1]
+    rho_p = (1/g_p.chord)*dd_p/(1+d_p**2)**(3/2)
+    target_length = g_p.arclength(g_p.chord)[0]
+    # rho_p = dd_p/(1+d_p**2)**(3/2)
+    # g.D[-1] = fsolve(residual, g.D[-1])[0]
+    # BREAK
+    # BREAK
+
+    print('target', target_length)
+    while error > 1e-2:
+        before = g.D[-1]
+        C = rho_p*g.chord/g_p.chord
+        dd = (2*n*g.D[-3] - 2*(g.N1+n)*g.D[-2])
+        d = -g.D[-2] + g.D[-1]
+        rho = dd/(1+d**2)**(3/2)
+        if C > 0:
+            deltaz = np.sqrt((dd/C)**(2/3)-1) + g.D[-2]
+        elif C < 0:
+            deltaz = -np.sqrt((dd/C)**(2/3)-1) + g.D[-2]
+        if not np.isnan(deltaz):
+            g.D[-1] = deltaz
+        else:
+            break
+        d = -g.D[-2] + g.D[-1]
+        rho = (1/g.chord)*dd/(1+d**2)**(3/2)
+        # print('D after', g.D)
+        # print('terms', np.sqrt((dd/C)**(2/3)-1), g.D[-2])
+        # print('C', C, rho_p, g.chord, g_p.chord)
+        # print('dd', d, d_p, dd, dd_p)
+        # print('before', before)
+        print('rho', rho, rho_p, g.D[-1])
+
+        g.internal_variables(target_length)
+        after = g.D[-1]
+        # print('after', after)
+        error = abs(after - before)
+        # print('deltaxi', g.D[-1], 'error', error)
+        # BREAK
+    return g.D
 
 
 abaqus_x = [0, 0.0046626413, 0.018402023, 0.048702486, 0.087927498, 0.12745513,
@@ -44,18 +83,21 @@ abaqus_y = [0, 0.0080771167, 0.015637144, 0.024132574, 0.030406451,
             0.0029010926, -0.0013316774, -0.0058551501]
 
 rotated_abaqus = rotate({'x': abaqus_x, 'y': abaqus_y})
-
+abaqus_x = rotated_abaqus['x']
+abaqus_y = rotated_abaqus['y']
 # NACA0012
 # higher order [0.1194, 0.0976, 0.1231, 0.0719, 0.1061, 0.1089, 0]
-g = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0], chord=1,
-                         color='b', N1=.5, N2=1, tol=0.0111414160997469)
-g_p = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0], chord=1,
-                           color='k', N1=.5, N2=1, tol=0.0111414160997469)
+# N 100: 0.0014553076272791395
+# N 10: 0.011141416099746887
+g = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0.], chord=1,
+                         color='b', N1=.5, N2=1, tol=0.0014553076272791395)
+g_p = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0.], chord=1,
+                           color='k', N1=.5, N2=1, tol=0.0014553076272791395)
 
-s = np.linspace(0, g.arclength(1)[0], 10)
+s = np.linspace(0, g.arclength(1)[0], 100)
 
 p = properties()
-l = loads(concentrated_load=[[0, -1]], load_s=[s[-1]], follower=True)
+l = loads(concentrated_load=[[0, -1]], load_s=[s[-1]])
 
 b = beam_chen(g, p, l, s, ignore_ends=True)
 # b.g.D = [0.11621804, 0.11164078, 0.08581012, 0.11474758, -0.00585594]
@@ -71,14 +113,22 @@ b.g.internal_variables(b.length)
 b.g.calculate_x1(b.s)
 b.x = b.g.x1_grid
 b.y = b.g.x3(b.x)
+
+rotated_beam = rotate({'x': b.x, 'y': b.y})
+plt.figure()
+plt.plot(b.x, b.M/b.p.young/b.p.inertia, 'b')
+plt.plot(b.x, b.g.rho, 'r')
+plt.plot(b.x, b.g_p.rho, 'g')
+plt.show()
 print('residual: ', b._residual(b.g.D))
 print('x', b.x)
 print('y', b.y)
 print('length', b.length, b.g.arclength(b.g.chord)[0])
 g_p.calculate_x1(b.s)
 g_p.plot(label='Parent')
-plt.plot(b.x, b.y, '.5', label='Child: %.3f N' % -l.concentrated_load[0][-1], lw=3)
-plt.scatter(rotated_abaqus['x'], rotated_abaqus['y'], c='.5', label='FEA: %.3f N' % -
+plt.plot(rotated_beam['x'], rotated_beam['y'], '.5',
+         label='Child: %.3f N' % -l.concentrated_load[0][-1], lw=3)
+plt.scatter(abaqus_x, abaqus_y, c='.5', label='FEA: %.3f N' % -
             l.concentrated_load[0][-1], edgecolors='k', zorder=10, marker="^")
 # plt.gca().set_aspect('equal', adjustable='box')
 plt.legend()

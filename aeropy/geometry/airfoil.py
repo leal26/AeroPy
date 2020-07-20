@@ -554,7 +554,7 @@ def find_edges(x, y, both_surfaces=False):
 
 def rotate(upper, lower={'x': [], 'y': []}, origin={'x': 0, 'y': 0},
            theta=None, unit_theta='rad', move_to_origin=False,
-           chord=None, both_surfaces=False):
+           chord=None, both_surfaces=False, normalize=True):
     """
     :param upper: dictionary with keys x and y, each a list
 
@@ -593,8 +593,11 @@ def rotate(upper, lower={'x': [], 'y': []}, origin={'x': 0, 'y': 0},
             cx = coordinates['x'][i] - origin['x']
             cy = coordinates['y'][i] - origin['y']
             # Rotate
-            rot_x = (T[0][0]*cx + T[0][1]*cy)/chord
-            rot_y = (T[1][0]*cx + T[1][1]*cy)/chord
+            rot_x = (T[0][0]*cx + T[0][1]*cy)
+            rot_y = (T[1][0]*cx + T[1][1]*cy)
+            if normalize:
+                rot_x = rot_x/chord
+                rot_y = rot_y/chord
             # Store and add back the values of the origin
             if move_to_origin:
                 rotated_coordinates['x'].append(rot_x)
@@ -1249,4 +1252,3 @@ def offset_point(x, y, rho, output_format='separate'):
         return zip(x_offset, y_offset)
     if output_format == 'separate':
         return x_offset, y_offset
-

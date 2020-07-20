@@ -76,7 +76,6 @@ class loads():
                 direction = [load[0]/norm, load[1]/norm]
                 self.concentrated_direction.append(direction)
                 self.concentrated_magnitude.append(norm)
-            print('in', direction, norm)
 
 
 class boundary_conditions():

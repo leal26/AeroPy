@@ -258,12 +258,12 @@ class CoordinateSystem(object):
             # else:
             #     return np.sqrt(np.inner(dr, dr)[0, 0])
             dr = self.x3(np.array([x1]), 'x1')
-            if np.isnan(dr):
-                # print('NaN', x1)
-                if x1 == 0:
-                    dr = self.x3(np.array([self.tol]), 'x1')
-                else:
-                    dr = self.x3(np.array([x1-self.tol]), 'x1')
+            # if np.isnan(dr):
+            #     # print('NaN', x1)
+            #     if x1 == 0:
+            #         dr = self.x3(np.array([self.tol]), 'x1')
+            #     else:
+            #         dr = self.x3(np.array([x1-self.tol]), 'x1')
             return np.sqrt(1 + dr**2)
         if chord is None:
             chord = self.chord
@@ -272,21 +272,67 @@ class CoordinateSystem(object):
     def arclength_index(self, index):
         x1 = self.x1_grid[index]
         dr = self.x3(np.array([x1]), 'x1')
-        if np.isnan(dr):
-            # print('NaN', x1)
-            if x1 == 0:
-                dr = self.x3(np.array([self.tol]), 'x1')
-            else:
-                dr = self.x3(np.array([x1-self.tol]), 'x1')
-            # if x1 == 0:
-            #     dr = self.x3(np.array([self.x1_grid[1]]), 'x1')
-            # else:
-            #     dr = self.x3(np.array([self.x1_grid[-2]]), 'x1')
+        # if np.isnan(dr):
+        #     # print('NaN', x1)
+        #     if x1 == 0:
+        #         dr = self.x3(np.array([self.tol]), 'x1')
+        #     else:
+        #         dr = self.x3(np.array([x1-self.tol]), 'x1')
+        #     # if x1 == 0:
+        #     #     dr = self.x3(np.array([self.x1_grid[1]]), 'x1')
+        #     # else:
+        #     #     dr = self.x3(np.array([self.x1_grid[-2]]), 'x1')
         self.darc[index] = np.sqrt(1 + dr[0]**2)
         # print('dr, darc', dr, self.darc[index])
         # print('x', self.x1_grid[:index+1])
         # print('darc', self.darc[:index+1])
         return integrate.trapz(self.darc[:index+1], self.x1_grid[:index+1])
+
+    def arclength_chord(self):
+        self.darc = np.ones(len(self.x1_grid))
+        dr = self.x3(np.array([1e-7]), 'x1')
+        self.darc[0] = np.sqrt(1 + dr[0]**2)
+        for index in range(1, len(self.x1_grid)-1):
+            x1 = self.x1_grid[index]
+            dr = self.x3(np.array([x1]), 'x1')
+            self.darc[index] = np.sqrt(1 + dr[0]**2)
+        self.darc[-1] = np.sqrt(1 + (-self.D[-2]+self.D[-1])**2)
+        # print('dr, darc', dr, self.darc[index])
+        # print('x', self.x1_grid[:index+1])
+        # print('darc', self.darc[:index+1])
+
+        # print(self.darc)
+        # print(self.x1_grid)
+        return integrate.trapz(self.darc, self.x1_grid)
+
+    def improper_arclength_chord(self):
+        def bounded_dr(x):
+
+            if x == 0:
+                return
+            elif x == 1:
+                return np.sqrt(1 + (-self.D[-2]+self.D[-1])**2) - np.sqrt(1 + A/x)
+            else:
+                dr = self.x3(np.array([x]), 'x1')
+                return np.sqrt(1 + dr[0]**2) - np.sqrt(1 + A/x)
+
+        def unbounded_integral(end, start=0):
+            def indefinite_integral(x):
+                # return x*np.sqrt(A/x+B)) + A*np.log(2*np.sqrt(B)*x*np.sqrt(A/x+B) + A + 2*B*x)/(2*np.sqrt(B))
+                return np.sqrt(x*(A + x)) + A*np.log(np.sqrt(A+x) + np.sqrt(x))
+            return indefinite_integral(end) - indefinite_integral(start)
+
+        A = self.N1**2*self.D[0]**2
+        self.darc = np.ones(len(self.x1_grid))
+        for index in range(1, len(self.x1_grid)):
+            x1 = self.x1_grid[index]
+            self.darc[index] = bounded_dr(x1)
+        self.darc[0] = self.darc[1]
+        bounded_integral = integrate.trapz(self.darc, self.x1_grid)
+
+        # self.darc += np.sqrt(1+self.D[0]**2/self.x1_grid)
+        # print(self.darc)
+        return bounded_integral + unbounded_integral(self.chord)
 
     def calculate_x1(self, length_target, bounds=None, output=False):
         def f(c_c):

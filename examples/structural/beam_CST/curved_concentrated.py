@@ -7,9 +7,35 @@ from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
 
-def format_input(input):
-    # COnsidering BC for zero derivative at the root
-    return list(input) + [-input[0]]
+# def format_input(input, g=None, g_p=None):
+#     # COnsidering BC for zero derivative at the root
+#     return list(input) + [-input[0]]
+def format_input(input, g=None, g_p=None):
+    g.D[:-1] = input
+    error = 9999
+    n = g.n - 2
+    dd_p = (2*n*g_p.D[-3] - 2*(g_p.N1+n)*g_p.D[-2])
+    d_p = -g_p.D[-2] + g_p.D[-1]
+    rho_p = dd_p/(1+d_p**2)**(3/2)
+    target_length = g_p.arclength(g_p.chord)[0]
+    print('target', target_length)
+    while error > 1e-9:
+        before = g.D[-1]
+        C = rho_p*g.chord/g_p.chord
+        dd = (2*n*g.D[-3] - 2*(g.N1+n)*g.D[-2])
+        d = -g.D[-2] + g.D[-1]
+        g.D[-1] = np.sqrt((dd/C)**(2/3)-1) + g.D[-2]
+        print('terms', np.sqrt((dd/C)**(2/3)-1), g.D[-2])
+        print('C', C, rho_p, g.chord, g_p.chord)
+        print('dd', d, d_p, dd, dd_p)
+        print('before', before)
+        g.internal_variables(target_length)
+        after = g.D[-1]
+        print('after', after)
+        error = abs(after - before)
+        print('deltaxi', g.D[-1], 'error', error)
+        # BREAK
+    return g.D
 
 
 abaqus_x = [0, 0.10398348, 0.20769666, 0.31089693, 0.4133383, 0.51480412,

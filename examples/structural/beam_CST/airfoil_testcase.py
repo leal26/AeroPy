@@ -12,25 +12,65 @@ import cProfile
 import pstats
 
 
-def format_input(input, g=None):
-    # print('input', input)
-    # nd_deltaz = input[-1]
-    # # COnsidering BC for zero derivative at the root
-    # error = 9999
-    # c_P = 1
-    # Au_P = [0.1127, 0.1043, 0.0886, 0.1050]
-    # AC_u0 = Au_P[0]
-    # deltaz_C = nd_deltaz*c_P
-    # while error > 1e-9:
-    #     before = AC_u0
-    #     Au_C = [AC_u0] + list(input[:-1])
-    #     # print('Au', Au_C)
-    #     c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz_C)
-    #     deltaz_C = nd_deltaz*c_C
-    #     AC_u0 = np.sqrt(c_P/c_C)*Au_P[0]
-    #     error = abs(AC_u0 - before)
-    # return list(Au_C) + [nd_deltaz]
-    return list(input) + [0]
+def format_input(input, g=None, g_p=None):
+    # def residual(deltaz):
+    #     g.D[-1] = deltaz[0]
+    #     g.internal_variables(target_length)
+    #     rho_p = (1/g_p.chord)*dd_p/(1+d_p**2)**(3/2)
+    #     dd = (2*n*g.D[-3] - 2*(g.N1+n)*g.D[-2])
+    #     d = -g.D[-2] + g.D[-1]
+    #     rho = (1/g.chord)*dd/(1+d**2)**(3/2)
+    #     g.radius_curvature(np.array([g.chord]))
+    #     rho_new = g_p.rho[0]
+    #     print(deltaz, rho, rho_new, rho_p, rho_p_new)
+    #     return(abs(rho_new-rho_p_new))
+
+    # print('D before', g.D)
+    g.D[:-1] = input
+    error = 9999
+    n = g.n - 2
+    dd_p = (2*n*g_p.D[-3] - 2*(g_p.N1+n)*g_p.D[-2])
+    d_p = -g_p.D[-2] + g_p.D[-1]
+    rho_p = (1/g_p.chord)*dd_p/(1+d_p**2)**(3/2)
+    target_length = g_p.arclength(g_p.chord)[0]
+    # rho_p = dd_p/(1+d_p**2)**(3/2)
+    # g.D[-1] = fsolve(residual, g.D[-1])[0]
+    # BREAK
+    # BREAK
+
+    print('target', target_length)
+
+    while error > 1e-4:
+        before = g.D[-1]
+        C = rho_p*g.chord
+        dd = (2*n*g.D[-3] - 2*(g.N1+n)*g.D[-2])
+        d = -g.D[-2] + g.D[-1]
+
+        if C > 0:
+            deltaz = np.sqrt((dd/C)**(2/3)-1) + g.D[-2]
+        elif C < 0:
+            deltaz = -np.sqrt((dd/C)**(2/3)-1) + g.D[-2]
+        if not np.isnan(deltaz):
+            g.D[-1] = deltaz
+        else:
+            break
+
+        d = -g.D[-2] + g.D[-1]
+        rho = (1/g.chord)*dd/(1+d**2)**(3/2)
+        print('D after', g.D)
+        print('terms', np.sqrt((dd/C)**(2/3)-1), g.D[-2])
+        print('C', C, rho_p, g.chord, g_p.chord)
+        print('dd', d, d_p, dd, dd_p)
+        print('before', before)
+        print('rho', rho, rho_p)
+
+        g.internal_variables(target_length)
+        after = g.D[-1]
+        print('after', after)
+        error = abs(after - before)
+        print('deltaxi', g.D[-1], 'error', error)
+        # BREAK
+    return g.D
 
 
 abaqus_x = [0, 0.0046626413, 0.018402023, 0.048702486, 0.087927498, 0.12745513,
@@ -46,7 +86,7 @@ abaqus_y = [0, 0.0080771167, 0.015637144, 0.024132574, 0.030406451,
             0.019699335, 0.016810443, 0.013729585, 0.010411576, 0.0068127746,
             0.0029010926, -0.0013316774, -0.0058551501]
 
-rotated_abaqus = rotate({'x': abaqus_x, 'y': abaqus_y})
+# rotated_abaqus = rotate({'x': abaqus_x, 'y': abaqus_y})
 
 # plt.figure()
 # plt.plot(abaqus_x, abaqus_y, 'b')
@@ -55,15 +95,17 @@ rotated_abaqus = rotate({'x': abaqus_x, 'y': abaqus_y})
 
 # NACA0008
 # higher order [0.1194, 0.0976, 0.1231, 0.0719, 0.1061, 0.1089, 0]
+# N 100: 0.06430238065609895
+# N 10: 0.011485823192467997
 g = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0], chord=1,
-                         color='b', N1=.5, N2=1, tol=0.011485823192467997)
+                         color='b', N1=.5, N2=1, tol=0.0014553076272791395)
 g_p = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0], chord=1,
-                           color='k', N1=.5, N2=1, tol=0.011485823192467997)
+                           color='k', N1=.5, N2=1, tol=0.0014553076272791395)
 
 # g.x1_grid = create_x(1, n=100, distribution='polar')[::-1]
 
-s = np.linspace(0, g.arclength(1)[0], 10)
-print('s', s)
+s = np.linspace(0, g.arclength(1)[0], 100)
+# print('s', s)
 # g.calculate_x1(s)
 # g.darc = np.zeros(len(g.x1_grid))
 # for i in range(len(g.x1_grid)):
@@ -75,7 +117,23 @@ p = properties()
 l = loads(concentrated_load=[[0, -1]], load_s=[s[-1]], follower=True)
 
 b = beam_chen(g, p, l, s, ignore_ends=True)
-b.g.D = [0.1126956897257928, 0.10811631223364697, 0.09120680993172335, 0.10763228117522525, 0]
+# b.g.D = [0.11621803608468839, 0.11164077707202186,
+#          0.08581012060178156, 0.11474758149621056, -0.005855939703725668]
+# b.g.D = [0.1126956897257928, 0.10811631223364697, 0.09120680993172335, 0.10763228117522525, 0]
+# D = format_input([0.11621803608468839, 0.11164077707202186,
+#                   0.08581012060178156, 0.11474758149621056], g=b.g, g_p=b.g_p)
+# b.g.D = [0.11621803608468839, 0.11164077707202186,
+#          0.08581012060178156, 0.11474758149621056, -0.005855939703725668]
+# print('D', D)
+# b.D = D
+b.g_p.x1_grid = np.linspace(0, 1, 10)
+print('Accurate', b.length)
+print('Improper', b.g_p.improper_arclength_chord())
+#
+# b.g_p.internal_variables(b.length)
+# b.g_p.calculate_x1(b.s)
+# print('x', b.g_p.x1_grid)
+BREAK
 
 
 def test_function():
@@ -96,16 +154,25 @@ b.g.internal_variables(b.length)
 b.g.calculate_x1(b.s)
 b.x = b.g.x1_grid
 b.y = b.g.x3(b.x)
+
+
 print('residual: ', b._residual(b.g.D))
-print('x', b.x)
-print('y', b.y)
-print('sizes', len(b.x), len(b.s))
-print('chord', b.g.chord)
+# print('x', b.x)
+# print('y', b.y)
+# print('sizes', len(b.x), len(b.s))
+# print('chord', b.g.chord)
 g_p.calculate_x1(b.s)
+
+plt.figure()
+plt.plot(b.x, b.M/b.p.young/b.p.inertia, 'b')
+plt.plot(b.x, b.g.rho, 'r')
+plt.plot(b.x, b.g_p.rho, 'g')
+
+plt.figure()
 g_p.plot(label='Parent')
 print('chord', b.g.chord)
 plt.plot(b.x, b.y, '.5', label='Child: %.3f N' % -l.concentrated_load[0][-1], lw=3)
-plt.scatter(rotated_abaqus['x'], rotated_abaqus['y'], c='.5', label='FEA: %.3f N' % -
+plt.scatter(abaqus_x, abaqus_y, c='.5', label='FEA: %.3f N' % -
             l.concentrated_load[0][-1], edgecolors='k', zorder=10, marker="^")
 
 plt.legend()
