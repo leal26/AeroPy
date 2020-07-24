@@ -86,7 +86,9 @@ abaqus_y = [0, 0.0080771167, 0.015637144, 0.024132574, 0.030406451,
             0.019699335, 0.016810443, 0.013729585, 0.010411576, 0.0068127746,
             0.0029010926, -0.0013316774, -0.0058551501]
 
-# rotated_abaqus = rotate({'x': abaqus_x, 'y': abaqus_y})
+rotated_abaqus = rotate({'x': abaqus_x, 'y': abaqus_y}, normalize=False)
+abaqus_x = rotated_abaqus['x']
+abaqus_y = rotated_abaqus['y']
 
 # plt.figure()
 # plt.plot(abaqus_x, abaqus_y, 'b')
@@ -98,42 +100,54 @@ abaqus_y = [0, 0.0080771167, 0.015637144, 0.024132574, 0.030406451,
 # N 100: 0.06430238065609895
 # N 10: 0.011485823192467997
 g = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0], chord=1,
-                         color='b', N1=.5, N2=1, tol=0.0014553076272791395)
+                         color='b', N1=.5, N2=1, tol=None)
 g_p = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0], chord=1,
-                           color='k', N1=.5, N2=1, tol=0.0014553076272791395)
+                           color='k', N1=.5, N2=1, tol=None)
 
 # g.x1_grid = create_x(1, n=100, distribution='polar')[::-1]
-
-s = np.linspace(0, g.arclength(1)[0], 100)
-# print('s', s)
+s = g_p.calculate_s(101, density='curvature')
+g.x1_grid = g_p.x1_grid
+print('x', g_p.x1_grid[-1])
+print('s', s[-1])
+g_p.calculate_x1(s)
+print('x', g_p.x1_grid)
+# BREAK
+# print(s)
+# s = np.linspace(0, g.arclength(1)[0], 100)
+# print('x', g.x1_grid)
 # g.calculate_x1(s)
+# rho = g.radius_curvature(g.x1_grid, output_only=True)
+# plt.figure()
+# plt.scatter(g.x1_grid, rho)
+# plt.show()
+# BREAK
 # g.darc = np.zeros(len(g.x1_grid))
 # for i in range(len(g.x1_grid)):
-#     s[i] = g.arclength_index(i)
-#     print(i, g.arclength_index(i), g.arclength(g.x1_grid[i])[0])
+#     print(i, g.improper_arclength_index(i), g.arclength(g.x1_grid[i])[0])
 #
 # BREAK
 p = properties()
 l = loads(concentrated_load=[[0, -1]], load_s=[s[-1]], follower=True)
 
-b = beam_chen(g, p, l, s, ignore_ends=True)
+b = beam_chen(g, p, l, s)
+b.length = s[-1]
+# b.g_p.calculate_x1(s)
 # b.g.D = [0.11621803608468839, 0.11164077707202186,
 #          0.08581012060178156, 0.11474758149621056, -0.005855939703725668]
-# b.g.D = [0.1126956897257928, 0.10811631223364697, 0.09120680993172335, 0.10763228117522525, 0]
+# solution
+b.g.D = [0.11317106940637985, 0.10774051556264977, 0.09141493349219963, 0.10766720638192107, 0]
+# fitted
+# b.g.D = [0.11642915, 0.11141244, 0.08593644, 0.1146274, 0]
 # D = format_input([0.11621803608468839, 0.11164077707202186,
 #                   0.08581012060178156, 0.11474758149621056], g=b.g, g_p=b.g_p)
 # b.g.D = [0.11621803608468839, 0.11164077707202186,
 #          0.08581012060178156, 0.11474758149621056, -0.005855939703725668]
 # print('D', D)
 # b.D = D
-b.g_p.x1_grid = np.linspace(0, 1, 10)
-print('Accurate', b.length)
-print('Improper', b.g_p.improper_arclength_chord())
-#
-# b.g_p.internal_variables(b.length)
-# b.g_p.calculate_x1(b.s)
-# print('x', b.g_p.x1_grid)
-BREAK
+# arc = []
+# correct_arc = []
+# Ns = np.linspace(100, 100000, 100)
+# for N in Ns:
 
 
 def test_function():
@@ -141,14 +155,17 @@ def test_function():
     b.g.calculate_x1(b.s)
     b.x = b.g.x1_grid
     b.y = b.g.x3(b.x)
+    b._residual(b.g.D)
 
 
-# profile = cProfile.Profile()
-# profile.runcall(test_function)
-# ps = pstats.Stats(profile)
-# ps.sort_stats('cumtime')
-# ps.print_stats()
-# BREAK
+print('s', s == np.sort(s))
+print('Accurate', b.length)
+print('Improper (parent)', b.g_p.improper_arclength_chord(), b.g_p.chord)
+test_function()
+print('Improper (child)', b.g.improper_arclength_chord(), b.g.chord)
+print('Residual', b.R, b.g.chord, b.g.arclength(b.g.chord)[0])
+
+
 # b.parameterized_solver(format_input=format_input, x0=g.D[:-1])
 b.g.internal_variables(b.length)
 b.g.calculate_x1(b.s)
@@ -162,12 +179,13 @@ print('residual: ', b._residual(b.g.D))
 # print('sizes', len(b.x), len(b.s))
 # print('chord', b.g.chord)
 g_p.calculate_x1(b.s)
-
+print('x', b.g.x1_grid == np.sort(b.g.x1_grid))
 plt.figure()
-plt.plot(b.x, b.M/b.p.young/b.p.inertia, 'b')
-plt.plot(b.x, b.g.rho, 'r')
-plt.plot(b.x, b.g_p.rho, 'g')
-
+plt.plot(b.g.x1_grid, b.M/b.p.young/b.p.inertia, 'b', label='RHS (Moment)')
+plt.plot(b.g.x1_grid, b.g.rho - b.g_p.rho, 'r', label='LHS (Curvatures)')
+plt.xlabel('x')
+plt.ylabel('RHS/LHS')
+plt.legend()
 plt.figure()
 g_p.plot(label='Parent')
 print('chord', b.g.chord)

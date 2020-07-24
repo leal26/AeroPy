@@ -108,7 +108,8 @@ class beam_chen():
         self.ignore_ends = ignore_ends
         self.rotated = rotated
 
-        self.integral_ends()
+        if self.ignore_ends:
+            self.integral_ends()
         self.g_p = copy.deepcopy(geometry)
         self.g_p.calculate_x1(self.s)
         self.g_p.radius_curvature(self.g_p.x1_grid)
@@ -201,14 +202,15 @@ class beam_chen():
             rhs = self.g.rho[i] - self.g_p.rho[i]
             lhs = self.M[i]/self.p.young/self.p.inertia
             self.r[i] = np.abs(lhs - rhs)
+            # print(lhs, rhs)
         # print('M', self.M)
         # print('rho', self.g.rho)
         # print('Rho', self.g_p.rho)
-        # print(self.r)
         if self.ignore_ends:
             self.R = abs(trapz(self.r[1:-1], self.s[1:-1]))
         else:
-            self.R = abs(trapz(self.r, self.s))
+            print('THIS ')
+            self.R = abs(trapz(self.r[:], self.s[:]))
         if np.isnan(self.R):
             self.R = 100
 
@@ -237,7 +239,7 @@ class beam_chen():
             A = format_input(A, self.g, self.g_p)
             return self._residual(A)
 
-        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-1, 1]],
+        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-10, 10]],
                        constraints=constraints)
         self.g.D = format_input(sol.x, self.g, self.g_p)
         self.g.internal_variables(self.length)
@@ -253,6 +255,7 @@ class beam_chen():
         self.g.calculate_x1(self.s)
         self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)
+        print(self.g.chord)
         if self.l.follower:
             self.g.calculate_angles()
         self.calculate_M()

@@ -79,6 +79,7 @@ class CoordinateSystem(object):
     def polynomial(cls, D, chord=1, color='b', n=6, tol=1e-6):
         c = cls(D, chord=chord, color=color, n=n, tol=tol)
         c.x3 = c._x3_poly
+        c.name = 'polynomial'
         return c
 
     @classmethod
@@ -86,12 +87,14 @@ class CoordinateSystem(object):
         c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2,
                 deltaz=deltaz, tol=tol)
         c.x3 = c._x3_CST
+        c.name = 'CST'
         return c
 
     @classmethod
     def cylindrical(cls, D, chord=1, color='k', configuration=0):
         c = cls(D, color=color, chord=chord, n=1, configuration=configuration)
         c.x3 = c._x3_cylindrical
+        c.name = 'cylindrical'
         return c
 
     def _x3_poly(self, x1, diff=None, D=None):
@@ -288,6 +291,12 @@ class CoordinateSystem(object):
         # print('darc', self.darc[:index+1])
         return integrate.trapz(self.darc[:index+1], self.x1_grid[:index+1])
 
+    def improper_arclength_index(self, index):
+        x1 = self.x1_grid[index]
+        self.darc[index] = self.bounded_dr(x1)
+        bounded_integral = integrate.trapz(self.darc[:index+1], self.x1_grid[:index+1])
+        return bounded_integral + self.unbounded_integral(x1, 0)
+
     def arclength_chord(self):
         self.darc = np.ones(len(self.x1_grid))
         dr = self.x3(np.array([1e-7]), 'x1')
@@ -306,33 +315,39 @@ class CoordinateSystem(object):
         return integrate.trapz(self.darc, self.x1_grid)
 
     def improper_arclength_chord(self):
-        def bounded_dr(x):
-
-            if x == 0:
-                return
-            elif x == 1:
-                return np.sqrt(1 + (-self.D[-2]+self.D[-1])**2) - np.sqrt(1 + A/x)
-            else:
-                dr = self.x3(np.array([x]), 'x1')
-                return np.sqrt(1 + dr[0]**2) - np.sqrt(1 + A/x)
-
-        def unbounded_integral(end, start=0):
-            def indefinite_integral(x):
-                # return x*np.sqrt(A/x+B)) + A*np.log(2*np.sqrt(B)*x*np.sqrt(A/x+B) + A + 2*B*x)/(2*np.sqrt(B))
-                return np.sqrt(x*(A + x)) + A*np.log(np.sqrt(A+x) + np.sqrt(x))
-            return indefinite_integral(end) - indefinite_integral(start)
-
-        A = self.N1**2*self.D[0]**2
-        self.darc = np.ones(len(self.x1_grid))
+        self.darc = np.zeros(len(self.x1_grid))
         for index in range(1, len(self.x1_grid)):
             x1 = self.x1_grid[index]
-            self.darc[index] = bounded_dr(x1)
-        self.darc[0] = self.darc[1]
+            self.darc[index] = self.bounded_dr(x1)
         bounded_integral = integrate.trapz(self.darc, self.x1_grid)
+        return bounded_integral + self.unbounded_integral(self.chord)
 
-        # self.darc += np.sqrt(1+self.D[0]**2/self.x1_grid)
-        # print(self.darc)
-        return bounded_integral + unbounded_integral(self.chord)
+    def bounded_dr(self, x):
+        A = self.N1**2*self.D[0]**2
+        n = self.n - 2
+        # print(n)
+        if x == 0:
+            return self.D[0]**2*(-n-1) + 1.5*n*self.D[0]*self.D[1]
+        elif x == 1:
+            # - np.sqrt(1 + B/np.sqrt(x))
+            return np.sqrt(1 + (-self.D[-2]+self.D[-1])**2) - np.sqrt(1 + A/x)
+        else:
+            dr = self.x3(np.array([x]), 'x1')
+            return np.sqrt(1 + dr[0]**2) - np.sqrt(1 + A/x)  # - np.sqrt(1 + B/np.sqrt(x))
+
+    def unbounded_integral(self, end, start=0):
+        def indefinite_integral(x):
+            # return x*np.sqrt(A/x+B)) + A*np.log(2*np.sqrt(B)*x*np.sqrt(A/x+B) + A + 2*B*x)/(2*np.sqrt(B))
+            # if x == 0:
+            #     dz = -0.25*B**2*np.log(B)
+            # else:
+            #     dz = 0.5*np.sqrt(B/np.sqrt(x)+1)*(B*np.sqrt(x) + 2*x) - 0.25 * \
+            #         B**2*np.log(2*np.sqrt(x)*(np.sqrt(B/np.sqrt(x)+1)+1)+B)
+            # print('A', x, 0.5*np.sqrt(B/np.sqrt(x)+1)*(B*np.sqrt(x) + 2*x))
+            # print('B', x, 0.25 * B**2*np.log(2*np.sqrt(x)*(np.sqrt(B/np.sqrt(x)+1)+1)+B))
+            return np.sqrt(x*(A + x)) + A*np.log(np.sqrt(A+x) + np.sqrt(x))  # + dz
+        A = self.N1**2*self.D[0]**2
+        return indefinite_integral(end) - indefinite_integral(start)
 
     def calculate_x1(self, length_target, bounds=None, output=False):
         def f(c_c):
@@ -345,15 +360,23 @@ class CoordinateSystem(object):
                 return 100
             else:
                 self.x1_grid[index] = x
-                length_current = self.arclength_index(index)
+                if self.name == 'CST':
+                    length_current = self.improper_arclength_index(index)
+                else:
+                    length_current = self.arclength_index(index)
                 # print(index, x, length_current, target)
                 return abs(target - length_current)
+
+        def fprime_index(x):
+            dr = self.x3(np.array([x]), 'x1')
+            return np.sqrt(1 + dr[0]**2)
+
         x0 = 0
         x1 = []
 
         if len(length_target) == 1:
             target = length_target[0]
-            x1.append(optimize.fsolve(f, x0)[0])
+            x1.append(optimize.fsolve(f, x0, fprime=fprime_index)[0])
 
         self.x1_grid = np.zeros(len(length_target))
         self.darc = np.zeros(len(length_target))
@@ -362,12 +385,65 @@ class CoordinateSystem(object):
             target = length_target[index]
             # print(index, target)
             # print('TARGET', target)
-            x1.append(optimize.fsolve(f_index, target)[0])
+            x1.append(optimize.fsolve(f_index, target, fprime=fprime_index)[0])
             x0 = x1[-1]
         if output:
             return np.array(x1)
         else:
             self.x1_grid = np.array(x1)
+
+    # def calculate_s(self, target_length, N):
+    #     def integrand(s):
+    #         rho = self.radius_curvature(np.array([s]), output_only=True)[0]
+    #         print(s, rho)
+    #         return abs(rho)
+    #
+    #     def f(ds):
+    #         if ds[0] >= 0:
+    #             partial = integrate.quad(integrand, s_list[-1], s_list[-1]+ds[0], limit=500)[0]
+    #             print(s_list[-1], s_list[-1]+ds[0], partial, total/(N-1))
+    #             return abs(partial - total/(N-1))
+    #         else:
+    #             return 100
+    #     total = integrate.quad(integrand, 0, 1, limit=500)[0]
+    #     print('TOTAL', total)
+    #
+    #     s_list = [0]
+    #
+    #     for i in range(1, N):
+    #         ds = optimize.fsolve(f, 0)[0]
+    #         s_list.append(s_list[-1] + ds)
+    #     return np.array(s_list)
+
+    def calculate_s(self, N, target_length=None, density='gradient'):
+        def integrand(s):
+            rho = self.radius_curvature(np.array([s]), output_only=True)[0]
+            # print(s, rho)
+            return abs(rho)
+
+        def f(dx):
+            if dx[0] >= 0:
+                partial = integrate.quad(
+                    integrand, self.x1_grid[i-1], self.x1_grid[i-1]+dx[0], limit=500)[0]
+                # print(self.x1_grid[i-1], self.x1_grid[i-1]+dx[0], partial, total/(N-1))
+                return abs(partial - total/(N-1))
+            else:
+                return 100
+
+        if density == 'gradient':
+            return np.linspace(0, target_length, N)
+        elif density == 'curvature':
+            total = integrate.quad(integrand, 0, self.chord, limit=500)[0]
+
+            self.x1_grid = np.zeros(N)
+            self.darc = np.zeros(N)
+            s_list = [0]
+
+            for i in range(1, N):
+                dx = optimize.fsolve(f, 0)[0]
+                self.x1_grid[i] = self.x1_grid[i-1] + dx
+                s_list.append(self.improper_arclength_index(i))
+            return np.array(s_list)
 
     def plot(self, basis=False, r=None, label=None, linestyle='-', color=None, scatter=False, zorder=0, marker='.'):
         if r is None:
@@ -400,14 +476,21 @@ class CoordinateSystem(object):
         plt.xlabel('x (m)')
         plt.ylabel('y (m)')
 
-    def radius_curvature(self, x):
-        self.rho = self.x3(x, diff='x11')/(1+(self.x3(x, diff='x1'))**2)**(3/2)
+    def radius_curvature(self, x, output_only=False):
+        rho = self.x3(x, diff='x11')/(1+(self.x3(x, diff='x1'))**2)**(3/2)
+        if self.name == 'CST' and x[0] == 0:
+            rho[0] = -2/(self.D[0]**2)/self.chord
+        if output_only:
+            return rho
+        else:
+            self.rho = rho
 
     def internal_variables(self, target_length):
         # At first we utilize the non-dimensional trailing edge thickness
         self.deltaz = self.D[-1]
         self.chord = 1
         nondimensional_length, err = self.arclength(chord=1.)
+        print('internal',  target_length, nondimensional_length)
         self.chord = target_length/nondimensional_length
         self.deltaz = self.deltaz*self.chord
 

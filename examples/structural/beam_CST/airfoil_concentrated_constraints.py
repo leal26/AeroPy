@@ -22,7 +22,7 @@ def con(input):
 
 
 def format_input(input, g=None, g_p=None):
-    return list(input)
+    return list(input) + [0]
 
 
 abaqus_x = [0, 0.0046626413, 0.018402023, 0.048702486, 0.087927498, 0.12745513,
@@ -46,26 +46,27 @@ abaqus_y = rotated_abaqus['y']
 # N 100: 0.0014553076272791395
 # N 10: 0.011141416099746887
 g = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0.], chord=1,
-                         color='b', N1=.5, N2=1, tol=0.0014556787297621686)
+                         color='b', N1=.5, N2=1)
 g_p = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0.], chord=1,
-                           color='k', N1=.5, N2=1, tol=0.0014556787297621686)
+                           color='k', N1=.5, N2=1)
 
-s = np.linspace(0, g.arclength(1)[0], 100)
+# s = np.linspace(0, g.arclength(1)[0], 100)
+s = g_p.calculate_s(101, density='curvature')
 
 p = properties()
-l = loads(concentrated_load=[[0, -1]], load_s=[s[-1]])
+l = loads(concentrated_load=[[0, -1]], load_s=[s[-1]], follower=True)
 
-b = beam_chen(g, p, l, s, ignore_ends=True)
-
+b = beam_chen(g, p, l, s, rotated=True)
+b.length = s[-1]
 
 n = g_p.n - 2
 dd_p = (2*n*g_p.D[-3] - 2*(g_p.N1+n)*g_p.D[-2])
 d_p = -g_p.D[-2] + g_p.D[-1]
 rho_p = (1/g_p.chord)*dd_p/(1+d_p**2)**(3/2)
-target_length = g_p.arclength(g_p.chord)[0]
+target_length = s[-1]
 
 cons = {'type': 'ineq', 'fun': con}
-b.parameterized_solver(format_input=format_input, x0=g.D, constraints=cons)
+b.parameterized_solver(format_input=format_input, x0=g.D[:-1], constraints=cons)
 b.g.internal_variables(b.length)
 b.g.calculate_x1(b.s)
 b.x = b.g.x1_grid
@@ -73,11 +74,15 @@ b.y = b.g.x3(b.x)
 
 rotated_beam = rotate({'x': b.x, 'y': b.y}, normalize=False)
 plt.figure()
-plt.plot(b.x, b.M/b.p.young/b.p.inertia, 'b')
-plt.plot(b.x, b.g.rho, 'r')
-plt.plot(b.x, b.g_p.rho, 'g')
+plt.scatter(b.x, b.M/b.p.young/b.p.inertia, c='b')
+plt.scatter(b.x, b.g.rho, c='r')
+plt.scatter(b.x, b.g_p.rho, c='g')
+plt.figure()
+plt.scatter(b.x, b.M/b.p.young/b.p.inertia, c='b')
+plt.scatter(b.x, b.g.rho - b.g_p.rho, c='r')
 plt.show()
 print('residual: ', b._residual(b.g.D))
+print(b.r)
 print('x', b.x)
 print('y', b.y)
 print('length', target_length, b.length, b.g.arclength(b.g.chord)[0])

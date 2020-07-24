@@ -10,8 +10,8 @@ from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
 
-def cst(x, A0, A1, A2, A3, A4, deltaz):
-    b.g.D = [A0, A1, A2, A3, A4, deltaz]
+def cst(x, A0, A1, A2, A3):
+    b.g.D = [A0, A1, A2, A3, 0]
     b.deltaz = 0
     b.length = b.g.arclength(chord=chord)[0]
     b.g.internal_variables(b.length)
@@ -79,23 +79,23 @@ abaqus_y = [0, 0.0080771167, 0.015637144, 0.024132574, 0.030406451,
             0.032165118, 0.029923303, 0.027543247, 0.025045833, 0.022435322,
             0.019699335, 0.016810443, 0.013729585, 0.010411576, 0.0068127746,
             0.0029010926, -0.0013316774, -0.0058551501]
-# rotated_abaqus = rotate({'x': abaqus_x, 'y': abaqus_y})
-# x = np.array(rotated_abaqus['x'])
-# y = np.array(rotated_abaqus['y'])
-x = abaqus_x
-y = abaqus_y
+rotated_abaqus = rotate({'x': abaqus_x, 'y': abaqus_y}, normalize=False)
+x = np.array(rotated_abaqus['x'])
+y = np.array(rotated_abaqus['y'])
+# x = abaqus_x
+# y = abaqus_y
 # [0.1127, 0.1043, 0.0886, 0.1050, 0]
 
-g = CoordinateSystem.CST(D=[0.11426263950926166, 0.10030249560463604, 0.10849279536132808, 0.07991666514922281, 0.11237393774104394, 0],
-                         chord=chord, color='k', N1=.5, N2=1, deltaz=0, tol=0.0014553076272791395)
+g = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0],
+                         chord=chord, color='k', N1=.5, N2=1, deltaz=0, tol=None)
 
 s = np.linspace(0, 1, 100)
 p = properties()
 l = loads()
-b = beam_chen(g, p, l, s)
+b = beam_chen(g, p, l, s, ignore_ends=False)
 # BRAKE
 # Fit
-popt, pcov = curve_fit(cst, x, y, p0=[0, 0, 0, 0, 0, 0])
+popt, pcov = curve_fit(cst, x, y, p0=[0, 0, 0, 0])
 print('Solution: ', popt)
 print('Error: ', np.sqrt(np.diag(pcov)))
 b.g.D = list(popt)
