@@ -52,11 +52,14 @@ g_p = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0.], chord=1,
 
 # s = np.linspace(0, g.arclength(1)[0], 100)
 s = g_p.calculate_s(101, density='curvature')
+# s = g_p.calculate_s(101, g.arclength(np.array([1]))[0], density='gradient')
 
 p = properties()
 l = loads(concentrated_load=[[0, -1]], load_s=[s[-1]], follower=True)
 
 b = beam_chen(g, p, l, s, rotated=True)
+b.g.calculate_x1(s)
+b.g_p.calculate_x1(s)
 b.length = s[-1]
 
 n = g_p.n - 2
@@ -66,7 +69,7 @@ rho_p = (1/g_p.chord)*dd_p/(1+d_p**2)**(3/2)
 target_length = s[-1]
 
 cons = {'type': 'ineq', 'fun': con}
-b.parameterized_solver(format_input=format_input, x0=g.D[:-1], constraints=cons)
+b.parameterized_solver(format_input=format_input, x0=g.D[:-1])
 b.g.internal_variables(b.length)
 b.g.calculate_x1(b.s)
 b.x = b.g.x1_grid

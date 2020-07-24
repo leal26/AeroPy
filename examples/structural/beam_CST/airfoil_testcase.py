@@ -105,21 +105,33 @@ g_p = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0], chord=1,
                            color='k', N1=.5, N2=1, tol=None)
 
 # g.x1_grid = create_x(1, n=100, distribution='polar')[::-1]
+# s = g_p.calculate_s(101, g.arclength(np.array([1]))[0], density='gradient')
 s = g_p.calculate_s(101, density='curvature')
-g.x1_grid = g_p.x1_grid
-print('x', g_p.x1_grid[-1])
-print('s', s[-1])
-g_p.calculate_x1(s)
-print('x', g_p.x1_grid)
+# print(g_p.partial)
 # BREAK
-# print(s)
+# g.calculate_x1(s)
+# g_p.calculate_x1(s)
+# g.x1_grid = g_p.x1_grid
+# g.darc = g_p.darc
+# print('x', g_p.x1_grid[-1])
+# print('s', s[-1])
+# g_p.calculate_x1(s)
+# print('x', g_p.x1_grid)
+# BREAK
+print(s)
 # s = np.linspace(0, g.arclength(1)[0], 100)
 # print('x', g.x1_grid)
 # g.calculate_x1(s)
-# rho = g.radius_curvature(g.x1_grid, output_only=True)
-# plt.figure()
-# plt.scatter(g.x1_grid, rho)
-# plt.show()
+rho = g_p.radius_curvature(g_p.x1_grid, output_only=True)
+plt.figure()
+plt.scatter(g_p.x1_grid, rho, c='b', label='calculate_s')
+g_p.calculate_x1(s)
+rho = g_p.radius_curvature(g_p.x1_grid, output_only=True)
+print('x', g_p.x1_grid)
+print('rho', rho)
+plt.scatter(g_p.x1_grid, rho, c='r', label='calculate_x1')
+plt.legend()
+plt.show()
 # BREAK
 # g.darc = np.zeros(len(g.x1_grid))
 # for i in range(len(g.x1_grid)):
@@ -135,7 +147,8 @@ b.length = s[-1]
 # b.g.D = [0.11621803608468839, 0.11164077707202186,
 #          0.08581012060178156, 0.11474758149621056, -0.005855939703725668]
 # solution
-b.g.D = [0.11317106940637985, 0.10774051556264977, 0.09141493349219963, 0.10766720638192107, 0]
+# b.g.D = [0.11317106940637985, 0.10774051556264977, 0.09141493349219963, 0.10766720638192107, 0]
+b.g.D = [0.11393863135878562, 0.11696225486582357, 0.06814132833709942, 0.10828109569350694, 0]
 # fitted
 # b.g.D = [0.11642915, 0.11141244, 0.08593644, 0.1146274, 0]
 # D = format_input([0.11621803608468839, 0.11164077707202186,
@@ -167,10 +180,10 @@ print('Residual', b.R, b.g.chord, b.g.arclength(b.g.chord)[0])
 
 
 # b.parameterized_solver(format_input=format_input, x0=g.D[:-1])
-b.g.internal_variables(b.length)
-b.g.calculate_x1(b.s)
-b.x = b.g.x1_grid
-b.y = b.g.x3(b.x)
+# b.g.internal_variables(b.length)
+# b.g.calculate_x1(b.s)
+# b.x = b.g.x1_grid
+# b.y = b.g.x3(b.x)
 
 
 print('residual: ', b._residual(b.g.D))
@@ -182,7 +195,11 @@ g_p.calculate_x1(b.s)
 print('x', b.g.x1_grid == np.sort(b.g.x1_grid))
 plt.figure()
 plt.plot(b.g.x1_grid, b.M/b.p.young/b.p.inertia, 'b', label='RHS (Moment)')
-plt.plot(b.g.x1_grid, b.g.rho - b.g_p.rho, 'r', label='LHS (Curvatures)')
+# plt.plot(b.g.x1_grid, b.g.rho - b.g_p.rho, 'r', label='LHS (Curvatures)')
+plt.plot(b.g_p.x1_grid, b.g_p.rho, 'r', label='LHS (Curvatures)')
+plt.scatter(b.g_p.x1_grid, b.g_p.rho, c='r')
+plt.plot(b.g.x1_grid, b.g.rho, 'g', label='LHS (Curvatures)')
+plt.scatter(b.g.x1_grid, b.g.rho, c='g')
 plt.xlabel('x')
 plt.ylabel('RHS/LHS')
 plt.legend()

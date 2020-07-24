@@ -354,66 +354,50 @@ class CoordinateSystem(object):
             length_current, err = self.arclength(c_c[0])
             return abs(target - length_current)
 
-        def f_index(x):
+        def f_index(dx):
             # Penalize in case x goes negative
-            if x < 0:
+            # print(dx)
+            if dx[0] < 0:
                 return 100
             else:
-                self.x1_grid[index] = x
+                self.x1_grid[index] = self.x1_grid[index-1] + dx[0]
+
                 if self.name == 'CST':
                     length_current = self.improper_arclength_index(index)
                 else:
                     length_current = self.arclength_index(index)
-                # print(index, x, length_current, target)
-                return abs(target - length_current)
+                return target - length_current
 
         def fprime_index(x):
             dr = self.x3(np.array([x]), 'x1')
             return np.sqrt(1 + dr[0]**2)
 
-        x0 = 0
-        x1 = []
-
         if len(length_target) == 1:
             target = length_target[0]
-            x1.append(optimize.fsolve(f, x0, fprime=fprime_index)[0])
-
-        self.x1_grid = np.zeros(len(length_target))
-        self.darc = np.zeros(len(length_target))
-        for index in range(len(length_target)):
-
-            target = length_target[index]
-            # print(index, target)
-            # print('TARGET', target)
-            x1.append(optimize.fsolve(f_index, target, fprime=fprime_index)[0])
-            x0 = x1[-1]
+            x1 = [optimize.fsolve(f, 0, fprime=fprime_index)[0]]
+        else:
+            x1 = [0]
+            if hasattr(self, 'x1_grid'):
+                if np.isnan(self.x1_grid).any():
+                    prev_values = False
+                else:
+                    prev_values = False
+            else:
+                prev_values = False
+                self.x1_grid = np.zeros(len(length_target))
+                self.darc = np.zeros(len(length_target))
+            for index in range(1, len(length_target)):
+                target = length_target[index]
+                if prev_values:
+                    x0 = self.x1_grid[index]
+                else:
+                    x0 = target
+                dx = optimize.fsolve(f_index, x0, fprime=fprime_index)[0]
+                x1.append(self.x1_grid[index-1] + dx)
         if output:
             return np.array(x1)
         else:
             self.x1_grid = np.array(x1)
-
-    # def calculate_s(self, target_length, N):
-    #     def integrand(s):
-    #         rho = self.radius_curvature(np.array([s]), output_only=True)[0]
-    #         print(s, rho)
-    #         return abs(rho)
-    #
-    #     def f(ds):
-    #         if ds[0] >= 0:
-    #             partial = integrate.quad(integrand, s_list[-1], s_list[-1]+ds[0], limit=500)[0]
-    #             print(s_list[-1], s_list[-1]+ds[0], partial, total/(N-1))
-    #             return abs(partial - total/(N-1))
-    #         else:
-    #             return 100
-    #     total = integrate.quad(integrand, 0, 1, limit=500)[0]
-    #     print('TOTAL', total)
-    #
-    #     s_list = [0]
-    #
-    #     for i in range(1, N):
-    #         ds = optimize.fsolve(f, 0)[0]
-    #         s_list.append(s_list[-1] + ds)
-    #     return np.array(s_list)
 
     def calculate_s(self, N, target_length=None, density='gradient'):
         def integrand(s):
@@ -423,12 +407,24 @@ class CoordinateSystem(object):
 
         def f(dx):
             if dx[0] >= 0:
-                partial = integrate.quad(
-                    integrand, self.x1_grid[i-1], self.x1_grid[i-1]+dx[0], limit=500)[0]
-                # print(self.x1_grid[i-1], self.x1_grid[i-1]+dx[0], partial, total/(N-1))
+                self.x1_grid[i] = self.x1_grid[i-1] + dx[0]
+                self.rho[i] = integrand(self.x1_grid[i])
+                partial = integrate.quad(integrand,
+                                         self.x1_grid[i-1], self.x1_grid[i-1]+dx[0], limit=500)[0]
+                # partial = integrate.trapz(self.rho[i-1:i+1], self.x1_grid[i-1:i+1])
+                # print(self.x1_grid[i], self.rho[i], partial, total/(N-1))
+                # if i == 4:
+                #     BREAK
+                # print(i, self.x1_grid[i-1], self.x1_grid[i-1]+dx[0], partial, total/(N-1))
+                self.partial[i] = partial
                 return abs(partial - total/(N-1))
             else:
                 return 100
+
+        def fprime(dx):
+            x = self.x1_grid[i-1]+dx[0]
+            output = integrand(x)
+            return [output]
 
         if density == 'gradient':
             return np.linspace(0, target_length, N)
@@ -437,12 +433,16 @@ class CoordinateSystem(object):
 
             self.x1_grid = np.zeros(N)
             self.darc = np.zeros(N)
+            self.partial = np.zeros(N)
+            self.rho = np.zeros(N)
+            self.rho[0] = abs(self.radius_curvature(np.array([0]), output_only=True)[0])
             s_list = [0]
 
             for i in range(1, N):
-                dx = optimize.fsolve(f, 0)[0]
+                dx = optimize.fsolve(f, 0, fprime=fprime)[0]
                 self.x1_grid[i] = self.x1_grid[i-1] + dx
                 s_list.append(self.improper_arclength_index(i))
+                # BREAK
             return np.array(s_list)
 
     def plot(self, basis=False, r=None, label=None, linestyle='-', color=None, scatter=False, zorder=0, marker='.'):
@@ -489,8 +489,11 @@ class CoordinateSystem(object):
         # At first we utilize the non-dimensional trailing edge thickness
         self.deltaz = self.D[-1]
         self.chord = 1
+        # s = self.calculate_s(len(self.x1_grid), density='curvature')
+        # nondimensional_length = s[-1]
+
         nondimensional_length, err = self.arclength(chord=1.)
-        print('internal',  target_length, nondimensional_length)
+        # print('internal',  target_length, nondimensional_length)
         self.chord = target_length/nondimensional_length
         self.deltaz = self.deltaz*self.chord
 

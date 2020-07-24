@@ -209,9 +209,11 @@ class beam_chen():
         if self.ignore_ends:
             self.R = abs(trapz(self.r[1:-1], self.s[1:-1]))
         else:
-            print('THIS ')
             self.R = abs(trapz(self.r[:], self.s[:]))
         if np.isnan(self.R):
+            print('r', self.r)
+            print('x', self.g.x1_grid)
+            print('rho', self.g.rho)
             self.R = 100
 
         print('R: ', self.R)
