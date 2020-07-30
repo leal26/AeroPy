@@ -198,9 +198,11 @@ class beam_chen():
 
     def calculate_residual(self):
         self.r = np.zeros(len(self.x))
+        lhs_list = np.zeros(len(self.x))
         for i in range(len(self.x)):
             rhs = self.g.rho[i] - self.g_p.rho[i]
             lhs = self.M[i]/self.p.young/self.p.inertia
+            lhs
             self.r[i] = np.abs(lhs - rhs)
             # print(lhs, rhs)
         # print('M', self.M)
@@ -264,7 +266,7 @@ class beam_chen():
         # self.calculate_G()
         # self.calculate_x()
         # self.calculate_M()
-        self.g.radius_curvature(self.g.x1_grid)
+        self.g.radius_curvature(self.g.x1_grid, parametric=True)
         self.calculate_residual()
         return self.R
 

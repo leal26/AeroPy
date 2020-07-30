@@ -134,8 +134,10 @@ class CoordinateSystem(object):
             return(CST(x1, self.chord, deltasz=self.deltaz, Au=A,
                        N1=self.N1, N2=self.N2))
         elif diff == 'x1':
-            return(dxi_u(psi, A, self.deltaz/self.chord,
-                         N1=self.N1, N2=self.N2))
+            d = dxi_u(psi, A, self.deltaz/self.chord, N1=self.N1, N2=self.N2)
+            if abs(psi[-1] - self.chord) < 1e-5:
+                d[0] = -A[-1] + self.deltaz/self.chord
+            return d
         elif diff == 'x11':
             return((1/self.chord)*ddxi_u(psi, A, N1=self.N1, N2=self.N2))
         elif diff == 'theta1':
@@ -369,8 +371,8 @@ class CoordinateSystem(object):
                 return target - length_current
 
         def fprime_index(x):
-            dr = self.x3(np.array([x]), 'x1')
-            return np.sqrt(1 + dr[0]**2)
+            dr = self.x3(x, 'x1')
+            return np.array([np.sqrt(1 + dr[0]**2)])
 
         if len(length_target) == 1:
             target = length_target[0]
@@ -389,9 +391,9 @@ class CoordinateSystem(object):
             for index in range(1, len(length_target)):
                 target = length_target[index]
                 if prev_values:
-                    x0 = self.x1_grid[index]
+                    x0 = self.x1_grid[index] - self.x1_grid[index-1]
                 else:
-                    x0 = target
+                    x0 = length_target[index] - length_target[index-1]
                 dx = optimize.fsolve(f_index, x0, fprime=fprime_index)[0]
                 x1.append(self.x1_grid[index-1] + dx)
         if output:
@@ -476,10 +478,22 @@ class CoordinateSystem(object):
         plt.xlabel('x (m)')
         plt.ylabel('y (m)')
 
-    def radius_curvature(self, x, output_only=False):
-        rho = self.x3(x, diff='x11')/(1+(self.x3(x, diff='x1'))**2)**(3/2)
-        if self.name == 'CST' and x[0] == 0:
-            rho[0] = -2/(self.D[0]**2)/self.chord
+    def radius_curvature(self, x, output_only=False, parametric=False):
+        if parametric:
+            if self.name == 'CST' and x[0] == 0:
+                x[0] = 1e-7
+            dx = self.x1(x, diff='theta1')
+            dy = self.x3(x, diff='theta1')
+            ddx = self.x1(x, diff='theta11')
+            ddy = self.x3(x, diff='theta11')
+            rho = (dx*ddy-dy*ddx)/(dx**2 + dy**2)**(1.5)
+        else:
+            rho = self.x3(x, diff='x11')/(1+(self.x3(x, diff='x1'))**2)**(3/2)
+            if self.name == 'CST' and x[0] == 0:
+                rho[0] = -2/(self.D[0]**2)/self.chord
+                # x_i = np.array([1e-7])
+                # r = self.x3(x_i, diff='x11')/(1+(self.x3(x_i, diff='x1'))**2)**(3/2)
+                # rho[0] = r
         if output_only:
             return rho
         else:

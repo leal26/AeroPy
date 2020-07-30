@@ -10,18 +10,31 @@ from aeropy.CST_2D import calculate_c_baseline
 from aeropy.geometry.airfoil import create_x, rotate
 
 
+# def con(input):
+#     g.D = input
+#     g.internal_variables(target_length)
+#
+#     dd = (2*n*g.D[-3] - 2*(g.N1+n)*g.D[-2])
+#     d = -g.D[-2] + g.D[-1]
+#     rho = (1./g.chord)*dd/(1+d**2)**(3/2)
+#     print('rho', rho, rho_p, g.D[-1])
+#     return(abs(rho-rho_p))
 def con(input):
-    g.D = input
+    g.D = format_input(input, g_p=g_p)
     g.internal_variables(target_length)
 
-    dd = (2*n*g.D[-3] - 2*(g.N1+n)*g.D[-2])
-    d = -g.D[-2] + g.D[-1]
-    rho = (1./g.chord)*dd/(1+d**2)**(3/2)
-    print('rho', rho, rho_p, g.D[-1])
-    return(abs(rho-rho_p))
+    lhs = -2/(g.D[0]**2*g.chord) + 2/(g_p.D[0]**2*g_p.chord)
+    rhs = -1*g.chord/p.young/p.inertia
+    return(lhs-rhs)
 
 
 def format_input(input, g=None, g_p=None):
+    # n = g_p.n - 2
+    # Pn = g_p.D[-2]
+    # Pn1 = g_p.D[-3]
+    # Cn1 = input[-1]
+    # Cn = (2*n*(-Pn1+Pn+Cn1) + Pn)/(1+2*n)
+    # return list(input) + [Cn, 0]
     return list(input) + [0]
 
 
@@ -45,9 +58,9 @@ abaqus_y = rotated_abaqus['y']
 # higher order [0.1194, 0.0976, 0.1231, 0.0719, 0.1061, 0.1089, 0]
 # N 100: 0.0014553076272791395
 # N 10: 0.011141416099746887
-g = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0.], chord=1,
+g = CoordinateSystem.CST(D=[0.11397826, 0.10433884, 0.10241407, 0.10070566, 0.0836374, 0.11353368, 0.], chord=1,
                          color='b', N1=.5, N2=1)
-g_p = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0.], chord=1,
+g_p = CoordinateSystem.CST(D=[0.11397826, 0.10433884, 0.10241407, 0.10070566, 0.0836374, 0.11353368, 0.], chord=1,
                            color='k', N1=.5, N2=1)
 
 # s = np.linspace(0, g.arclength(1)[0], 100)
@@ -68,21 +81,22 @@ d_p = -g_p.D[-2] + g_p.D[-1]
 rho_p = (1/g_p.chord)*dd_p/(1+d_p**2)**(3/2)
 target_length = s[-1]
 
-cons = {'type': 'ineq', 'fun': con}
+cons = {'type': 'eq', 'fun': con}
 b.parameterized_solver(format_input=format_input, x0=g.D[:-1])
 b.g.internal_variables(b.length)
 b.g.calculate_x1(b.s)
 b.x = b.g.x1_grid
 b.y = b.g.x3(b.x)
-
+b.g.radius_curvature(b.g.x1_grid)
+b.g_p.radius_curvature(b.g_p.x1_grid)
 rotated_beam = rotate({'x': b.x, 'y': b.y}, normalize=False)
 plt.figure()
-plt.scatter(b.x, b.M/b.p.young/b.p.inertia, c='b')
-plt.scatter(b.x, b.g.rho, c='r')
-plt.scatter(b.x, b.g_p.rho, c='g')
+plt.plot(b.x, b.M/b.p.young/b.p.inertia, c='b')
+plt.plot(b.x, b.g.rho, c='r')
+plt.plot(b.x, b.g_p.rho, c='g')
 plt.figure()
-plt.scatter(b.x, b.M/b.p.young/b.p.inertia, c='b')
-plt.scatter(b.x, b.g.rho - b.g_p.rho, c='r')
+plt.plot(b.x, b.M/b.p.young/b.p.inertia, c='b')
+plt.plot(b.x, b.g.rho - b.g_p.rho, c='r')
 plt.show()
 print('residual: ', b._residual(b.g.D))
 print(b.r)
