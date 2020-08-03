@@ -255,7 +255,7 @@ class CoordinateSystem(object):
                 # print(self.christoffel(alpha, beta, 2))
                 self.B[alpha, beta] = self.christoffel(alpha, beta, 2)
 
-    def arclength(self, chord=None):
+    def arclength(self, chord=None, origin=0):
         def integrand(x1):
             # dr = self.r(x1, 'x1')
             # if np.isnan(np.sqrt(np.inner(dr, dr))):
@@ -272,21 +272,21 @@ class CoordinateSystem(object):
             return np.sqrt(1 + dr**2)
         if chord is None:
             chord = self.chord
-        return integrate.quad(integrand, 0, chord, limit=500)
+        return integrate.quad(integrand, origin, chord, limit=500)
 
     def arclength_index(self, index):
         x1 = self.x1_grid[index]
         dr = self.x3(np.array([x1]), 'x1')
-        # if np.isnan(dr):
-        #     # print('NaN', x1)
-        #     if x1 == 0:
-        #         dr = self.x3(np.array([self.tol]), 'x1')
-        #     else:
-        #         dr = self.x3(np.array([x1-self.tol]), 'x1')
-        #     # if x1 == 0:
-        #     #     dr = self.x3(np.array([self.x1_grid[1]]), 'x1')
-        #     # else:
-        #     #     dr = self.x3(np.array([self.x1_grid[-2]]), 'x1')
+        if np.isnan(dr):
+            # print('NaN', x1)
+            if x1 == 0:
+                dr = self.x3(np.array([self.tol]), 'x1')
+            else:
+                dr = self.x3(np.array([x1-self.tol]), 'x1')
+            # if x1 == 0:
+            #     dr = self.x3(np.array([self.x1_grid[1]]), 'x1')
+            # else:
+            #     dr = self.x3(np.array([self.x1_grid[-2]]), 'x1')
         self.darc[index] = np.sqrt(1 + dr[0]**2)
         # print('dr, darc', dr, self.darc[index])
         # print('x', self.x1_grid[:index+1])
@@ -351,7 +351,8 @@ class CoordinateSystem(object):
         A = self.N1**2*self.D[0]**2
         return indefinite_integral(end) - indefinite_integral(start)
 
-    def calculate_x1(self, length_target, bounds=None, output=False):
+    def calculate_x1(self, length_target, bounds=None, output=False, origin=0,
+                     length_rigid=0):
         def f(c_c):
             length_current, err = self.arclength(c_c[0])
             return abs(target - length_current)
@@ -365,9 +366,10 @@ class CoordinateSystem(object):
                 self.x1_grid[index] = self.x1_grid[index-1] + dx[0]
 
                 if self.name == 'CST':
-                    length_current = self.improper_arclength_index(index)
+                    length_current = length_rigid + self.improper_arclength_index(index)
                 else:
-                    length_current = self.arclength_index(index)
+                    length_current = length_rigid + self.arclength_index(index)
+                # print('length', length_current, target)
                 return target - length_current
 
         def fprime_index(x):
@@ -378,16 +380,23 @@ class CoordinateSystem(object):
             target = length_target[0]
             x1 = [optimize.fsolve(f, 0, fprime=fprime_index)[0]]
         else:
-            x1 = [0]
+            x1 = [origin]
             if hasattr(self, 'x1_grid'):
                 if np.isnan(self.x1_grid).any():
                     prev_values = False
                 else:
-                    prev_values = False
+                    prev_values = True
             else:
                 prev_values = False
+            if not prev_values:
                 self.x1_grid = np.zeros(len(length_target))
                 self.darc = np.zeros(len(length_target))
+                self.x1_grid[0] = origin
+                if not self.name == 'CST' and origin != 0:
+                    dr = self.x3(np.array([origin]), 'x1')
+                    self.darc[0] = np.sqrt(1 + dr**2)
+                elif self.name == 'CST' and origin != 0:
+                    raise(NotImplementedError)
             for index in range(1, len(length_target)):
                 target = length_target[index]
                 if prev_values:
@@ -401,7 +410,7 @@ class CoordinateSystem(object):
         else:
             self.x1_grid = np.array(x1)
 
-    def calculate_s(self, N, target_length=None, density='gradient'):
+    def calculate_s(self, N, target_length=None, density='gradient', origin=0):
         def integrand(s):
             rho = self.radius_curvature(np.array([s]), output_only=True)[0]
             # print(s, rho)
@@ -429,9 +438,10 @@ class CoordinateSystem(object):
             return [output]
 
         if density == 'gradient':
-            return np.linspace(0, target_length, N)
+            s_epsilon = self.arclength(np.array([origin]))[0]
+            return np.linspace(s_epsilon, target_length, N)
         elif density == 'curvature':
-            total = integrate.quad(integrand, 0, self.chord, limit=500)[0]
+            total = integrate.quad(integrand, origin, self.chord, limit=500)[0]
 
             self.x1_grid = np.zeros(N)
             self.darc = np.zeros(N)
@@ -490,7 +500,10 @@ class CoordinateSystem(object):
         else:
             rho = self.x3(x, diff='x11')/(1+(self.x3(x, diff='x1'))**2)**(3/2)
             if self.name == 'CST' and x[0] == 0:
-                rho[0] = -2/(self.D[0]**2)/self.chord
+                if self.D[0] == 0:
+                    rho[0] = 0
+                else:
+                    rho[0] = -2/(self.D[0]**2)/self.chord
                 # x_i = np.array([1e-7])
                 # r = self.x3(x_i, diff='x11')/(1+(self.x3(x_i, diff='x1'))**2)**(3/2)
                 # rho[0] = r
@@ -499,14 +512,15 @@ class CoordinateSystem(object):
         else:
             self.rho = rho
 
-    def internal_variables(self, target_length):
+    def internal_variables(self, target_length, origin=0):
         # At first we utilize the non-dimensional trailing edge thickness
         self.deltaz = self.D[-1]
+        origin = origin/self.chord
         self.chord = 1
         # s = self.calculate_s(len(self.x1_grid), density='curvature')
         # nondimensional_length = s[-1]
 
-        nondimensional_length, err = self.arclength(chord=1.)
+        nondimensional_length, err = self.arclength(chord=1., origin=origin)
         # print('internal',  target_length, nondimensional_length)
         self.chord = target_length/nondimensional_length
         self.deltaz = self.deltaz*self.chord

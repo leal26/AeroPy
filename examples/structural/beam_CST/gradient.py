@@ -19,6 +19,33 @@ g_5 = CoordinateSystem.CST(D=[0.11397826, 0.10433884, 0.10241407, 0.10070566, 0.
                            color='b', N1=.5, N2=1, deltaz=0)
 g = CoordinateSystem.CST(D=[0.1127, 0.1043, 0.0886, 0.1050, 0], chord=1,
                          color='b', N1=.5, N2=1, deltaz=0)
+
+x = np.linspace(0, 1, 1000)
+plt.figure()
+for i in range(6):
+    d = dxi_u(x, np.ones(6), 0, N1=0.5, N2=1, indexes=[i])
+    plt.plot(x, d, label=i)
+plt.legend()
+plt.ylabel('Influence of Shape component on $dy/dx$')
+
+plt.figure()
+for i in range(6):
+    D_i = [0]*6
+    D_i[i] = 1
+    d = ddxi_u(x, D_i, N1=0.5, N2=1)
+    plt.plot(x, d, label=i)
+plt.legend()
+plt.ylabel('Influence of Shape component on $ddy/ddx$')
+
+plt.figure()
+for i in range(6):
+    D_i = [0]*6
+    D_i[i] = 1
+    d = CST(x, Au=D_i, deltasz=0, N1=0.5, N2=1, c=1)
+    plt.plot(x, d, label=i)
+plt.legend()
+plt.ylabel('Influence of Shape component on $y$')
+plt.show()
 D_fit = [0.12023167906378877, 0.10112629883623848, 0.12518045636490516,
          0.07661460343152796, 0.10804192536758454, 0.11319177161706924, 0]
 D_sol = [0.11398155727411789, 0.10708199288796764, 0.1048666057536085,

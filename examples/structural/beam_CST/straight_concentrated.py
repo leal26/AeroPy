@@ -14,6 +14,7 @@ def format_input(input, g=None, g_p=None):
 
 
 g = CoordinateSystem.CST(D=[0, 0, 0, 0], chord=1, color='b', N1=1, N2=1)
+g.name = 'proper integral'
 p = properties()
 l = loads(concentrated_load=[[0, -1]], load_s=[1])
 s = np.linspace(0, 1, 10)

@@ -48,23 +48,20 @@ def C(N1, N2, psi):
     return C
 
 
-def dxi_u(psi, Au, delta_xi, N1=0.5, N2=1):
+def dxi_u(psi, Au, delta_xi, N1=0.5, N2=1, indexes=None):
     """Calculate upper derivate of xi for a given psi"""
+
     n = len(Au)-1
-    # print(delta_xi)
+    if indexes is None:
+        indexes = range(n+1)
+
     C_i = C(N1, N2, psi)
     diff = delta_xi
-    # print(0, diff)
-    # print('C', C_i)
-    for i in range(n+1):
+    for i in indexes:
         S_i = S(i, n, psi)
         dS1 = (N1+i)/psi
         dS2 = (i-n-N2)/(1-psi)
         diff += Au[i]*C_i*S_i*(dS1+dS2)
-        # print(i+1, diff)
-        # print('S', S_i)
-        # print('dS1', dS1)
-        # print('dS2', dS2)
     return diff
 
 

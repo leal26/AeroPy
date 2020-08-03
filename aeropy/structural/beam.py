@@ -99,19 +99,22 @@ class euler_bernoulle_curvilinear():
 
 
 class beam_chen():
-    def __init__(self, geometry, properties, load, s, ignore_ends=False, rotated=False):
+    def __init__(self, geometry, properties, load, s, ignore_ends=False,
+                 rotated=False, origin=0):
         self.g = copy.deepcopy(geometry)
         self.p = properties
         self.l = load
         self.s = s
-        self.length = self.g.arclength()[0]
+        self.origin = origin
+        self.length = self.g.arclength(origin=origin)[0]
         self.ignore_ends = ignore_ends
         self.rotated = rotated
 
         if self.ignore_ends:
             self.integral_ends()
         self.g_p = copy.deepcopy(geometry)
-        self.g_p.calculate_x1(self.s)
+        self.g_p.internal_variables(self.length, origin=self.origin)
+        self.g_p.calculate_x1(self.s, origin=origin, length_rigid=s[0])
         self.g_p.radius_curvature(self.g_p.x1_grid)
         if self.rotated:
             self.g_p.calculate_angles()
@@ -202,9 +205,8 @@ class beam_chen():
         for i in range(len(self.x)):
             rhs = self.g.rho[i] - self.g_p.rho[i]
             lhs = self.M[i]/self.p.young/self.p.inertia
-            lhs
+
             self.r[i] = np.abs(lhs - rhs)
-            # print(lhs, rhs)
         # print('M', self.M)
         # print('rho', self.g.rho)
         # print('Rho', self.g_p.rho)
@@ -213,10 +215,13 @@ class beam_chen():
         else:
             self.R = abs(trapz(self.r[:], self.s[:]))
         if np.isnan(self.R):
+            print('ignore_ends', self.ignore_ends)
             print('r', self.r)
             print('x', self.g.x1_grid)
+            print('s', self.s)
             print('rho', self.g.rho)
             self.R = 100
+            # BREAK
 
         print('R: ', self.R)
 
@@ -246,8 +251,9 @@ class beam_chen():
         sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-10, 10]],
                        constraints=constraints)
         self.g.D = format_input(sol.x, self.g, self.g_p)
-        self.g.internal_variables(self.length)
-        self.g.calculate_x1(self.s)
+        self.g.internal_variables(self.length, origin=self.origin)
+        # self.g.calculate_x1(self.s)
+        self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)
         print('sol', self.g.D, sol.fun)
@@ -255,8 +261,8 @@ class beam_chen():
 
     def _residual(self, A):
         self.g.D = A
-        self.g.internal_variables(self.length)
-        self.g.calculate_x1(self.s)
+        self.g.internal_variables(self.length, origin=self.origin)
+        self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)
         print(self.g.chord)
@@ -266,17 +272,17 @@ class beam_chen():
         # self.calculate_G()
         # self.calculate_x()
         # self.calculate_M()
-        self.g.radius_curvature(self.g.x1_grid, parametric=True)
+        self.g.radius_curvature(self.g.x1_grid)
         self.calculate_residual()
         return self.R
 
     def integral_ends(self):
         # Correct point
-        origin = np.array([0])
+        origin = np.array([self.origin])
         tip = np.array([self.g.chord])
         if np.isnan(self.g.x3(origin, diff='x1')[0]) or \
                 np.isnan(self.g.x3(origin, diff='x11')[0]):
-            self.s = np.insert(self.s, 1, self.g.tol)
+            self.s = np.insert(self.s, 1, origin + self.g.tol)
 
         if np.isnan(self.g.x3(tip, diff='x1')[0]) or \
                 np.isnan(self.g.x3(tip, diff='x11')[0]):
