@@ -88,6 +88,7 @@ class CoordinateSystem(object):
                 deltaz=deltaz, tol=tol)
         c.x3 = c._x3_CST
         c.name = 'CST'
+        c.zetaT = c.deltaz/c.chord
         return c
 
     @classmethod
@@ -134,9 +135,9 @@ class CoordinateSystem(object):
             return(CST(x1, self.chord, deltasz=self.deltaz, Au=A,
                        N1=self.N1, N2=self.N2))
         elif diff == 'x1':
-            d = dxi_u(psi, A, self.deltaz/self.chord, N1=self.N1, N2=self.N2)
-            if abs(psi[-1] - self.chord) < 1e-5:
-                d[0] = -A[-1] + self.deltaz/self.chord
+            d = dxi_u(psi, A, self.zetaT, N1=self.N1, N2=self.N2)
+            if abs(x1[-1] - self.chord) < 1e-5:
+                d[-1] = -A[-1] + self.zetaT
             return d
         elif diff == 'x11':
             return((1/self.chord)*ddxi_u(psi, A, N1=self.N1, N2=self.N2))
@@ -514,7 +515,7 @@ class CoordinateSystem(object):
 
     def internal_variables(self, target_length, origin=0):
         # At first we utilize the non-dimensional trailing edge thickness
-        self.deltaz = self.D[-1]
+        self.zetaT = self.D[-1]
         origin = origin/self.chord
         self.chord = 1
         # s = self.calculate_s(len(self.x1_grid), density='curvature')
@@ -523,7 +524,7 @@ class CoordinateSystem(object):
         nondimensional_length, err = self.arclength(chord=1., origin=origin)
         # print('internal',  target_length, nondimensional_length)
         self.chord = target_length/nondimensional_length
-        self.deltaz = self.deltaz*self.chord
+        self.deltaz = self.zetaT*self.chord
 
     def calculate_angles(self):
         self.cos = self.x1(self.x1_grid, 'theta1')

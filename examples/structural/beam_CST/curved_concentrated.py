@@ -62,6 +62,7 @@ b = beam_chen(g, p, l, s, ignore_ends=True)
 b.parameterized_solver(format_input=format_input, x0=b.g.D[:-1])
 
 b.g_p.plot(label='Parent')
+print(b.g.zetaT, b.g.deltaz)
 plt.plot(b.x, b.y, '.5', label='Child: %.3f N' % -l.concentrated_load[0][-1], lw=3)
 plt.scatter(abaqus_x, abaqus_y, c='.5', label='FEA: %.3f N' % -
             l.concentrated_load[0][-1], edgecolors='k', zorder=10, marker="^")
