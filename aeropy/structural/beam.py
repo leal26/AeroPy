@@ -201,7 +201,6 @@ class beam_chen():
 
     def calculate_residual(self):
         self.r = np.zeros(len(self.x))
-        lhs_list = np.zeros(len(self.x))
         for i in range(len(self.x)):
             rhs = self.g.rho[i] - self.g_p.rho[i]
             lhs = self.M[i]/self.p.young/self.p.inertia
@@ -251,7 +250,7 @@ class beam_chen():
         sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-10, 10]],
                        constraints=constraints)
         self.g.D = format_input(sol.x, self.g, self.g_p)
-        self.g.internal_variables(self.length, origin=self.origin)
+        # self.g.internal_variables(self.length, origin=self.origin)
         # self.g.calculate_x1(self.s)
         self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
@@ -261,7 +260,7 @@ class beam_chen():
 
     def _residual(self, A):
         self.g.D = A
-        self.g.internal_variables(self.length, origin=self.origin)
+        # self.g.internal_variables(self.length, origin=self.origin)
         self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)

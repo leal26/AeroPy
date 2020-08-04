@@ -14,26 +14,31 @@ from aeropy.CST_2D import dxi_u
 
 def calculate_A(input):
     d = np.zeros([2, 1])
-
-    d[0] = b.g_p.x3(np.array([epsilon]))[0] - epsilon*b.g.deltaz
-    d[1] = b.g_p.x3(np.array([epsilon]), diff='x1')[0] - b.g.deltaz/b.g.chord
+    d[0] = b.g_p.x3(np.array([epsilon]))[0] - epsilon*b.g.zetaT
+    d[1] = b.g_p.x3(np.array([epsilon]), diff='x1')[0] - b.g.zetaT
 
     A0 = np.zeros(len(g.D)-1)
     D = np.zeros([2, 2])
     for i in range(2):
         A = np.copy(A0)
         A[i] = 1
+        # print(i, A)
         D[0, i] = CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=b.g.chord)
-        D[1, i] = dxi_u(epsilon, A, 0, N1=0.5, N2=1)
+        D[1, i] = dxi_u(epsilon/b.g.chord, A, 0, N1=0.5, N2=1)
 
     for i in range(2, 6):
+
         A = np.copy(A0)
         A[i] = input[i-2]
+        # print(i, A)
         d[0] -= CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=b.g.chord)
-        d[1] -= dxi_u(epsilon, A, 0, N1=0.5, N2=1)
-    A01 = np.linalg.solve(D, d)
-    print(A01)
-    return [A01[0][0], A01[1][0]]
+        d[1] -= dxi_u(epsilon/b.g.chord, A, 0, N1=0.5, N2=1)
+    # A01 = np.linalg.solve(D, d)
+
+    det = D[0, 0]*D[1, 1] - D[0, 1]*D[1, 0]
+    A0 = (1/det)*(D[1, 1]*d[0][0] - D[0, 1]*d[1][0])
+    A1 = (1/det)*(-D[1, 0]*d[0][0] + D[0, 0]*d[1][0])
+    return [A0, A1]
 
 
 def calculate_chord(input):
@@ -49,20 +54,19 @@ def calculate_chord(input):
     return b.g_p.chord*dd_c/dd_p
 
 
-def f(deltaz):
-    b.g.deltaz = deltaz[0]
-    s_current = b.g.arclength(b.g.chord, origin=epsilon)[0]
-    print(deltaz, b.length, s_current)
-    return b.length - s_current
-
-
-def cst(x, A2, A3, A4, A5, deltaz):
+def cst(x, A2, A3, A4, A5, zetaT):
 
     input = [A2, A3, A4, A5]
 
-    b.g.chord = calculate_chord(input)
-    b.g.deltaz = deltaz*b.g.chord
-    b.g.D = calculate_A(input) + list(input) + [b.g.deltaz]
+    b.g.zetaT = zetaT
+    b.g.internal_variables(b.length, origin=epsilon)
+    # b.g.chord = calculate_chord(input)
+    # b.g.chord = abaqus_x[-1]
+    # b.g.deltaz = b.g.zetaT*b.g.chord
+    # b.g.zetaT = abaqus_y[-1]/abaqus_x[-1]
+    # b.g.deltaz = abaqus_y[-1]
+    # b.g.chord = abaqus_x[-1]
+    b.g.D = calculate_A(input) + list(input) + [b.g.zetaT]
     # b.g.deltaz = fsolve(f, b.g.deltaz, xtol=1e-4)[0]
     # b.g.D[-1] = b.g.deltaz
     y = b.g.x3(x)
@@ -99,7 +103,7 @@ y = abaqus_y
 g = CoordinateSystem.CST(D=[0.11397826, 0.10433884, 0.10241407, 0.10070566, 0.0836374,  0.11353368, 0],
                          chord=1, color='k', N1=.5, N2=1, deltaz=0, tol=None)
 g.name = 'proper integral'
-epsilon = 0.02
+epsilon = 0.01
 
 s_epsilon = g.arclength(np.array([epsilon]))[0]
 s = np.linspace(s_epsilon, g.arclength(np.array([1]))[0], 101)
@@ -113,10 +117,11 @@ popt, pcov = curve_fit(cst, x, y, p0=b.g_p.D[2:])
 print('Solution: ', popt)
 print('Error: ', np.sqrt(np.diag(pcov)))
 
-b.g.chord = calculate_chord(list(popt)[:-1])
-b.g.deltaz = popt[-1]*b.g.chord
-b.g.D = calculate_A(popt) + list(popt)
+# b.g.chord = calculate_chord(list(popt)[:-1])
 
+b.g.D = np.array(calculate_A(popt) + list(popt))
+b.g.zetaT = popt[-1]
+b.g.internal_variables(b.length, origin=epsilon)
 # b.g.D[-1] = float(fsolve(f, b.g.deltaz, xtol=1e-4)[0])
 # b.g.deltaz = b.g.D[-1]
 
@@ -131,7 +136,7 @@ print('arclength', b.g.arclength(b.g_p.chord, origin=epsilon)[0], b.g.arclength(
 x_fit = b.g.x1_grid
 y_fit = b.g.x3(b.g.x1_grid)
 print('D', b.g.D)
-# b._residual(b.g.D)
+b._residual(b.g.D)
 
 b.g.radius_curvature(b.g.x1_grid)
 print('Second derivative')

@@ -279,7 +279,7 @@ class CoordinateSystem(object):
         x1 = self.x1_grid[index]
         dr = self.x3(np.array([x1]), 'x1')
         if np.isnan(dr):
-            # print('NaN', x1)
+            print('X', x1)
             if x1 == 0:
                 dr = self.x3(np.array([self.tol]), 'x1')
             else:
@@ -425,26 +425,28 @@ class CoordinateSystem(object):
                 length_current = length_rigid + self.arclength_index(index)
                 # print(index, x, length_current, target)
                 return abs(target - length_current)
-        x0 = origin
+
+    #     def fprime_index(x):
+    #         dr = self.x3(x, 'x1')
+    #         return np.array([np.sqrt(1 + dr[0]**2)])
         x1 = []
 
         if len(length_target) == 1:
             target = length_target[0]
-            x1.append(optimize.fsolve(f, x0)[0])
-
-        self.x1_grid = np.zeros(len(length_target))
-        self.darc = np.zeros(len(length_target))
-        for index in range(len(length_target)):
-
-            target = length_target[index]
-            # print(index, target)
-            # print('TARGET', target)
-            x1.append(optimize.fsolve(f_index, target)[0])
-            x0 = x1[-1]
+            x1.append(optimize.fsolve(f, origin)[0])
+        else:
+            self.x1_grid = np.zeros(len(length_target))
+            self.darc = np.zeros(len(length_target))
+            for index in range(len(length_target)):
+                if index == 0 and origin != 0:
+                    dr = self.x3(np.array([origin]), 'x1')
+                    self.darc[index] = np.sqrt(1 + dr[0]**2)
+                    self.x1_grid[index] = origin
+                else:
+                    target = length_target[index]
+                    self.x1_grid[index] = optimize.fsolve(f_index, target)[0]
         if output:
             return np.array(x1)
-        else:
-            self.x1_grid = np.array(x1)
 
     def calculate_s(self, N, target_length=None, density='gradient', origin=0):
         def integrand(s):
