@@ -247,10 +247,10 @@ class beam_chen():
             A = format_input(A, self.g, self.g_p)
             return self._residual(A)
 
-        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-10, 10]],
+        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-1, 1]],
                        constraints=constraints)
         self.g.D = format_input(sol.x, self.g, self.g_p)
-        # self.g.internal_variables(self.length, origin=self.origin)
+        self.g.internal_variables(self.length, origin=self.origin)
         # self.g.calculate_x1(self.s)
         self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
@@ -260,7 +260,7 @@ class beam_chen():
 
     def _residual(self, A):
         self.g.D = A
-        # self.g.internal_variables(self.length, origin=self.origin)
+        self.g.internal_variables(self.length, origin=self.origin)
         self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)

@@ -54,19 +54,32 @@ def calculate_chord(input):
     return b.g_p.chord*dd_c/dd_p
 
 
+def format_input(input, g=None, g_p=None):
+    b.g.zetaT = input[-1]
+    b.g.deltaz = b.g.zetaT*b.g.chord
+    error = 999
+    while error > 1e-3:
+        chord0 = np.copy(b.g.chord)
+        A01 = calculate_A(input)
+        b.g.D = A01 + list(input)
+        b.g.internal_variables(b.length, origin=epsilon)
+        error = abs(b.g.chord-chord0)
+    return A01 + list(input)
+
+
 def cst(x, A2, A3, A4, A5, zetaT):
 
-    input = [A2, A3, A4, A5]
+    input = [A2, A3, A4, A5, zetaT]
 
-    b.g.zetaT = zetaT
-    b.g.internal_variables(b.length, origin=epsilon)
+    b.g.D = format_input(input)
+    # b.g.internal_variables(b.length, origin=epsilon)
     # b.g.chord = calculate_chord(input)
     # b.g.chord = abaqus_x[-1]
     # b.g.deltaz = b.g.zetaT*b.g.chord
     # b.g.zetaT = abaqus_y[-1]/abaqus_x[-1]
     # b.g.deltaz = abaqus_y[-1]
     # b.g.chord = abaqus_x[-1]
-    b.g.D = calculate_A(input) + list(input) + [b.g.zetaT]
+    # b.g.D = calculate_A(input) + list(input) + [b.g.zetaT]
     # b.g.deltaz = fsolve(f, b.g.deltaz, xtol=1e-4)[0]
     # b.g.D[-1] = b.g.deltaz
     y = b.g.x3(x)
@@ -119,9 +132,9 @@ print('Error: ', np.sqrt(np.diag(pcov)))
 
 # b.g.chord = calculate_chord(list(popt)[:-1])
 
-b.g.D = np.array(calculate_A(popt) + list(popt))
-b.g.zetaT = popt[-1]
-b.g.internal_variables(b.length, origin=epsilon)
+b.g.D = format_input(popt)
+# b.g.zetaT = popt[-1]
+# b.g.internal_variables(b.length, origin=epsilon)
 # b.g.D[-1] = float(fsolve(f, b.g.deltaz, xtol=1e-4)[0])
 # b.g.deltaz = b.g.D[-1]
 
