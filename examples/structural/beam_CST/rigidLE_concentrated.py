@@ -69,21 +69,26 @@ def con(input):
 
 def format_input(input, g=None, g_p=None):
     def free_end(An_in):
-        den = (1+(-An_in + b.g.zetaT)**2)**(1.5)
-        An_out = (2*n*Cn1 - den*(b.g.chord/b.g_p.chord)*dd_p)/(1+2*n)
+        den = (1+(-An_in + g.zetaT)**2)**(1.5)
+        An_out = (2*n*Cn1 - den*(g.chord/g_p.chord)*dd_p)/(1+2*n)
         # print(den, An_in, An_out)
         return An_out
     error = 999
+    counter = 0
     while error > 1e-8:
+        print('count', counter)
         chord0 = np.copy(g.chord)
+
+        A0 = np.sqrt(g_p.chord/g.chord)*g_p.D[0]
+        print('chords', g_p.chord, g.chord)
 
         # A5
         n = 5
-        Pn = b.g_p.D[-2]
-        Pn1 = b.g_p.D[-3]
+        Pn = g_p.D[-2]
+        Pn1 = g_p.D[-3]
         Cn1 = input[-1]
-        dd_p = (2*n*Pn1-(1+2*n)*Pn)/(1+(-Pn + b.g_p.zetaT)**2)**(1.5)
-        An = float(fixed_point(free_end, b.g_p.D[-2]))
+        dd_p = (2*n*Pn1-(1+2*n)*Pn)/(1+(-Pn + g_p.zetaT)**2)**(1.5)
+        An = float(fixed_point(free_end, g_p.D[-2]))
         # print('An', An)
         # BREAK
         # Pn = b.g_p.D[-2]
@@ -93,11 +98,11 @@ def format_input(input, g=None, g_p=None):
         # An = (2*n*Cn1 - (b.g.chord/b.g_p.chord)*dd_p)/(1+2*n)
         temp = list(input) + [An]
 
-        A0 = np.zeros(len(g.D)-1)
+        A_template = np.zeros(len(g.D)-1)
         # D
         D = np.zeros([2, 2])
-        A = np.copy(A0)
-        A[0] = 1
+        A = np.copy(A_template)
+        A[1] = 1
         D[0, 0] = CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=g.chord)
         D[1, 0] = dxi_u(epsilon/g.chord, A, 0, N1=0.5, N2=1)
         D[0, 1] = epsilon
@@ -107,23 +112,34 @@ def format_input(input, g=None, g_p=None):
         d = np.zeros([2, 1])
         d[0] = g_p.x3(np.array([epsilon]))[0]
         d[1] = g_p.x3(np.array([epsilon]), diff='x1')[0]
-        for i in range(1, 6):
-            A = np.copy(A0)
-            A[i] = temp[i-1]
+        for i in [0, 2, 3, 4, 5]:
+            A = np.copy(A_template)
+            if i == 0:
+                A[i] = A0
+            else:
+                A[i] = temp[i-2]
+            print(i, A)
             d[0] -= CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=g.chord)
             d[1] -= dxi_u(epsilon/g.chord, A, 0, N1=0.5, N2=1)
 
         det = D[0, 0]*D[1, 1] - D[0, 1]*D[1, 0]
-        A0 = (1/det)*(D[1, 1]*d[0][0] - D[0, 1]*d[1][0])
+        A1 = (1/det)*(D[1, 1]*d[0][0] - D[0, 1]*d[1][0])
         # print('D', D)
         # print('d', d)
         # BREAK
         b.g.zetaT = (1/det)*(-D[1, 0]*d[0][0] + D[0, 0]*d[1][0])
-        g.D = [A0] + list(temp) + [b.g.zetaT]
+        g.D = [A0, A1] + list(temp) + [b.g.zetaT]
         g.internal_variables(b.length, origin=epsilon)
         error = abs(g.chord-chord0)
+        print('input', input)
+        print('temp', temp)
+        print('D matrix', D)
+        print('D param', g.D)
         print('iteration', error, g.chord, chord0)
-    return [A0] + list(temp) + [b.g.zetaT]
+        # BREAK
+        # BREAK
+        counter += 1
+    return [A0, A1] + list(temp) + [b.g.zetaT]
 
 # abaqus_x = [0.0, 0.0099999998, 0.0020458214, 0.047780406, 0.087024547, 0.12658319, 0.16626321, 0.20599827, 0.24575868, 0.2855289, 0.32529992, 0.3650662, 0.40482411, 0.44457138,
 #             0.48430675, 0.52402967, 0.56374025, 0.60343891, 0.64312649, 0.68280399, 0.72247189, 0.76213056, 0.80177915, 0.84141576, 0.88103628, 0.92063403, 0.96019793, 0.99971026]
@@ -161,7 +177,7 @@ abaqus_x = [0.0, 0.1, 0.0020865877, 0.010215517, 0.019589836, 0.029336579, 0.039
 abaqus_y = [-4.0000065e-40, 0.031264387, 0.0051910011, 0.011353852, 0.015514729, 0.018725043, 0.021357819, 0.023590373, 0.025523078, 0.027219331, 0.028722271, 0.030062895, 0.032319341, 0.033270512, 0.034128651, 0.03490264, 0.035599921, 0.036226809, 0.036788702, 0.037290271, 0.037735589, 0.038128216, 0.038471311, 0.038767669, 0.039019786, 0.039229915, 0.039400075, 0.039532099, 0.039627664, 0.039688289, 0.039715387, 0.039710242, 0.039674055, 0.039607946, 0.039512955, 0.039390061, 0.039240185, 0.039064191, 0.038862918, 0.038637146, 0.038387638, 0.038115114, 0.03782028, 0.037503809, 0.037166361, 0.036808569, 0.036431063, 0.036034454, 0.035619333, 0.035186291, 0.034735892,
             0.034268714, 0.033785302, 0.033286206, 0.03277196, 0.032243092, 0.031700108, 0.031143531, 0.030573845, 0.029991528, 0.029397061, 0.028790889, 0.02817345, 0.027545173, 0.026906464, 0.026257688, 0.025599198, 0.024931356, 0.024254471, 0.023568785, 0.022874529, 0.022171937, 0.021461232, 0.020742511, 0.020015802, 0.019281134, 0.018538537, 0.017788017, 0.017029405, 0.01626244, 0.015486865, 0.01470242, 0.013908756, 0.013105318, 0.012291517, 0.011466763, 0.010630327, 0.009781315, 0.0089188144, 0.008041786, 0.0071490384, 0.0062393229, 0.0053112092, 0.0043631843, 0.003393573, 0.0024005773, 0.0013822207, 0.00033648894, -0.00073902967, -0.0018465805, -0.0029886768, -0.0041684718]
 epsilon = 0.1
-g = CoordinateSystem.CST(D=[0.11397826, 0.10433884, 0.10241407, 0.10070566, 0.0836374, 0.11353368, 0.], chord=1,
+g = CoordinateSystem.CST(D=[0.11397826, 0.10433884, 0.10241407, 0.10070566, 0.0836374, 0.11353368, 0], chord=1,
                          color='b', N1=.5, N2=1)
 g.name = 'proper integral'
 g_p = CoordinateSystem.CST(D=[0.11397826, 0.10433884, 0.10241407, 0.10070566, 0.0836374, 0.11353368, 0], chord=1,
@@ -184,7 +200,7 @@ target_length = s[-1]
 # cons = {'type': 'eq', 'fun': con}
 # n = len(b.g_p.D) - 2
 # Cn0 = g.D[-2] - 2*n/(1+2*n)*g.D[-3]
-b.parameterized_solver(format_input=format_input, x0=g.D[1:-2])
+b.parameterized_solver(format_input=format_input, x0=g.D[2:-2])
 
 print('x', b.x)
 print('y', b.y)
@@ -198,10 +214,17 @@ print('rho_p', b.g_p.rho)
 b.g.calculate_x1(b.s, origin=b.origin, length_rigid=b.s[0])
 b.x = b.g.x1_grid
 b.y = b.g.x3(b.x)
-x_c = np.linspace(0, b.g.chord, 100)
-x_p = np.linspace(0, b.g_p.chord, 100)
+x_c = b.g.x1_grid  # np.linspace(1e-6, b.g.chord, 100)
+x_p = b.g_p.x1_grid  # np.linspace(1e-6, b.g_p.chord, 100)
 b.g.radius_curvature(x_c)
 b.g_p.radius_curvature(x_p)
+b.g.name = 'CST'
+b.g_p.name = 'CST'
+rho0 = b.g.radius_curvature(np.array([0]), output_only=True)
+rho0_p = b.g_p.radius_curvature(np.array([0]), output_only=True)
+b.g.name = 'garbage'
+b.g_p.name = 'garbage'
+print('rho0', rho0, rho0_p)
 # rotated_beam = rotate({'x': b.x, 'y': b.y}, normalize=False)
 plt.figure()
 plt.plot(b.x, b.M/b.p.young/b.p.inertia, c='b')

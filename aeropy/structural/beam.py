@@ -247,7 +247,7 @@ class beam_chen():
             A = format_input(A, self.g, self.g_p)
             return self._residual(A)
 
-        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-1, 1]],
+        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-.2, .2]],
                        constraints=constraints)
         self.g.D = format_input(sol.x, self.g, self.g_p)
         self.g.internal_variables(self.length, origin=self.origin)
