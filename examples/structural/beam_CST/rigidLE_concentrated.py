@@ -83,7 +83,7 @@ def format_input(input, g=None, g_p=None):
         print('chords', g_p.chord, g.chord)
 
         # A5
-        n = 5
+        n = len(g_p.D) - 2
         Pn = g_p.D[-2]
         Pn1 = g_p.D[-3]
         Cn1 = input[-1]
@@ -112,7 +112,8 @@ def format_input(input, g=None, g_p=None):
         d = np.zeros([2, 1])
         d[0] = g_p.x3(np.array([epsilon]))[0]
         d[1] = g_p.x3(np.array([epsilon]), diff='x1')[0]
-        for i in [0, 2, 3, 4, 5]:
+        for i in [0] + [*range(2, n+1)]:
+            print(temp)
             A = np.copy(A_template)
             if i == 0:
                 A[i] = A0
@@ -177,10 +178,12 @@ abaqus_x = [0.0, 0.1, 0.0020865877, 0.010215517, 0.019589836, 0.029336579, 0.039
 abaqus_y = [-4.0000065e-40, 0.031264387, 0.0051910011, 0.011353852, 0.015514729, 0.018725043, 0.021357819, 0.023590373, 0.025523078, 0.027219331, 0.028722271, 0.030062895, 0.032319341, 0.033270512, 0.034128651, 0.03490264, 0.035599921, 0.036226809, 0.036788702, 0.037290271, 0.037735589, 0.038128216, 0.038471311, 0.038767669, 0.039019786, 0.039229915, 0.039400075, 0.039532099, 0.039627664, 0.039688289, 0.039715387, 0.039710242, 0.039674055, 0.039607946, 0.039512955, 0.039390061, 0.039240185, 0.039064191, 0.038862918, 0.038637146, 0.038387638, 0.038115114, 0.03782028, 0.037503809, 0.037166361, 0.036808569, 0.036431063, 0.036034454, 0.035619333, 0.035186291, 0.034735892,
             0.034268714, 0.033785302, 0.033286206, 0.03277196, 0.032243092, 0.031700108, 0.031143531, 0.030573845, 0.029991528, 0.029397061, 0.028790889, 0.02817345, 0.027545173, 0.026906464, 0.026257688, 0.025599198, 0.024931356, 0.024254471, 0.023568785, 0.022874529, 0.022171937, 0.021461232, 0.020742511, 0.020015802, 0.019281134, 0.018538537, 0.017788017, 0.017029405, 0.01626244, 0.015486865, 0.01470242, 0.013908756, 0.013105318, 0.012291517, 0.011466763, 0.010630327, 0.009781315, 0.0089188144, 0.008041786, 0.0071490384, 0.0062393229, 0.0053112092, 0.0043631843, 0.003393573, 0.0024005773, 0.0013822207, 0.00033648894, -0.00073902967, -0.0018465805, -0.0029886768, -0.0041684718]
 epsilon = 0.1
-g = CoordinateSystem.CST(D=[0.11397826, 0.10433884, 0.10241407, 0.10070566, 0.0836374, 0.11353368, 0], chord=1,
+g = CoordinateSystem.CST(D=[0.11511409, 0.10023264, 0.11857466, 0.07564926, 0.1223947,  0.07029669,
+                            0.12082582, 0], chord=1,
                          color='b', N1=.5, N2=1)
 g.name = 'proper integral'
-g_p = CoordinateSystem.CST(D=[0.11397826, 0.10433884, 0.10241407, 0.10070566, 0.0836374, 0.11353368, 0], chord=1,
+g_p = CoordinateSystem.CST(D=[0.11511409, 0.10023264, 0.11857466, 0.07564926, 0.1223947,  0.07029669,
+                              0.12082582, 0], chord=1,
                            color='k', N1=.5, N2=1)
 g_p.name = 'proper integral'
 s_epsilon = g_p.arclength(np.array([epsilon]))[0]
@@ -189,7 +192,7 @@ s = np.linspace(s_epsilon, g_p.arclength(np.array([1]))[0], 51)
 p = properties(dimensions=[0.001, 0.001])
 l = loads(concentrated_load=[[0, -0.0001]], load_s=[s[-1]])
 print('s', s)
-b = beam_chen(g, p, l, s, origin=epsilon, ignore_ends=False)
+b = beam_chen(g, p, l, s, origin=epsilon, ignore_ends=True)
 
 n = g_p.n - 2
 dd_p = (2*n*g_p.D[-3] - 2*(g_p.N1+n)*g_p.D[-2])
@@ -209,17 +212,16 @@ print('R', b.R)
 print('dydx', b.g.x3(b.g.x1_grid, 'x1'))
 print('ddyddx', b.g.x3(b.g.x1_grid, 'x11'))
 print('arc', b.g.darc)
-print('rho', b.g.rho)
-print('rho_p', b.g_p.rho)
+
 b.g.calculate_x1(b.s, origin=b.origin, length_rigid=b.s[0])
 b.x = b.g.x1_grid
 b.y = b.g.x3(b.x)
-x_c = b.g.x1_grid  # np.linspace(1e-6, b.g.chord, 100)
-x_p = b.g_p.x1_grid  # np.linspace(1e-6, b.g_p.chord, 100)
-b.g.radius_curvature(x_c)
-b.g_p.radius_curvature(x_p)
+x_c = b.g.x1_grid  # np.linspace(0, b.g.chord, 1000)
 b.g.name = 'CST'
 b.g_p.name = 'CST'
+x_p = b.g_p.x1_grid  # np.linspace(0, b.g_p.chord, 1000)
+b.g.radius_curvature(x_c)
+b.g_p.radius_curvature(x_p)
 rho0 = b.g.radius_curvature(np.array([0]), output_only=True)
 rho0_p = b.g_p.radius_curvature(np.array([0]), output_only=True)
 b.g.name = 'garbage'
@@ -244,8 +246,10 @@ print('length', target_length, b.length, b.g.arclength(b.g.chord, origin=epsilon
 print('dys', b.g_p.x3(np.array([b.g_p.x1_grid[0]]), 'x1'), b.g.x3(np.array([b.g.x1_grid[0]]), 'x1'))
 print('ddys', b.g_p.x3(np.array([b.g_p.x1_grid[-1]]), 'x11'),
       b.g.x3(np.array([b.g.x1_grid[-1]]), 'x11'))
-b.g_p.plot(label='Parent')
-plt.plot(b.x, b.y, '.5',
+# b.g_p.plot(label='Parent')
+plt.plot(x_p, b.g_p.x3(x_p), 'b',
+         label='Parent', lw=3)
+plt.plot(x_c, b.g.x3(x_c), '.5',
          label='Child: %.3f N' % -l.concentrated_load[0][-1], lw=3)
 plt.scatter(abaqus_x, abaqus_y, c='.5', label='FEA: %.3f N' % -
             l.concentrated_load[0][-1], edgecolors='k', zorder=10, marker="^")
