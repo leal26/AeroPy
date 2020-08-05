@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, fixed_point
 
 from aeropy.structural.beam import beam_chen
 from aeropy.structural.stable_solution import properties, loads
@@ -68,9 +68,30 @@ def con(input):
 #     return [A0, A1] + list(input)
 
 def format_input(input, g=None, g_p=None):
+    def free_end(An_in):
+        den = (1+(-An_in + b.g.zetaT)**2)**(1.5)
+        An_out = (2*n*Cn1 - den*(b.g.chord/b.g_p.chord)*dd_p)/(1+2*n)
+        # print(den, An_in, An_out)
+        return An_out
     error = 999
-    while error > 1e-3:
+    while error > 1e-8:
         chord0 = np.copy(g.chord)
+
+        # A5
+        n = 5
+        Pn = b.g_p.D[-2]
+        Pn1 = b.g_p.D[-3]
+        Cn1 = input[-1]
+        dd_p = (2*n*Pn1-(1+2*n)*Pn)/(1+(-Pn + b.g_p.zetaT)**2)**(1.5)
+        An = float(fixed_point(free_end, b.g_p.D[-2]))
+        # print('An', An)
+        # BREAK
+        # Pn = b.g_p.D[-2]
+        # Pn1 = b.g_p.D[-3]
+        # Cn1 = input[-1]
+        # dd_p = 2*n*Pn1-(1+2*n)*Pn
+        # An = (2*n*Cn1 - (b.g.chord/b.g_p.chord)*dd_p)/(1+2*n)
+        temp = list(input) + [An]
 
         A0 = np.zeros(len(g.D)-1)
         # D
@@ -88,7 +109,7 @@ def format_input(input, g=None, g_p=None):
         d[1] = g_p.x3(np.array([epsilon]), diff='x1')[0]
         for i in range(1, 6):
             A = np.copy(A0)
-            A[i] = input[i-1]
+            A[i] = temp[i-1]
             d[0] -= CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=g.chord)
             d[1] -= dxi_u(epsilon/g.chord, A, 0, N1=0.5, N2=1)
 
@@ -98,11 +119,11 @@ def format_input(input, g=None, g_p=None):
         # print('d', d)
         # BREAK
         b.g.zetaT = (1/det)*(-D[1, 0]*d[0][0] + D[0, 0]*d[1][0])
-        g.D = [A0] + list(input) + [b.g.zetaT]
+        g.D = [A0] + list(temp) + [b.g.zetaT]
         g.internal_variables(b.length, origin=epsilon)
         error = abs(g.chord-chord0)
         print('iteration', error, g.chord, chord0)
-    return [A0] + list(input) + [b.g.zetaT]
+    return [A0] + list(temp) + [b.g.zetaT]
 
 # abaqus_x = [0.0, 0.0099999998, 0.0020458214, 0.047780406, 0.087024547, 0.12658319, 0.16626321, 0.20599827, 0.24575868, 0.2855289, 0.32529992, 0.3650662, 0.40482411, 0.44457138,
 #             0.48430675, 0.52402967, 0.56374025, 0.60343891, 0.64312649, 0.68280399, 0.72247189, 0.76213056, 0.80177915, 0.84141576, 0.88103628, 0.92063403, 0.96019793, 0.99971026]
@@ -152,7 +173,7 @@ s = np.linspace(s_epsilon, g_p.arclength(np.array([1]))[0], 51)
 p = properties(dimensions=[0.001, 0.001])
 l = loads(concentrated_load=[[0, -0.0001]], load_s=[s[-1]])
 print('s', s)
-b = beam_chen(g, p, l, s, origin=epsilon, ignore_ends=True)
+b = beam_chen(g, p, l, s, origin=epsilon, ignore_ends=False)
 
 n = g_p.n - 2
 dd_p = (2*n*g_p.D[-3] - 2*(g_p.N1+n)*g_p.D[-2])
@@ -163,28 +184,34 @@ target_length = s[-1]
 # cons = {'type': 'eq', 'fun': con}
 # n = len(b.g_p.D) - 2
 # Cn0 = g.D[-2] - 2*n/(1+2*n)*g.D[-3]
-b.parameterized_solver(format_input=format_input, x0=g.D[1:-1])
+b.parameterized_solver(format_input=format_input, x0=g.D[1:-2])
 
 print('x', b.x)
 print('y', b.y)
 print('r', b.r)
 print('R', b.R)
+print('dydx', b.g.x3(b.g.x1_grid, 'x1'))
+print('ddyddx', b.g.x3(b.g.x1_grid, 'x11'))
 print('arc', b.g.darc)
 print('rho', b.g.rho)
-
+print('rho_p', b.g_p.rho)
 b.g.calculate_x1(b.s, origin=b.origin, length_rigid=b.s[0])
 b.x = b.g.x1_grid
 b.y = b.g.x3(b.x)
-b.g.radius_curvature(b.g.x1_grid)
-b.g_p.radius_curvature(b.g_p.x1_grid)
+x_c = np.linspace(0, b.g.chord, 100)
+x_p = np.linspace(0, b.g_p.chord, 100)
+b.g.radius_curvature(x_c)
+b.g_p.radius_curvature(x_p)
 # rotated_beam = rotate({'x': b.x, 'y': b.y}, normalize=False)
 plt.figure()
 plt.plot(b.x, b.M/b.p.young/b.p.inertia, c='b')
-plt.plot(b.x, b.g.rho, c='r')
-plt.plot(b.x, b.g_p.rho, c='g')
+plt.plot(x_c, b.g.rho, c='r')
+plt.scatter(x_c, b.g.rho, c='r')
+plt.plot(x_p, b.g_p.rho, c='g')
+plt.scatter(x_p, b.g_p.rho, c='g')
 plt.figure()
 plt.plot(b.x, b.M/b.p.young/b.p.inertia, c='b')
-plt.plot(b.x, b.g.rho - b.g_p.rho, c='r')
+plt.plot(x_c, b.g.rho - b.g_p.rho, c='r')
 plt.show()
 print('residual: ', b._residual(b.g.D))
 print(b.r)
@@ -192,7 +219,7 @@ print('x', b.x)
 print('y', b.y)
 print('length', target_length, b.length, b.g.arclength(b.g.chord, origin=epsilon)[0])
 print('dys', b.g_p.x3(np.array([b.g_p.x1_grid[0]]), 'x1'), b.g.x3(np.array([b.g.x1_grid[0]]), 'x1'))
-print('ddys', b.g.x3(np.array([b.g.x1_grid[-1]]), 'x11'),
+print('ddys', b.g_p.x3(np.array([b.g_p.x1_grid[-1]]), 'x11'),
       b.g.x3(np.array([b.g.x1_grid[-1]]), 'x11'))
 b.g_p.plot(label='Parent')
 plt.plot(b.x, b.y, '.5',
