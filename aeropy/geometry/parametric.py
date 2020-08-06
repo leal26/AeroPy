@@ -27,7 +27,6 @@ class CoordinateSystem(object):
         if self.n == 1 and (isinstance(values, float) or isinstance(values, np.float64)):
             self._D = values
         else:
-            print(values, self.n, len(values))
             if len(values) != self.n:
                 self._D = np.zeros(self.n)
                 self._D[:len(values)] = values
@@ -113,10 +112,6 @@ class CoordinateSystem(object):
         elif diff == 'theta1':
             return self.x3(x1, 'x1')*self.x1(x1, 'theta1')
         elif diff == 'theta11':
-            # print('x3/x11: ', self.x3(x1, 'x11'))
-            # print('x1/t1: ', self.x1(x1, 'theta1'))
-            # print('x3/x1: ', self.x3(x1, 'x1'))
-            # print('x1/t1: ', self.x1(x1, 'theta11'))
             return self.x3(x1, 'x11')*self.x1(x1, 'theta1')**2 + \
                 self.x3(x1, 'x1')*self.x1(x1, 'theta11')
         elif diff == 'theta3':
@@ -153,7 +148,6 @@ class CoordinateSystem(object):
         """ z2 (checked)"""
         if R is None:
             R = self.D[0]
-        # print(x1, R)
         if diff is None:
             return(R - np.sqrt(R**2 - x1**2))
         elif diff == 'x1':
@@ -217,9 +211,6 @@ class CoordinateSystem(object):
             gik_j = self.dA[i, k, j]
             gjk_i = self.dA[j, k, i]
             gij_k = self.dA[i, j, k]
-            # print('dA', i,k,j, gik_j)
-            # print('dA', j,k,i, gjk_i)
-            # print('dA', i,j,k, gij_k)
             return .5*(gik_j + gjk_i - gij_k)
         elif order == 2:
             raise NotImplementedError
@@ -241,35 +232,16 @@ class CoordinateSystem(object):
                                                      self.a[j, :]) + \
                             np.einsum('ij,ij->i', self.a[i, :],
                                       self.da[j, k, :])
-                        # if self.dA[i,j,k,0] !=0:
-                        #     print(i,j,k)
-                        #     print(self.da[i,k,:])
-                        #     print(self.a[j,:])
-                        #     print(self.a[i,:])
-                        #     print(self.da[j,k,:])
 
     def curvature_tensor(self):
         self.B = np.zeros([2, 2, len(self.x1_grid)])
         for alpha in range(2):
             for beta in range(2):
-                # print(alpha, beta)
-                # print(self.christoffel(alpha, beta, 2))
                 self.B[alpha, beta] = self.christoffel(alpha, beta, 2)
 
     def arclength(self, chord=None, origin=0):
         def integrand(x1):
-            # dr = self.r(x1, 'x1')
-            # if np.isnan(np.sqrt(np.inner(dr, dr))):
-            #     return(100)
-            # else:
-            #     return np.sqrt(np.inner(dr, dr)[0, 0])
             dr = self.x3(np.array([x1]), 'x1')
-            # if np.isnan(dr):
-            #     # print('NaN', x1)
-            #     if x1 == 0:
-            #         dr = self.x3(np.array([self.tol]), 'x1')
-            #     else:
-            #         dr = self.x3(np.array([x1-self.tol]), 'x1')
             return np.sqrt(1 + dr**2)
         if chord is None:
             chord = self.chord
@@ -279,20 +251,11 @@ class CoordinateSystem(object):
         x1 = self.x1_grid[index]
         dr = self.x3(np.array([x1]), 'x1')
         if np.isnan(dr):
-            print('BROKE', self.chord, x1, self.D)
-            # BREAK
             if x1 == 0:
                 dr = self.x3(np.array([self.tol]), 'x1')
             else:
                 dr = self.x3(np.array([x1-self.tol]), 'x1')
-            # if x1 == 0:
-            #     dr = self.x3(np.array([self.x1_grid[1]]), 'x1')
-            # else:
-            #     dr = self.x3(np.array([self.x1_grid[-2]]), 'x1')
         self.darc[index] = np.sqrt(1 + dr[0]**2)
-        # print('dr, darc', dr, self.darc[index])
-        # print('x', self.x1_grid[:index+1])
-        # print('darc', self.darc[:index+1])
         return integrate.trapz(self.darc[:index+1], self.x1_grid[:index+1])
 
     def improper_arclength_index(self, index):
@@ -310,12 +273,6 @@ class CoordinateSystem(object):
             dr = self.x3(np.array([x1]), 'x1')
             self.darc[index] = np.sqrt(1 + dr[0]**2)
         self.darc[-1] = np.sqrt(1 + (-self.D[-2]+self.D[-1])**2)
-        # print('dr, darc', dr, self.darc[index])
-        # print('x', self.x1_grid[:index+1])
-        # print('darc', self.darc[:index+1])
-
-        # print(self.darc)
-        # print(self.x1_grid)
         return integrate.trapz(self.darc, self.x1_grid)
 
     def improper_arclength_chord(self):
@@ -329,7 +286,6 @@ class CoordinateSystem(object):
     def bounded_dr(self, x):
         A = self.N1**2*self.D[0]**2
         n = self.n - 2
-        # print(n)
         if x == 0:
             return self.D[0]**2*(-n-1) + 1.5*n*self.D[0]*self.D[1]
         elif x == 1:
@@ -337,19 +293,11 @@ class CoordinateSystem(object):
             return np.sqrt(1 + (-self.D[-2]+self.D[-1])**2) - np.sqrt(1 + A/x)
         else:
             dr = self.x3(np.array([x]), 'x1')
-            return np.sqrt(1 + dr[0]**2) - np.sqrt(1 + A/x)  # - np.sqrt(1 + B/np.sqrt(x))
+            return np.sqrt(1 + dr[0]**2) - np.sqrt(1 + A/x)
 
     def unbounded_integral(self, end, start=0):
         def indefinite_integral(x):
-            # return x*np.sqrt(A/x+B)) + A*np.log(2*np.sqrt(B)*x*np.sqrt(A/x+B) + A + 2*B*x)/(2*np.sqrt(B))
-            # if x == 0:
-            #     dz = -0.25*B**2*np.log(B)
-            # else:
-            #     dz = 0.5*np.sqrt(B/np.sqrt(x)+1)*(B*np.sqrt(x) + 2*x) - 0.25 * \
-            #         B**2*np.log(2*np.sqrt(x)*(np.sqrt(B/np.sqrt(x)+1)+1)+B)
-            # print('A', x, 0.5*np.sqrt(B/np.sqrt(x)+1)*(B*np.sqrt(x) + 2*x))
-            # print('B', x, 0.25 * B**2*np.log(2*np.sqrt(x)*(np.sqrt(B/np.sqrt(x)+1)+1)+B))
-            return np.sqrt(x*(A + x)) + A*np.log(np.sqrt(A+x) + np.sqrt(x))  # + dz
+            return np.sqrt(x*(A + x)) + A*np.log(np.sqrt(A+x) + np.sqrt(x))
         A = self.N1**2*self.D[0]**2
         return indefinite_integral(end) - indefinite_integral(start)
 
@@ -360,8 +308,6 @@ class CoordinateSystem(object):
             return abs(target - length_current)
 
         def f_index(dx):
-            # Penalize in case x goes negative
-            # print(dx)
             if dx[0] < 0:
                 return 100
             else:
@@ -371,7 +317,6 @@ class CoordinateSystem(object):
                     length_current = length_rigid + self.improper_arclength_index(index)
                 else:
                     length_current = length_rigid + self.arclength_index(index)
-                # print('length', length_current, target)
                 return target - length_current
 
         def fprime_index(x):
@@ -454,7 +399,6 @@ class CoordinateSystem(object):
     def calculate_s(self, N, target_length=None, density='gradient', origin=0):
         def integrand(s):
             rho = self.radius_curvature(np.array([s]), output_only=True)[0]
-            # print(s, rho)
             return abs(rho)
 
         def f(dx):
@@ -463,11 +407,6 @@ class CoordinateSystem(object):
                 self.rho[i] = integrand(self.x1_grid[i])
                 partial = integrate.quad(integrand,
                                          self.x1_grid[i-1], self.x1_grid[i-1]+dx[0], limit=500)[0]
-                # partial = integrate.trapz(self.rho[i-1:i+1], self.x1_grid[i-1:i+1])
-                # print(self.x1_grid[i], self.rho[i], partial, total/(N-1))
-                # if i == 4:
-                #     BREAK
-                # print(i, self.x1_grid[i-1], self.x1_grid[i-1]+dx[0], partial, total/(N-1))
                 self.partial[i] = partial
                 return abs(partial - total/(N-1))
             else:
@@ -558,11 +497,9 @@ class CoordinateSystem(object):
         self.zetaT = self.D[-1]
         origin = origin/self.chord
         self.chord = 1
-        # s = self.calculate_s(len(self.x1_grid), density='curvature')
-        # nondimensional_length = s[-1]
 
         nondimensional_length, err = self.arclength(chord=1., origin=origin/self.chord)
-        # print('internal',  target_length, nondimensional_length)
+
         self.chord = target_length/nondimensional_length
         self.deltaz = self.zetaT*self.chord
 

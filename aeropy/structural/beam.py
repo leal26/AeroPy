@@ -141,7 +141,6 @@ class beam_chen():
                     f2 = c*self.g.sin[index] - s*self.g.cos[index]
                     f1 = (c-self.g.sin[index]*f2)/self.g.cos[index]
 
-                    # print('f', f1, f2)
                     M_i += self.l.concentrated_magnitude[i]*f1*(self.y[index]-y)
                     M_i += self.l.concentrated_magnitude[i]*f2*(self.x[index]-x)
             else:
@@ -206,9 +205,6 @@ class beam_chen():
             lhs = self.M[i]/self.p.young/self.p.inertia
 
             self.r[i] = np.abs(lhs - rhs)
-        # print('M', self.M)
-        # print('rho', self.g.rho)
-        # print('Rho', self.g_p.rho)
         if self.ignore_ends:
             self.R = abs(trapz(self.r[1:-1], self.s[1:-1]))
         else:
@@ -264,13 +260,9 @@ class beam_chen():
         self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)
-        print(self.g.chord)
         if self.l.follower:
             self.g.calculate_angles()
         self.calculate_M()
-        # self.calculate_G()
-        # self.calculate_x()
-        # self.calculate_M()
         self.g.radius_curvature(self.g.x1_grid)
         self.calculate_residual()
         return self.R
