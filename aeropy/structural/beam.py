@@ -100,7 +100,7 @@ class euler_bernoulle_curvilinear():
 
 class beam_chen():
     def __init__(self, geometry, properties, load, s, ignore_ends=False,
-                 rotated=False, origin=0):
+                 rotated=False, origin=0, g2=None):
         self.g = copy.deepcopy(geometry)
         self.p = properties
         self.l = load
@@ -116,6 +116,7 @@ class beam_chen():
         self.g_p.internal_variables(self.length, origin=self.origin)
         self.g_p.calculate_x1(self.s, origin=origin, length_rigid=s[0])
         self.g_p.radius_curvature(self.g_p.x1_grid)
+
         if self.rotated:
             self.g_p.calculate_angles()
 
@@ -237,8 +238,7 @@ class beam_chen():
             y_before = np.copy(self.y)
             print(error)
 
-    def parameterized_solver(self, format_input=None, x0=None, g_switch=False,
-                             constraints=(),):
+    def parameterized_solver(self, format_input=None, x0=None, constraints=(),):
         def formatted_residual(A):
             A = format_input(A, self.g, self.g_p)
             return self._residual(A)
@@ -252,7 +252,6 @@ class beam_chen():
         self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)
         print('sol', self.g.D, sol.fun)
-        return
 
     def _residual(self, A):
         self.g.D = A
@@ -279,3 +278,46 @@ class beam_chen():
                 np.isnan(self.g.x3(tip, diff='x11')[0]):
             self.s = np.insert(self.s, -1, self.s[-1] - self.g.tol)
         self.g.calculate_x1(self.s)
+
+
+class airfoil():
+    def __init__(self, g_upper, g_lower, properties_upper, properties_lower,
+                 load_upper, load_lower, s_upper, s_lower, ignore_ends=False,
+                 rotated=False, origin=0, chord=1, zetaT=0):
+        self.bu = beam_chen(g_upper, properties_upper, load_upper, s_upper,
+                            origin=origin, ignore_ends=ignore_ends,
+                            rotated=rotated)
+        self.bl = beam_chen(g_lower, properties_lower, load_lower, s_lower,
+                            origin=origin, ignore_ends=ignore_ends,
+                            rotated=rotated)
+        self.chord = chord
+        self.zetaT = zetaT
+
+    def calculate_x(self, s_upper=None, s_lower=None):
+        if s_upper is None and s_lower is None:
+            self.bu.g.calculate_x1(self.bu.s, origin=self.bu.origin,
+                                   length_rigid=self.bu.s[0])
+            self.bl.g.calculate_x1(self.bl.s, origin=self.bl.origin,
+                                   length_rigid=self.bl.s[0])
+            self.bu.x = self.bu.g.x1_grid
+            self.bl.x = self.bl.g.x1_grid
+        else:
+            raise(NotImplementedError)
+
+    def parameterized_solver(self, format_input=None, x0=None):
+        def formatted_residual(A):
+            [Au, Al] = format_input(A, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
+            R = self.bu._residual(Au) + self.bl._residual(Al)
+            print('u', self.bu.R, Au)
+            print('l', self.bl.R, Al)
+            return R
+
+        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-.2, .2]])
+        self.bu.g.D, self.bl.g.D = format_input(
+            sol.x, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
+        self.bu.g.internal_variables(self.bu.length, origin=self.bu.origin)
+        self.bl.g.internal_variables(self.bl.length, origin=self.bl.origin)
+        self.calculate_x()
+        self.bu.y = self.bu.g.x3(self.bu.x)
+        self.bl.y = self.bl.g.x3(self.bl.x)
+        print('sol', self.bu.g.D, self.bl.g.D)
