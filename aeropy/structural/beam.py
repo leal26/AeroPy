@@ -205,7 +205,7 @@ class beam_chen():
             rhs = self.g.rho[i] - self.g_p.rho[i]
             lhs = self.M[i]/self.p.young/self.p.inertia
 
-            self.r[i] = np.abs(lhs - rhs)
+            self.r[i] = abs(lhs - rhs)
         if self.ignore_ends:
             self.R = abs(trapz(self.r[1:-1], self.s[1:-1]))
         else:
@@ -278,6 +278,26 @@ class beam_chen():
                 np.isnan(self.g.x3(tip, diff='x11')[0]):
             self.s = np.insert(self.s, -1, self.s[-1] - self.g.tol)
         self.g.calculate_x1(self.s)
+
+    def calculate_resultants(self):
+        self.g.calculate_angles()
+        du_x = self.g.x1_grid - self.g_p.x1_grid
+        du_x[0] = 0
+        du_y = self.g.x3(self.g.x1_grid, diff='theta1') - \
+            self.g_p.x3(self.g_p.x1_grid, diff='theta1')
+        du_y[0] = 0
+        print('cos', self.g.cos)
+        print('du', du)
+        dRx = self.p.area*self.p.young*(self.g.x3)
+        dRy = self.p.area*self.p.young*du*self.g.sin
+        dRm = dRy*(self.g.x1_grid - self.g.chord) - dRx*(self.g.x3(self.g.x1_grid) - self.g.deltaz)
+        print('s', self.s)
+        print('dRx', dRx)
+        print('dRy', dRy)
+        print('dRm', dRm)
+        self.Rx = np.trapz(dRx, self.s)
+        self.Ry = np.trapz(dRy, self.s)
+        self.Rm = np.trapz(dRm, self.s)
 
 
 class airfoil():

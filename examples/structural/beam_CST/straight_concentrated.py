@@ -21,6 +21,10 @@ s = np.linspace(0, 1, 10)
 
 b = beam_chen(g, p, l, s, ignore_ends=True)
 b.parameterized_solver(format_input, x0=g.D[:-1])
+# b.g.calculate_x1(b.s)
+b.calculate_resultants()
+print(b.Rx, b.Ry, b.Rm)
+BREAK
 # b._residual([0.005714289063490557, 0.004285875208812112,
 #              0.002857270578861466, -0.005714289063490557])
 print('x', b.x)

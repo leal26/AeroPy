@@ -68,7 +68,7 @@ def format_input_upper(input, g=None, g_p=None):
 def format_input_lower(input, gu=None, gu_p=None, gl=None, gl_p=None):
     def free_end(An_in):
         dr_l = -gl_p.D[-2] + gl_p.D[-1]
-        An_out = (cos*np.sqrt(1+dr_u**2)*np.sqrt(1+dr_l**2)-1)/dr_l
+        An_out = - gl_p.D[-1] + (cos*np.sqrt(1+dr_u**2)*np.sqrt(1+dr_l**2)-1)/dr_l
         return An_out
 
     def length_preserving(A2):
@@ -78,28 +78,28 @@ def format_input_lower(input, gu=None, gu_p=None, gl=None, gl_p=None):
     gl.zetaT = gu.zetaT
     n = len(gl_p.D) - 2
     error = 999
-    A2 = gl.D[2]
-    # print('Dl', gl.D)
+    A3 = gl.D[3]
+    # gl.internal_variables(a.bl.length, origin=epsilon)
+    # print('chord', gl.chord, gu.chord)
+    A0 = np.sqrt(gl.chord/gu.chord)*gl_p.D[0]
     while error > 1e-8:
-        A20 = A2
-
+        A30 = A3
         # A5
         dr_u = -gu_p.D[-2] + gu_p.D[-1]
         dr_l = -gl_p.D[-2] + gl_p.D[-1]
         cos = (1+dr_u*dr_l)/np.sqrt(1+dr_u**2)/np.sqrt(1+dr_l**2)
         An = float(fixed_point(free_end, gl_p.D[-2]))
-        # print('A2', A2)
-        temp = [A2] + list(input) + [An]
+        temp = [A3] + list(input) + [An]
 
         A_template = np.zeros(len(gl.D)-1)
         # D
         D = np.zeros([2, 2])
         A = np.copy(A_template)
-        A[0] = 1
+        A[1] = 1
         D[0, 0] = CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=gu.chord)
         D[1, 0] = dxi_u(epsilon/gu.chord, A, 0, N1=0.5, N2=1)
         A = np.copy(A_template)
-        A[1] = 1
+        A[2] = 1
         D[0, 1] = CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=gu.chord)
         D[1, 1] = dxi_u(epsilon/gu.chord, A, 0, N1=0.5, N2=1)
 
@@ -109,25 +109,31 @@ def format_input_lower(input, gu=None, gu_p=None, gl=None, gl_p=None):
         d[1] = gl_p.x3(np.array([epsilon]), diff='x1')[0] - gu.zetaT
         # print('input', input)
         # print('temp', temp)
-        for i in range(2, n+1):
+        indexes = [0] + [*range(3, n+1)]
+        for i in indexes:
             A = np.copy(A_template)
-
-            A[i] = temp[i-2]
+            if i == 0:
+                A[0] = A0
+            else:
+                # print(i, i-2, temp)
+                A[i] = temp[i-3]
             # print('i', i, A)
             d[0] -= CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=gu.chord)
             d[1] -= dxi_u(epsilon/gu.chord, A, 0, N1=0.5, N2=1)
 
         det = D[0, 0]*D[1, 1] - D[0, 1]*D[1, 0]
-        A0 = (1/det)*(D[1, 1]*d[0][0] - D[0, 1]*d[1][0])
-        A1 = (1/det)*(-D[1, 0]*d[0][0] + D[0, 0]*d[1][0])
-        gl.D = [A0, A1] + list(temp) + [gu.zetaT]
+        A1 = (1/det)*(D[1, 1]*d[0][0] - D[0, 1]*d[1][0])
+        A2 = (1/det)*(-D[1, 0]*d[0][0] + D[0, 0]*d[1][0])
+        gl.D = [A0, A1, A2, A3] + list(temp[1:]) + [gu.zetaT]
         A2 = fsolve(length_preserving, A2)[0]
         # gl.internal_variables(a.gu.length, origin=epsilon)
 
-        error = abs(A2 - A20)
+        error = abs(A3 - A30)
+        # print('D_p', gl_p.D)
         # print('D', gl.D)
-        # print(A2, A20, error)
-    return [A0, A1, A2] + list(temp)[1:] + [gu.zetaT]
+        # print(A3, A30, error)
+        # BREAK
+    return [A0, A1, A2, A3] + list(temp)[1:] + [gu.zetaT]
 
 
 epsilon = 0.1
@@ -149,15 +155,23 @@ s_lower = np.linspace(s_epsilon, g_p.arclength(np.array([1]))[0], 51)
 p_upper = properties()
 p_lower = properties()
 l_upper = loads(concentrated_load=[[0, -1/2]], load_s=[s_upper[-1]])
-l_lower = loads(concentrated_load=[[0, -1/2]], load_s=[s_lower[-1]])
+l_lower = loads(concentrated_load=[[0, 1/2]], load_s=[s_lower[-1]])
 a = airfoil(g_upper, g_lower, p_upper, p_lower, l_upper, l_lower, s_upper,
             s_lower, origin=epsilon, ignore_ends=True)
 a.calculate_x()
-print('s', a.bu.s)
-print('x', a.bu.g.x1_grid)
+a.bl.g.radius_curvature(a.bl.g.x1_grid)
+a.bu.g.radius_curvature(a.bu.g.x1_grid)
+# plt.figure()
+# plt.plot(a.bu.g.x1_grid, a.bu.g.rho, label='Upper')
+# plt.plot(a.bl.g.x1_grid, a.bl.g.rho, label='Lower')
+# plt.legend()
+# plt.show()
+# BREAK
+# print('s', a.bu.s)
+# print('x', a.bu.g.x1_grid)
 # target_length = s[-1]
 #
-a.parameterized_solver(format_input=format_input, x0=list(g_upper.D[1:-2]) + list(g_lower.D[3:-2]))
+a.parameterized_solver(format_input=format_input, x0=list(g_upper.D[1:-2]) + list(g_lower.D[4:-2]))
 #
 # b.gu.calculate_x1(b.s, origin=b.origin, length_rigid=b.s[0])
 # a.bu.x = b.g.x1_grid

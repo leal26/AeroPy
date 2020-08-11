@@ -131,8 +131,8 @@ class CoordinateSystem(object):
                        N1=self.N1, N2=self.N2))
         elif diff == 'x1':
             d = dxi_u(psi, A, self.zetaT, N1=self.N1, N2=self.N2)
-            # if abs(x1[-1] - self.chord) < 1e-5:
-            #     d[-1] = -A[-1] + self.zetaT
+            if abs(x1[-1] - self.chord) < 1e-5:
+                d[-1] = -A[-1] + self.zetaT
             return d
         elif diff == 'x11':
             return((1/self.chord)*ddxi_u(psi, A, N1=self.N1, N2=self.N2))
@@ -506,3 +506,7 @@ class CoordinateSystem(object):
     def calculate_angles(self):
         self.cos = self.x1(self.x1_grid, 'theta1')
         self.sin = self.x3(self.x1_grid, 'theta1')
+
+        if self.x1_grid[0] == 0 and self.N1 == 1:
+            self.cos[0] = 1
+            self.sin[0] = 0
