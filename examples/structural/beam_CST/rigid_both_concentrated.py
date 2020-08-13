@@ -11,9 +11,8 @@ from aeropy.geometry.airfoil import create_x, rotate, CST
 
 
 def format_input(input, gu=None, gu_p=None, gl=None, gl_p=None):
-    n = len(gu.D) - 2
-    Au = format_input_upper(input[:n-1], g=gu, g_p=gu_p)
-    Al = format_input_lower(input[n-1:], gu=gu, gu_p=gu_p, gl=gl, gl_p=gl_p)
+    Au = format_input_upper(input, g=gu, g_p=gu_p)
+    Al = format_input_lower(gu=gu, gu_p=gu_p, gl=gl, gl_p=gl_p)
 
     return Au, Al
 
@@ -65,31 +64,34 @@ def format_input_upper(input, g=None, g_p=None):
     return [A0] + list(temp) + [g.zetaT]
 
 
-def format_input_lower(input, gu=None, gu_p=None, gl=None, gl_p=None):
+def format_input_lower(gu=None, gu_p=None, gl=None, gl_p=None):
     def free_end(An_in):
-        dr_l = -gl_p.D[-2] + gl_p.D[-1]
-        An_out = - gl_p.D[-1] + (cos*np.sqrt(1+dr_u**2)*np.sqrt(1+dr_l**2)-1)/dr_l
+        den = (1+(-An_in + gl.zetaT)**2)**(1.5)
+        An_out = (2*n*Cn1 - den*(gl.chord/gl_p.chord)*dd_p)/(1+2*n)
+        dd_c1 = (1/gl.chord)*(2*n*Cn1-(1+2*n)*An_out)/(1+(-An_in + gl_p.zetaT)**2)**(1.5)
+        dd_c2 = (1/gl.chord)*(2*n*Cn1-(1+2*n)*An_out)/(1+(-An_out + gl_p.zetaT)**2)**(1.5)
+        print(dd_p, dd_c1, dd_c2)
         return An_out
 
-    def length_preserving(A2):
-        gl.D[2] = A2[0]
+    def length_preserving(A3):
+        gl.D[3] = A3[0]
         return a.bl.length - gl.arclength(origin=a.bl.origin)[0]
     gl.chord = gu.chord
     gl.zetaT = gu.zetaT
+    gl.deltaz = gu.chord*gu.zetaT
     n = len(gl_p.D) - 2
-    error = 999
+
+    Pn = gl_p.D[-2]
+    Pn1 = gl_p.D[-3]
+    dd_p = (2*n*Pn1-(1+2*n)*Pn)/(1+(-Pn + gl_p.zetaT)**2)**(1.5)
     A3 = gl.D[3]
-    # gl.internal_variables(a.bl.length, origin=epsilon)
-    # print('chord', gl.chord, gu.chord)
-    A0 = np.sqrt(gl.chord/gu.chord)*gl_p.D[0]
-    while error > 1e-8:
-        A30 = A3
-        # A5
-        dr_u = -gu_p.D[-2] + gu_p.D[-1]
-        dr_l = -gl_p.D[-2] + gl_p.D[-1]
-        cos = (1+dr_u*dr_l)/np.sqrt(1+dr_u**2)/np.sqrt(1+dr_l**2)
-        An = float(fixed_point(free_end, gl_p.D[-2]))
-        temp = [A3] + list(input) + [An]
+    Cn1 = gl.D[-3]
+    A0 = np.sqrt(gl_p.chord/gl.chord)*gl_p.D[0]
+    error = 999
+    while error > 1e-3:
+        A_before = gl.D
+        An = float(fixed_point(free_end, gl.D[-2]))
+        temp = [A3, An]
 
         A_template = np.zeros(len(gl.D)-1)
         # D
@@ -107,46 +109,46 @@ def format_input_lower(input, gu=None, gu_p=None, gl=None, gl_p=None):
         d = np.zeros([2, 1])
         d[0] = gl_p.x3(np.array([epsilon]))[0] - epsilon*gu.zetaT
         d[1] = gl_p.x3(np.array([epsilon]), diff='x1')[0] - gu.zetaT
-        # print('input', input)
-        # print('temp', temp)
+
         indexes = [0] + [*range(3, n+1)]
         for i in indexes:
             A = np.copy(A_template)
             if i == 0:
                 A[0] = A0
             else:
-                # print(i, i-2, temp)
                 A[i] = temp[i-3]
-            # print('i', i, A)
             d[0] -= CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=gu.chord)
             d[1] -= dxi_u(epsilon/gu.chord, A, 0, N1=0.5, N2=1)
 
         det = D[0, 0]*D[1, 1] - D[0, 1]*D[1, 0]
         A1 = (1/det)*(D[1, 1]*d[0][0] - D[0, 1]*d[1][0])
         A2 = (1/det)*(-D[1, 0]*d[0][0] + D[0, 0]*d[1][0])
-        gl.D = [A0, A1, A2, A3] + list(temp[1:]) + [gu.zetaT]
-        A2 = fsolve(length_preserving, A2)[0]
-        # gl.internal_variables(a.gu.length, origin=epsilon)
+        gl.D[0] = A0
+        gl.D[1] = A1
+        gl.D[2] = A2
+        gl.D[-2] = An
+        A3 = fsolve(length_preserving, A3)[0]
+        gl.D = [A0, A1, A2, A3, An, gu.zetaT]
 
-        error = abs(A3 - A30)
-        # print('D_p', gl_p.D)
-        # print('D', gl.D)
-        # print(A3, A30, error)
-        # BREAK
-    return [A0, A1, A2, A3] + list(temp)[1:] + [gu.zetaT]
+        error = np.linalg.norm(np.array(gl.D)-np.array(A_before))
+        A_before = np.copy(gl.D)
+        print('error', error)
+    # print('zetaT', gu.zetaT)
+    return [A0, A1, A2, A3, An, gu.zetaT]
 
 
 epsilon = 0.1
-data = np.loadtxt('deformed_airfoil.csv', delimiter=',')
-abaqus_x = data[0, :]
-abaqus_y = data[1, :]
-g_upper = CoordinateSystem.CST(D=[0.11397826, 0.10433884, 0.10241407, 0.10070566, 0.0836374, 0.11353368, 0], chord=1,
+upper = np.loadtxt('upper_airfoil.csv', delimiter=',')
+lower = np.loadtxt('lower_airfoil.csv', delimiter=',')
+abaqus_x = list(upper[0, :]) + list(lower[0, :])
+abaqus_y = list(upper[1, :]) + list(lower[1, :])
+g_upper = CoordinateSystem.CST(D=[0.11415405, 0.10066617, 0.10787586, 0.08047336, 0.11218462, 0], chord=1,
                                color='b', N1=.5, N2=1)
-g_lower = CoordinateSystem.CST(D=[-0.11397826, -0.10433884, -0.10241407, -0.10070566, -0.0836374, -0.11353368, 0], chord=1,
+g_lower = CoordinateSystem.CST(D=[-0.11415405, -0.10066617, -0.10787586, -0.08047336, -0.11218462, 0], chord=1,
                                color='b', N1=.5, N2=1)
 g_upper.name = 'proper integral'
 g_lower.name = 'proper integral'
-g_p = CoordinateSystem.CST(D=[0.11397826, 0.10433884, 0.10241407, 0.10070566, 0.0836374, 0.11353368, 0], chord=1,
+g_p = CoordinateSystem.CST(D=[-0.11415405, -0.10066617, -0.10787586, -0.08047336, -0.11218462, 0], chord=1,
                            color='k', N1=.5, N2=1)
 g_p.name = 'proper integral'
 s_epsilon = g_p.arclength(np.array([epsilon]))[0]
@@ -154,29 +156,34 @@ s_upper = np.linspace(s_epsilon, g_p.arclength(np.array([1]))[0], 51)
 s_lower = np.linspace(s_epsilon, g_p.arclength(np.array([1]))[0], 51)
 p_upper = properties()
 p_lower = properties()
-l_upper = loads(concentrated_load=[[0, -1/2]], load_s=[s_upper[-1]])
-l_lower = loads(concentrated_load=[[0, 1/2]], load_s=[s_lower[-1]])
+l_upper = loads(concentrated_load=[[0, -1]], load_s=[s_upper[-1]])
+l_lower = loads(concentrated_load=[[0, -1]], load_s=[s_lower[-1]])
 a = airfoil(g_upper, g_lower, p_upper, p_lower, l_upper, l_lower, s_upper,
             s_lower, origin=epsilon, ignore_ends=True)
 a.calculate_x()
-a.bl.g.radius_curvature(a.bl.g.x1_grid)
-a.bu.g.radius_curvature(a.bu.g.x1_grid)
-# plt.figure()
-# plt.plot(a.bu.g.x1_grid, a.bu.g.rho, label='Upper')
-# plt.plot(a.bl.g.x1_grid, a.bl.g.rho, label='Lower')
-# plt.legend()
+
+
 # plt.show()
 # BREAK
 # print('s', a.bu.s)
 # print('x', a.bu.g.x1_grid)
 # target_length = s[-1]
 #
-a.parameterized_solver(format_input=format_input, x0=list(g_upper.D[1:-2]) + list(g_lower.D[4:-2]))
-#
+a.parameterized_solver(format_input=format_input, x0=list(g_upper.D[1:-2]))
+a.bl.g.radius_curvature(a.bl.g.x1_grid)
+a.bu.g.radius_curvature(a.bu.g.x1_grid)
 # b.gu.calculate_x1(b.s, origin=b.origin, length_rigid=b.s[0])
 # a.bu.x = b.g.x1_grid
 # b.y = b.g.x3(b.x)
 
+plt.figure()
+plt.plot(a.bu.g.x1_grid, a.bu.g.rho - a.bu.g_p.rho, label='Upper')
+plt.plot(a.bl.g.x1_grid, a.bl.g.rho - a.bl.g_p.rho, label='Lower')
+print('rho child', a.bl.g.rho)
+print('rho parent', a.bl.g_p.rho)
+plt.legend()
+
+plt.figure()
 plt.plot(a.bu.g_p.x1_grid, a.bu.g_p.x3(a.bu.g_p.x1_grid), 'b',
          label='Upper Parent', lw=3)
 plt.plot(a.bu.g.x1_grid, a.bu.g.x3(a.bu.g.x1_grid), '.5',

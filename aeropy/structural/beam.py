@@ -165,7 +165,7 @@ class beam_chen():
                 M_x = w*self.g.cos[index:i_end]*(self.x[index:i_end]-x)
                 M_y = w*self.g.sin[index:i_end]*(self.y[index:i_end]-y)
                 M_i -= trapz(M_x + M_y, self.s[index:i_end])
-        return M_i
+        return M_i + self.l.torque
 
     def calculate_G(self):
         self.G = np.zeros(len(self.x))
@@ -327,17 +327,68 @@ class airfoil():
     def parameterized_solver(self, format_input=None, x0=None):
         def formatted_residual(A):
             [Au, Al] = format_input(A, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
-            R = self.bu._residual(Au) + self.bl._residual(Al)
-            print('u', self.bu.R, Au)
-            print('l', self.bl.R, Al)
+            self.calculate_x()
+            self.calculate_resultants()
+            R = self.bu._residual(Au)
+            print('R', self.bu.R, R, Au)
             return R
 
         sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-.2, .2]])
         self.bu.g.D, self.bl.g.D = format_input(
             sol.x, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
-        self.bu.g.internal_variables(self.bu.length, origin=self.bu.origin)
-        self.bl.g.internal_variables(self.bl.length, origin=self.bl.origin)
+        # self.bu.g.internal_variables(self.bu.length, origin=self.bu.origin)
+        # self.bl.g.internal_variables(self.bl.length, origin=self.bl.origin)
         self.calculate_x()
+
         self.bu.y = self.bu.g.x3(self.bu.x)
         self.bl.y = self.bl.g.x3(self.bl.x)
         print('sol', self.bu.g.D, self.bl.g.D)
+
+    def calculate_resultants(self):
+        def derivative(f, a, method='central', h=0.01):
+            '''Compute the difference formula for f'(a) with step size h.
+
+            Parameters
+            ----------
+            f : function
+                Vectorized function of one variable
+            a : number
+                Compute derivative at x = a
+            method : string
+                Difference formula: 'forward', 'backward' or 'central'
+            h : number
+                Step size in difference formula
+
+            Returns
+            -------
+            float
+                Difference formula:
+                    central: f(a+h) - f(a-h))/2h
+                    forward: f(a+h) - f(a))/h
+                    backward: f(a) - f(a-h))/h
+            '''
+            if method == 'central':
+                return (f(a + h) - f(a - h))/(2*h)
+            elif method == 'forward':
+                return (f(a + h) - f(a))/h
+            elif method == 'backward':
+                return (f(a) - f(a - h))/h
+            else:
+                raise ValueError("Method must be 'central', 'forward' or 'backward'.")
+
+        def f(x):
+            rho = self.bl.g.radius_curvature(np.array([x]), output_only=True)
+            rho_p = self.bl.g_p.radius_curvature(np.array([x]), output_only=True)
+            # print('rhps', rho, rho_p)
+            return self.bl.p.young*self.bl.p.inertia*(rho - rho_p)[0]
+
+        self.bl.g.calculate_angles()
+        V = derivative(f, self.bl.g.chord, 'central', h=0.001)
+        Bx = V*self.bl.g.sin[-1]
+        By = -V*self.bl.g.cos[-1]
+        self.bu.l.concentrated_load[0][0] = Bx
+        self.bu.l.concentrated_load[0][1] = -1 + By
+        # print('V', V, self.bl.g.sin[-1], self.bl.g.cos[-1])
+        # BREAK
+        # print('resultant', self.bu.l.concentrated_load)
+        # BREAK
