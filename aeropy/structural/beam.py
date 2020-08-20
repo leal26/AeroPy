@@ -2,6 +2,7 @@ import aeropy
 import math
 import copy
 
+from findiff import FinDiff
 import numpy as np
 from scipy.integrate import quad, trapz
 from scipy.optimize import minimize
@@ -100,7 +101,7 @@ class euler_bernoulle_curvilinear():
 
 class beam_chen():
     def __init__(self, geometry, properties, load, s, ignore_ends=False,
-                 rotated=False, origin=0, g2=None):
+                 rotated=False, origin=0, g2=None, length_preserving=True):
         self.g = copy.deepcopy(geometry)
         self.p = properties
         self.l = load
@@ -109,11 +110,13 @@ class beam_chen():
         self.length = self.g.arclength(origin=origin)[0]
         self.ignore_ends = ignore_ends
         self.rotated = rotated
+        self.length_preserving = length_preserving
 
         if self.ignore_ends:
             self.integral_ends()
         self.g_p = copy.deepcopy(geometry)
-        self.g_p.internal_variables(self.length, origin=self.origin)
+        if length_preserving:
+            self.g_p.internal_variables(self.length, origin=self.origin)
         self.g_p.calculate_x1(self.s, origin=origin, length_rigid=s[0])
         self.g_p.radius_curvature(self.g_p.x1_grid)
 
@@ -243,10 +246,11 @@ class beam_chen():
             A = format_input(A, self.g, self.g_p)
             return self._residual(A)
 
-        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-.2, .2]],
+        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-1, 1]],
                        constraints=constraints)
         self.g.D = format_input(sol.x, self.g, self.g_p)
-        self.g.internal_variables(self.length, origin=self.origin)
+        if self.length_preserving:
+            self.g.internal_variables(self.length, origin=self.origin)
         # self.g.calculate_x1(self.s)
         self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
@@ -255,7 +259,8 @@ class beam_chen():
 
     def _residual(self, A):
         self.g.D = A
-        self.g.internal_variables(self.length, origin=self.origin)
+        if self.length_preserving:
+            self.g.internal_variables(self.length, origin=self.origin)
         self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)
@@ -280,24 +285,35 @@ class beam_chen():
         self.g.calculate_x1(self.s)
 
     def calculate_resultants(self):
+        length_child = self.g.arclength(np.array([self.g.chord]))[0]
         self.g.calculate_angles()
-        du_x = self.g.x1_grid - self.g_p.x1_grid
-        du_x[0] = 0
-        du_y = self.g.x3(self.g.x1_grid, diff='theta1') - \
-            self.g_p.x3(self.g_p.x1_grid, diff='theta1')
-        du_y[0] = 0
-        print('cos', self.g.cos)
-        print('du', du)
-        dRx = self.p.area*self.p.young*(self.g.x3)
-        dRy = self.p.area*self.p.young*du*self.g.sin
-        dRm = dRy*(self.g.x1_grid - self.g.chord) - dRx*(self.g.x3(self.g.x1_grid) - self.g.deltaz)
-        print('s', self.s)
-        print('dRx', dRx)
-        print('dRy', dRy)
-        print('dRm', dRm)
-        self.Rx = np.trapz(dRx, self.s)
-        self.Ry = np.trapz(dRy, self.s)
-        self.Rm = np.trapz(dRm, self.s)
+        cos = self.g.cos[-1]
+        sin = self.g.sin[-1]
+        # print('cos', self.g.cos)
+        Qx = 0
+        Qy = 0
+        Qt = Qx*cos + Qy*sin
+        rho_c = self.g.rho[-1]
+        rho_p = self.g_p.rho[-1]
+        # self.T = Qt - self.p.inertia*self.p.young*(rho_c - rho_p)*(1-rho_c)
+        self.T = self.p.area*self.p.young*(length_child/self.length-1)
+        b = self.g.rho[-1] - self.g_p.rho[-1]
+        a = self.g.rho[-2] - self.g_p.rho[-2]
+        ds = self.s[-1] - self.s[-2]
+        self.V = - self.p.young*self.p.inertia*(b-a)/ds
+
+        self.Rx = sin*self.V + cos*self.T
+        self.Ry = cos*self.V - sin*self.T
+        # self.Rx = cos*(self.T+sin*self.V)
+        # self.Ry = self.V/cos  # - sin/cos*self.Rx
+        print('R', self.Rx, self.Ry)
+        # print('g_p', self.g_p.rho)
+        # print('rho_c', rho_c)
+        # print('rho_p', rho_p)
+        # print('V', self.V)
+        # print('T', self.T)
+        # print('eqs', self.V/cos, self.T/sin)
+        # print('cos/sin', cos, sin)
 
 
 class airfoil():
@@ -328,7 +344,10 @@ class airfoil():
         def formatted_residual(A):
             [Au, Al] = format_input(A, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
             self.calculate_x()
-            self.calculate_resultants()
+            self.bl.g.radius_curvature(self.bl.g.x1_grid)
+            self.bl.calculate_resultants()
+            self.bu.l.concentrated_load[0][0] = -self.bl.Rx
+            self.bu.l.concentrated_load[0][1] = -1 - self.bl.Ry
             R = self.bu._residual(Au)
             print('R', self.bu.R, R, Au)
             return R
@@ -344,51 +363,92 @@ class airfoil():
         self.bl.y = self.bl.g.x3(self.bl.x)
         print('sol', self.bu.g.D, self.bl.g.D)
 
-    def calculate_resultants(self):
-        def derivative(f, a, method='central', h=0.01):
-            '''Compute the difference formula for f'(a) with step size h.
 
-            Parameters
-            ----------
-            f : function
-                Vectorized function of one variable
-            a : number
-                Compute derivative at x = a
-            method : string
-                Difference formula: 'forward', 'backward' or 'central'
-            h : number
-                Step size in difference formula
+class coupled_beams():
+    def __init__(self, g_upper, g_lower, properties_upper, properties_lower,
+                 load_upper, load_lower, s_upper, s_lower, ignore_ends=False,
+                 rotated=False, origin=0, chord=1, zetaT=0):
+        self.bu = beam_chen(g_upper, properties_upper, load_upper, s_upper,
+                            origin=origin, ignore_ends=ignore_ends,
+                            rotated=rotated)
+        self.bl = beam_chen(g_lower, properties_lower, load_lower, s_lower,
+                            origin=origin, ignore_ends=ignore_ends,
+                            rotated=rotated)
 
-            Returns
-            -------
-            float
-                Difference formula:
-                    central: f(a+h) - f(a-h))/2h
-                    forward: f(a+h) - f(a))/h
-                    backward: f(a) - f(a-h))/h
-            '''
-            if method == 'central':
-                return (f(a + h) - f(a - h))/(2*h)
-            elif method == 'forward':
-                return (f(a + h) - f(a))/h
-            elif method == 'backward':
-                return (f(a) - f(a - h))/h
-            else:
-                raise ValueError("Method must be 'central', 'forward' or 'backward'.")
+    def calculate_x(self, s_upper=None, s_lower=None):
+        if s_upper is None and s_lower is None:
+            self.bu.g.calculate_x1(self.bu.s, origin=self.bu.origin,
+                                   length_rigid=self.bu.s[0])
+            self.bl.g.calculate_x1(self.bl.s, origin=self.bl.origin,
+                                   length_rigid=self.bl.s[0])
+            self.bu.x = self.bu.g.x1_grid
+            self.bl.x = self.bl.g.x1_grid
+        else:
+            raise(NotImplementedError)
 
-        def f(x):
-            rho = self.bl.g.radius_curvature(np.array([x]), output_only=True)
-            rho_p = self.bl.g_p.radius_curvature(np.array([x]), output_only=True)
-            # print('rhps', rho, rho_p)
-            return self.bl.p.young*self.bl.p.inertia*(rho - rho_p)[0]
+    def parameterized_solver(self, format_input=None, x0=None):
+        def formatted_residual(A):
+            [Au, Al] = format_input(A, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
+            self.calculate_x()
+            self.calculate_force()
+            R = self.bu._residual(Au) + self.bl._residual(Al)
+            print('R', self.bu.R, R, Au)
+            return R
 
-        self.bl.g.calculate_angles()
-        V = derivative(f, self.bl.g.chord, 'central', h=0.001)
-        Bx = V*self.bl.g.sin[-1]
-        By = -V*self.bl.g.cos[-1]
-        self.bu.l.concentrated_load[0][0] = Bx
-        self.bu.l.concentrated_load[0][1] = -1 + By
-        # print('V', V, self.bl.g.sin[-1], self.bl.g.cos[-1])
-        # BREAK
-        # print('resultant', self.bu.l.concentrated_load)
-        # BREAK
+        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-.2, .2]])
+        self.bu.g.D, self.bl.g.D = format_input(
+            sol.x, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
+        # self.bu.g.internal_variables(self.bu.length, origin=self.bu.origin)
+        # self.bl.g.internal_variables(self.bl.length, origin=self.bl.origin)
+        self.calculate_x()
+
+        self.bu.y = self.bu.g.x3(self.bu.x)
+        self.bl.y = self.bl.g.x3(self.bl.x)
+        print('sol', self.bu.g.D, self.bl.g.D)
+
+    def calculate_force(self):
+        x_u = self.bu.g.calculate_x1(self.bu.l.concentrated_s)
+        x_l = self.bl.g.calculate_x1(self.bl.l.concentrated_s)
+
+        y_u = self.bu.g.x3(np.array([x_u]))[0]
+        y_l = self.bl.g.x3(np.array([x_l]))[0]
+
+        dx = x_u - x_l
+        dy = y_u - y_l
+        ds = np.sqrt(dx**2 + dy**2)
+        Fx = self.bu.l.concentrated_magnitude*dx/ds
+        Fy = self.bu.l.concentrated_magnitude*dy/ds
+        self.bu.l.concentrated_load = [[-Fx, -Fy], ]
+        self.bl.l.concentrated_load = [[Fx, Fy], ]
+
+
+def derivative(f, a, method='central', h=0.01):
+    '''Compute the difference formula for f'(a) with step size h.
+
+    Parameters
+    ----------
+    f : function
+        Vectorized function of one variable
+    a : number
+        Compute derivative at x = a
+    method : string
+        Difference formula: 'forward', 'backward' or 'central'
+    h : number
+        Step size in difference formula
+
+    Returns
+    -------
+    float
+        Difference formula:
+            central: f(a+h) - f(a-h))/2h
+            forward: f(a+h) - f(a))/h
+            backward: f(a) - f(a-h))/h
+    '''
+    if method == 'central':
+        return (f(a + h) - f(a - h))/(2*h)
+    elif method == 'forward':
+        return (f(a + h) - f(a))/h
+    elif method == 'backward':
+        return (f(a) - f(a - h))/h
+    else:
+        raise ValueError("Method must be 'central', 'forward' or 'backward'.")

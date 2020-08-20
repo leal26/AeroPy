@@ -29,13 +29,13 @@ morphing_direction = 'forwards'
 
 def calculate_dependent_shape_coefficients(Au_C_1_to_n,
                                            psi_spars, Au_P, Al_P, deltaz, c_P,
-                                           morphing='backwards'):
+                                           morphing='backwards', N1=0.5, N2=1.0):
     """Calculate  dependent shape coefficients for children configuration for a 4 order
     Bernstein polynomial and return the children upper, lower shape
     coefficients, children chord and spar thicknesses. _P denotes parent parameters"""
     def calculate_AC_u0(AC_u0):
         Au_C = [AC_u0] + Au_C_1_to_n
-        c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
+        c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz, N1=N1, N2=N2)
         return np.sqrt(c_P/c_C)*Au_P[0]
 
     # Bersntein Polynomial
@@ -60,7 +60,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
     Au_C = [AC_u0] + Au_C_1_to_n
 
     # Now that AC_u0 is known we can calculate the actual chord and AC_l0
-    c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
+    c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz, N1=N1, N2=N2)
     AC_l0 = np.sqrt(c_P/c_C)*Al_P[0]
     # print(Au_C)
     # print(Au_P)
@@ -77,10 +77,10 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
             psi_j = psi_spars[j]
             # Calculate the spar thickness in meters from parent, afterwards, need to
             # adimensionalize for the goal airfoil by dividing by c_goal
-            t_j = calculate_spar_distance(psi_spars[j], Au_C, Au_P, Al_P, deltaz, c_P)
+            t_j = calculate_spar_distance(psi_spars[j], Au_C, Au_P, Al_P, deltaz, c_P, N1=N1, N2=N2)
 
             spar_thicknesses.append(t_j)
-            b_list[j] = (t_j/c_C - psi_j*deltaz/c_C)/((psi_j**0.5)*(1-psi_j)) - A0*(1-psi_j)**n
+            b_list[j] = (t_j/c_C - psi_j*deltaz/c_C)/((psi_j**N1)*(1-psi_j)**N2) - A0*(1-psi_j)**n
 
         B = np.zeros((n, n))
         # j is the row dimension and i the column dimension in this case
@@ -104,23 +104,23 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
         xi_lower_children = []
         xi_upper_children = []
 
-        c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz)
+        c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz, N1=N1, N2=N2)
         # print(c_C, AC_u0, AC_l0)
         # psi_baseline, Au_baseline, Au_goal, deltaz, c_baseline, c_goal
         psi_upper_children = []
         for j in range(len(psi_spars)):
             psi_upper_children.append(calculate_psi_goal(psi_spars[j], Au_P, Au_C, deltaz,
-                                                         c_P, c_C))
+                                                         c_P, c_C, N1=N1, N2=N2))
         # Calculate xi for upper children. Do not care about lower so just gave it random shape coefficients
         xi_upper_children = CST(psi_upper_children, 1., deltasz=[
-                                deltaz/2./c_C, deltaz/2./c_C],  Al=Au_C, Au=Au_C)
+                                deltaz/2./c_C, deltaz/2./c_C],  Al=Au_C, Au=Au_C, N1=N1, N2=N2)
         xi_upper_children = xi_upper_children['u']
 
         # print xi_upper_children
 
         # Debugging section
         x = np.linspace(0, 1)
-        y = CST(x, 1., deltasz=[deltaz/2./c_C, deltaz/2./c_C],  Al=Au_C, Au=Au_C)
+        y = CST(x, 1., deltasz=[deltaz/2./c_C, deltaz/2./c_C],  Al=Au_C, Au=Au_C, N1=N1, N2=N2)
         # plt.plot(x,y['u'])
         # plt.scatter(psi_upper_children, xi_upper_children)
         # plt.grid()
@@ -128,11 +128,11 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
         # BREAK
         for j in range(len(psi_spars)):
             xi_parent = CST(psi_spars, 1., deltasz=[
-                            deltaz/2./c_P, deltaz/2./c_P],  Al=Al_P, Au=Au_P)
+                            deltaz/2./c_P, deltaz/2./c_P],  Al=Al_P, Au=Au_P, N1=N1, N2=N2)
             delta_j_P = xi_parent['u'][j]-xi_parent['l'][j]
             t_j = c_P*(delta_j_P)
             # Claculate orientation for children
-            s_j = calculate_spar_direction(psi_spars[j], Au_P, Au_C, deltaz, c_C)
+            s_j = calculate_spar_direction(psi_spars[j], Au_P, Au_C, deltaz, c_C, N1=N1, N2=N2)
             psi_l_j = psi_upper_children[j]-delta_j_P/c_C*s_j[0]
             xi_l_j = xi_upper_children[j]-delta_j_P/c_C*s_j[1]
 
@@ -141,7 +141,7 @@ def calculate_dependent_shape_coefficients(Au_C_1_to_n,
             xi_lower_children.append(xi_l_j)
 
             f[j] = (2*xi_l_j + psi_l_j*deltaz/c_C) / \
-                (2*(psi_l_j**0.5)*(psi_l_j-1)) - AC_l0*(1-psi_l_j)**n
+                (2*(psi_l_j**N1)*(psi_l_j-1)**N2) - AC_l0*(1-psi_l_j)**n
 
         F = np.zeros((n, n))
         # j is the row dimension and i the column dimension in this case

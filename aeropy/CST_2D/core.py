@@ -119,12 +119,12 @@ def ddxi_l(psi, Al, abs_output=False, N1=0.5, N2=1):
         return diff
 
 
-def calculate_c_baseline(c_L, Au_C, Au_L, deltaz_C, deltaz_L=None):
+def calculate_c_baseline(c_L, Au_C, Au_L, deltaz_C, deltaz_L=None, N1=0.5, N2=1):
     """Equations in the New_CST.pdf. Calculates the upper chord in order for
        the cruise and landing airfoils ot have the same length."""
 
     def integrand(psi, Au, delta_xi):
-        return np.sqrt(1 + dxi_u(psi, Au, delta_xi)**2)
+        return np.sqrt(1 + dxi_u(psi, Au, delta_xi, N1=N1, N2=N2)**2)
 
     def f(c_C):
         """Function dependent of c_C and that outputs c_C."""
@@ -146,13 +146,13 @@ def calculate_c_baseline(c_L, Au_C, Au_L, deltaz_C, deltaz_L=None):
 
 
 def calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz,
-                       c_baseline, c_goal):
+                       c_baseline, c_goal, N1=0.5, N2=1.0):
     """Find the value for psi that has the same location w on the upper
     surface of the goal as psi_baseline on the upper surface of the
     baseline"""
 
     def integrand(psi_baseline, Au, deltaz, c):
-        return c*np.sqrt(1 + dxi_u(psi_baseline, Au, deltaz/c)**2)
+        return c*np.sqrt(1 + dxi_u(psi_baseline, Au, deltaz/c, N1=N1, N2=N2)**2)
 
     def equation(psi_goal, L_baseline, Au_goal, deltaz, c):
         y, err = quad(integrand, 0, psi_goal, args=(Au_goal, deltaz, c))
@@ -167,33 +167,33 @@ def calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz,
     return y[0]
 
 
-def calculate_cbeta(psi_i, Au, delta_xi):
+def calculate_cbeta(psi_i, Au, delta_xi, N1=0.5, N2=1.):
     """Calculate cosine for angles between vertical spars and outer mold
     line for cruise"""
-    norm = np.sqrt(1+dxi_u(psi_i, Au, delta_xi)**2)
-    return dxi_u(psi_i, Au, delta_xi)/norm
+    norm = np.sqrt(1+dxi_u(psi_i, Au, delta_xi, N1=N1, N2=N2)**2)
+    return dxi_u(psi_i, Au, delta_xi, N1=N1, N2=N2)/norm
 
 
 def calculate_spar_direction(psi_baseline, Au_baseline, Au_goal, deltaz,
-                             c_goal):
+                             c_goal, N1=0.5, N2=1.0):
     """Calculate the direction of the spar component based on a location
     at the upper surface for the cruise airfoil."""
     # Calculate cruise chord
-    c_baseline = calculate_c_baseline(c_goal, Au_baseline, Au_goal, deltaz)
+    c_baseline = calculate_c_baseline(c_goal, Au_baseline, Au_goal, deltaz, N1=N1, N2=N2)
     # Calculate psi at goal arifoil
     psi_goal = calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz,
-                                  c_baseline, c_goal)
+                                  c_baseline, c_goal, N1=N1, N2=N2)
     # non-normalized direction
     s = np.zeros(2)
     t = np.zeros(2)
 #    t_norm = np.sqrt(1 + (dxi_u(psi_goal, Au_goal[0], Au_goal[1], deltaz))**2)
 
     cbeta = calculate_cbeta(psi_baseline, Au_baseline,
-                            deltaz/c_baseline)
+                            deltaz/c_baseline, N1=N1, N2=N2)
     sbeta = np.sqrt(1-cbeta**2)
 
     t[0] = 1
-    t[1] = dxi_u(psi_goal, Au_goal, deltaz/c_goal)
+    t[1] = dxi_u(psi_goal, Au_goal, deltaz/c_goal, N1=N1, N2=N2)
     t_norm = np.sqrt(t[0]**2 + t[1]**2)
     t = (1./t_norm)*t
 #    s[0] = t_norm*cbeta - dxi_u(psi_goal, Au_goal[0], Au_goal[1], deltaz)
@@ -205,7 +205,7 @@ def calculate_spar_direction(psi_baseline, Au_baseline, Au_goal, deltaz,
 
 
 def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
-                            deltaz, c_goal):
+                            deltaz, c_goal, N1=.5, N2=1.):
     """Calculate spar distance (dimensional)"""
 
     def f(psi_lower_goal):
@@ -216,18 +216,18 @@ def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
                                              y_upper_goal)/c_goal
 
     # Calculate cruise chord
-    c_baseline = calculate_c_baseline(c_goal, Au_baseline, Au_goal, deltaz)
+    c_baseline = calculate_c_baseline(c_goal, Au_baseline, Au_goal, deltaz, N1=N1, N2=N2)
 
     # Calculate upper psi at goal airfoil
     psi_upper_goal = calculate_psi_goal(psi_baseline, Au_baseline, Au_goal,
-                                        deltaz, c_baseline, c_goal)
+                                        deltaz, c_baseline, c_goal, N1=N1, N2=N2)
     y_upper_goal = CST(psi_upper_goal*c_goal, c_goal,
-                       [deltaz/2., deltaz/2.], Au_goal, Al_goal)
+                       [deltaz/2., deltaz/2.], Au_goal, Al_goal, N1=N1, N2=N2)
     y_upper_goal = y_upper_goal['u']
 
     # Spar direction
     s = calculate_spar_direction(psi_baseline, Au_baseline, Au_goal, deltaz,
-                                 c_goal)
+                                 c_goal, N1=N1, N2=N2)
 
     # Calculate lower psi and xi at goal airfoil
     # Because the iterative method can lead to warningdivision by zero after
@@ -236,18 +236,18 @@ def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
     psi_lower_goal = optimize.fixed_point(f, [psi_upper_goal])
     x_lower_goal = psi_lower_goal*c_goal
     y_lower_goal = CST(x_lower_goal, c_goal, [deltaz/2., deltaz/2.],
-                       Au_goal, Al_goal)
+                       Au_goal, Al_goal, N1=N1, N2=N2)
     y_lower_goal = y_lower_goal['l']
 
     return (y_upper_goal - y_lower_goal[0])/s[1]
 
 
-def calculate_arc_length(psi_initial, psi_final, A_j, deltaz, c_j):
+def calculate_arc_length(psi_initial, psi_final, A_j, deltaz, c_j, N1=.5, N2=1.0):
     """Calculate arc length from psi_initial to psi_final for
        shape coefficient A_j, trailing edge thickness deltaz, and
        chord c_j. Output is the dimensional length"""
     def integrand(psi_baseline, A_j, deltaz, c_j):
-        return c_j*np.sqrt(1 + dxi_u(psi_baseline, A_j, deltaz/c_j)**2)
+        return c_j*np.sqrt(1 + dxi_u(psi_baseline, A_j, deltaz/c_j, N1=N1, N2=N2)**2)
 
     L, err = quad(integrand, psi_initial, psi_final, args=(A_j, deltaz, c_j))
     return L
@@ -337,24 +337,24 @@ def find_inflection_points(Au, Al):
     return psi_u_solutions, psi_l_solutions
 
 
-def calculate_camber(psi, Au, Al, delta_xi):
-    xi = CST(psi, 1., [delta_xi/2., delta_xi/2.], Au, Al)
+def calculate_camber(psi, Au, Al, delta_xi, N1=.5, N2=1.):
+    xi = CST(psi, 1., [delta_xi/2., delta_xi/2.], Au, Al, N1=N1, N2=N2)
     return (xi['u']+xi['l'])/2.
 
 
-def calculate_max_camber(Au, Al, delta_xi):
+def calculate_max_camber(Au, Al, delta_xi, N1=.5, N2=1.):
     """Calculate maximum camber and where it is. Returns (\psi, max_camber)"""
     def dcamber(psi, Au, Al, delta_xi):
-        return 0.5*(dxi_u(psi, Au, delta_xi) + dxi_l(psi, Al, delta_xi))
+        return 0.5*(dxi_u(psi, Au, delta_xi, N1=N1, N2=N2) + dxi_l(psi, Al, delta_xi, N1=N1, N2=N2))
 
     solution = fsolve(dcamber, 0.5, args=(Au, Al, delta_xi))
 
     # Outputs floats with psi and xi coordinates
-    return solution[0], calculate_camber(solution, Au, Al, delta_xi)[0]
+    return solution[0], calculate_camber(solution, Au, Al, delta_xi, N1=N1, N2=N2)[0]
 
 
-def calculate_average_camber(Au, Al, delta_xi):
+def calculate_average_camber(Au, Al, delta_xi, N1=.5, N2=1.):
     psi = np.linspace(0, 1, 1000)
-    xi = CST(psi, 1., [delta_xi/2., delta_xi/2.], Au, Al)
+    xi = CST(psi, 1., [delta_xi/2., delta_xi/2.], Au, Al, N1=N1, N2=N2)
     camber = (xi['u']+xi['l'])/2.
     return np.average(np.absolute(camber))

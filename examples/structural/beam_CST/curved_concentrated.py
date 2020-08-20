@@ -47,8 +47,8 @@ g = CoordinateSystem.CST(D=[-0.25, -0.25, -0.25, -0.25, 0.25], chord=1,
                          color='b', N1=1, N2=1, deltaz=0.25)
 g_p = CoordinateSystem.CST(D=[-0.25, -0.25, -0.25, -0.25, 0.25], chord=1,
                            color='k', N1=1, N2=1, deltaz=0.25)
-g.name = 'proper integral'
-g_p.name = 'proper integral'
+# g.name = 'proper integral'
+# g_p.name = 'proper integral'
 # x = np.linspace(0, 1, 20)
 # s = np.zeros(len(x))
 # for i in range(len(x)):
@@ -61,6 +61,13 @@ l = loads(concentrated_load=[[0, -1]], load_s=[s[-1]])
 b = beam_chen(g, p, l, s, ignore_ends=True)
 b.parameterized_solver(format_input=format_input, x0=b.g.D[:-1])
 
+b.calculate_resultants()
+print(b.Rx, b.Ry)
+print('grad rho', np.gradient(b.p.inertia*b.p.young*(b.g.rho-b.g_p.rho), b.s))
+print('grad M', np.gradient(b.M, b.g.x1_grid))
+plt.plot(b.s, b.p.inertia*b.p.young*(b.g.rho-b.g_p.rho), 'r')
+plt.plot(b.s, b.M, 'b')
+plt.show()
 b.g_p.plot(label='Parent')
 print(b.g.zetaT, b.g.deltaz)
 plt.plot(b.x, b.y, '.5', label='Child: %.3f N' % -l.concentrated_load[0][-1], lw=3)

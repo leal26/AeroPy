@@ -131,11 +131,15 @@ class CoordinateSystem(object):
                        N1=self.N1, N2=self.N2))
         elif diff == 'x1':
             d = dxi_u(psi, A, self.zetaT, N1=self.N1, N2=self.N2)
-            if abs(x1[-1] - self.chord) < 1e-5:
+            if abs(x1[-1] - self.chord) < 1e-6:
                 d[-1] = -A[-1] + self.zetaT
             return d
         elif diff == 'x11':
-            return((1/self.chord)*ddxi_u(psi, A, N1=self.N1, N2=self.N2))
+            dd = (1/self.chord)*ddxi_u(psi, A, N1=self.N1, N2=self.N2)
+            if abs(x1[-1] - self.chord) < 1e-6:
+                n = len(A) - 1
+                dd[-1] = 2*n*A[-2] - 2*(self.N1+n)*A[-1]
+            return dd
         elif diff == 'theta1':
             return self.x3(x1, 'x1')*self.x1(x1, 'theta1')
         elif diff == 'theta11':
@@ -313,10 +317,10 @@ class CoordinateSystem(object):
             else:
                 self.x1_grid[index] = self.x1_grid[index-1] + dx[0]
 
-                if self.name == 'CST':
-                    length_current = length_rigid + self.improper_arclength_index(index)
-                else:
-                    length_current = length_rigid + self.arclength_index(index)
+                # if self.name == 'CST':
+                #     length_current = length_rigid + self.improper_arclength_index(index)
+                # else:
+                length_current = length_rigid + self.arclength_index(index)
                 return target - length_current
 
         def fprime_index(x):
@@ -342,7 +346,7 @@ class CoordinateSystem(object):
                 if not self.name == 'CST' and origin != 0:
                     dr = self.x3(np.array([origin]), 'x1')
                     self.darc[0] = np.sqrt(1 + dr**2)
-                elif self.name == 'CST' and origin != 0:
+                elif self.name != 'CST' and origin != 0:
                     raise(NotImplementedError)
             for index in range(1, len(length_target)):
                 target = length_target[index]
@@ -368,10 +372,10 @@ class CoordinateSystem(object):
                 return 100
             else:
                 self.x1_grid[index] = x
-                if self.name == 'CST':
-                    length_current = length_rigid + self.improper_arclength_index(index)
-                else:
-                    length_current = length_rigid + self.arclength_index(index)
+                # if self.name == 'CST':
+                #     length_current = length_rigid + self.improper_arclength_index(index)
+                # else:
+                length_current = length_rigid + self.arclength_index(index)
                 return abs(target - length_current)
 
     #     def fprime_index(x):
@@ -479,14 +483,12 @@ class CoordinateSystem(object):
             rho = (dx*ddy-dy*ddx)/(dx**2 + dy**2)**(1.5)
         else:
             rho = self.x3(x, diff='x11')/(1+(self.x3(x, diff='x1'))**2)**(3/2)
-            if self.name == 'CST' and x[0] == 0:
-                if self.D[0] == 0:
-                    rho[0] = 0
-                else:
-                    rho[0] = -2/(self.D[0]**2)/self.chord
-                # x_i = np.array([1e-7])
-                # r = self.x3(x_i, diff='x11')/(1+(self.x3(x_i, diff='x1'))**2)**(3/2)
-                # rho[0] = r
+            if self.name == 'CST':
+                if x[0] == 0:
+                    if self.D[0] == 0:
+                        rho[0] = 0
+                    else:
+                        rho[0] = -2/(self.D[0]**2)/self.chord
         if output_only:
             return rho
         else:

@@ -11,8 +11,8 @@ from aeropy.geometry.airfoil import create_x, rotate, CST
 
 
 def format_input(input, gu=None, gu_p=None, gl=None, gl_p=None):
-    Au = format_input_upper(input, g=gu, g_p=gu_p)
-    Al = format_input_lower(gu=gu, gu_p=gu_p, gl=gl, gl_p=gl_p)
+    Au = format_input_upper(input[:-1], g=gu, g_p=gu_p)
+    Al = format_input_lower(input[-1:], gu=gu, gu_p=gu_p, gl=gl, gl_p=gl_p)
 
     return Au, Al
 
@@ -64,7 +64,7 @@ def format_input_upper(input, g=None, g_p=None):
     return [A0] + list(temp) + [g.zetaT]
 
 
-def format_input_lower(gu=None, gu_p=None, gl=None, gl_p=None):
+def format_input_lower(A3, gu=None, gu_p=None, gl=None, gl_p=None):
     def free_end(An_in):
         den = (1+(-An_in + gl.zetaT)**2)**(1.5)
         An_out = (2*n*Cn1 - den*(gl.chord/gl_p.chord)*dd_p)/(1+2*n)
@@ -73,9 +73,7 @@ def format_input_lower(gu=None, gu_p=None, gl=None, gl_p=None):
         print(dd_p, dd_c1, dd_c2)
         return An_out
 
-    def length_preserving(A3):
-        gl.D[3] = A3[0]
-        return a.bl.length - gl.arclength(origin=a.bl.origin)[0]
+    gl.D[3] = A3[0]
     gl.chord = gu.chord
     gl.zetaT = gu.zetaT
     gl.deltaz = gu.chord*gu.zetaT
@@ -84,56 +82,47 @@ def format_input_lower(gu=None, gu_p=None, gl=None, gl_p=None):
     Pn = gl_p.D[-2]
     Pn1 = gl_p.D[-3]
     dd_p = (2*n*Pn1-(1+2*n)*Pn)/(1+(-Pn + gl_p.zetaT)**2)**(1.5)
-    A3 = gl.D[3]
     Cn1 = gl.D[-3]
     A0 = np.sqrt(gl_p.chord/gl.chord)*gl_p.D[0]
-    error = 999
-    while error > 1e-3:
-        A_before = gl.D
-        An = float(fixed_point(free_end, gl.D[-2]))
-        temp = [A3, An]
+    An = float(fixed_point(free_end, gl.D[-2]))
+    temp = [A3, An]
 
-        A_template = np.zeros(len(gl.D)-1)
-        # D
-        D = np.zeros([2, 2])
+    A_template = np.zeros(len(gl.D)-1)
+    # D
+    D = np.zeros([2, 2])
+    A = np.copy(A_template)
+    A[1] = 1
+    D[0, 0] = CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=gu.chord)
+    D[1, 0] = dxi_u(epsilon/gu.chord, A, 0, N1=0.5, N2=1)
+    A = np.copy(A_template)
+    A[2] = 1
+    D[0, 1] = CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=gu.chord)
+    D[1, 1] = dxi_u(epsilon/gu.chord, A, 0, N1=0.5, N2=1)
+
+    # d
+    d = np.zeros([2, 1])
+    d[0] = gl_p.x3(np.array([epsilon]))[0] - epsilon*gu.zetaT
+    d[1] = gl_p.x3(np.array([epsilon]), diff='x1')[0] - gu.zetaT
+
+    indexes = [0] + [*range(3, n+1)]
+    for i in indexes:
         A = np.copy(A_template)
-        A[1] = 1
-        D[0, 0] = CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=gu.chord)
-        D[1, 0] = dxi_u(epsilon/gu.chord, A, 0, N1=0.5, N2=1)
-        A = np.copy(A_template)
-        A[2] = 1
-        D[0, 1] = CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=gu.chord)
-        D[1, 1] = dxi_u(epsilon/gu.chord, A, 0, N1=0.5, N2=1)
+        if i == 0:
+            A[0] = A0
+        else:
+            A[i] = temp[i-3]
+        d[0] -= CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=gu.chord)
+        d[1] -= dxi_u(epsilon/gu.chord, A, 0, N1=0.5, N2=1)
 
-        # d
-        d = np.zeros([2, 1])
-        d[0] = gl_p.x3(np.array([epsilon]))[0] - epsilon*gu.zetaT
-        d[1] = gl_p.x3(np.array([epsilon]), diff='x1')[0] - gu.zetaT
+    det = D[0, 0]*D[1, 1] - D[0, 1]*D[1, 0]
+    A1 = (1/det)*(D[1, 1]*d[0][0] - D[0, 1]*d[1][0])
+    A2 = (1/det)*(-D[1, 0]*d[0][0] + D[0, 0]*d[1][0])
+    gl.D[0] = A0
+    gl.D[1] = A1
+    gl.D[2] = A2
+    gl.D[-2] = An
+    gl.D = [A0, A1, A2, A3, An, gu.zetaT]
 
-        indexes = [0] + [*range(3, n+1)]
-        for i in indexes:
-            A = np.copy(A_template)
-            if i == 0:
-                A[0] = A0
-            else:
-                A[i] = temp[i-3]
-            d[0] -= CST(epsilon, Au=A, deltasz=0, N1=0.5, N2=1, c=gu.chord)
-            d[1] -= dxi_u(epsilon/gu.chord, A, 0, N1=0.5, N2=1)
-
-        det = D[0, 0]*D[1, 1] - D[0, 1]*D[1, 0]
-        A1 = (1/det)*(D[1, 1]*d[0][0] - D[0, 1]*d[1][0])
-        A2 = (1/det)*(-D[1, 0]*d[0][0] + D[0, 0]*d[1][0])
-        gl.D[0] = A0
-        gl.D[1] = A1
-        gl.D[2] = A2
-        gl.D[-2] = An
-        A3 = fsolve(length_preserving, A3)[0]
-        gl.D = [A0, A1, A2, A3, An, gu.zetaT]
-
-        error = np.linalg.norm(np.array(gl.D)-np.array(A_before))
-        A_before = np.copy(gl.D)
-        print('error', error)
-    # print('zetaT', gu.zetaT)
     return [A0, A1, A2, A3, An, gu.zetaT]
 
 
@@ -169,7 +158,7 @@ a.calculate_x()
 # print('x', a.bu.g.x1_grid)
 # target_length = s[-1]
 #
-a.parameterized_solver(format_input=format_input, x0=list(g_upper.D[1:-2]))
+a.parameterized_solver(format_input=format_input, x0=list(g_upper.D[1:-2]) + [g_lower.D[3]])
 a.bl.g.radius_curvature(a.bl.g.x1_grid)
 a.bu.g.radius_curvature(a.bu.g.x1_grid)
 # b.gu.calculate_x1(b.s, origin=b.origin, length_rigid=b.s[0])
