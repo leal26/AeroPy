@@ -82,9 +82,9 @@ class CoordinateSystem(object):
         return c
 
     @classmethod
-    def CST(cls, D, chord, color, N1=.5, N2=1.0, deltaz=0, tol=1e-6):
+    def CST(cls, D, chord, color, N1=.5, N2=1.0, deltaz=0, tol=1e-6, offset=0):
         c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2,
-                deltaz=deltaz, tol=tol)
+                deltaz=deltaz, tol=tol, offset=offset)
         c.x3 = c._x3_CST
         c.name = 'CST'
         c.zetaT = c.deltaz/c.chord
@@ -127,8 +127,8 @@ class CoordinateSystem(object):
         A = self.D[:-1]
         psi = x1 / self.chord
         if diff is None:
-            return(CST(x1, self.chord, deltasz=self.deltaz, Au=A,
-                       N1=self.N1, N2=self.N2))
+            return(self.offset + CST(x1, self.chord, deltasz=self.deltaz, Au=A,
+                                     N1=self.N1, N2=self.N2))
         elif diff == 'x1':
             d = dxi_u(psi, A, self.zetaT, N1=self.N1, N2=self.N2)
             if abs(x1[-1] - self.chord) < 1e-6:
@@ -249,6 +249,8 @@ class CoordinateSystem(object):
             return np.sqrt(1 + dr**2)
         if chord is None:
             chord = self.chord
+        if chord == 0:
+            return [0, 0]
         return integrate.quad(integrand, origin, chord, limit=500)
 
     def arclength_index(self, index):
@@ -305,65 +307,66 @@ class CoordinateSystem(object):
         A = self.N1**2*self.D[0]**2
         return indefinite_integral(end) - indefinite_integral(start)
 
-    def calculate_x1(self, length_target, bounds=None, output=False, origin=0,
-                     length_rigid=0):
-        def f(c_c):
-            length_current, err = self.arclength(c_c[0])
-            return abs(target - length_current)
-
-        def f_index(dx):
-            if dx[0] < 0:
-                return 100
-            else:
-                self.x1_grid[index] = self.x1_grid[index-1] + dx[0]
-
-                # if self.name == 'CST':
-                #     length_current = length_rigid + self.improper_arclength_index(index)
-                # else:
-                length_current = length_rigid + self.arclength_index(index)
-                return target - length_current
-
-        def fprime_index(x):
-            dr = self.x3(x, 'x1')
-            return np.array([np.sqrt(1 + dr[0]**2)])
-
-        if len(length_target) == 1:
-            target = length_target[0]
-            x1 = [optimize.fsolve(f, 0, fprime=fprime_index)[0]]
-        else:
-            x1 = [origin]
-            if hasattr(self, 'x1_grid'):
-                if np.isnan(self.x1_grid).any():
-                    prev_values = False
-                else:
-                    prev_values = True
-            else:
-                prev_values = False
-            if not prev_values:
-                self.x1_grid = np.zeros(len(length_target))
-                self.darc = np.ones(len(length_target))
-                self.x1_grid[0] = origin
-                if not self.name == 'CST' and origin != 0:
-                    dr = self.x3(np.array([origin]), 'x1')
-                    self.darc[0] = np.sqrt(1 + dr**2)
-                elif self.name != 'CST' and origin != 0:
-                    raise(NotImplementedError)
-            for index in range(1, len(length_target)):
-                target = length_target[index]
-                if prev_values:
-                    x0 = self.x1_grid[index] - self.x1_grid[index-1]
-                else:
-                    x0 = length_target[index] - length_target[index-1]
-                dx = optimize.fsolve(f_index, x0, fprime=fprime_index)[0]
-                x1.append(self.x1_grid[index-1] + dx)
-        if output:
-            return np.array(x1)
-        else:
-            self.x1_grid = np.array(x1)
+    # def calculate_x1(self, length_target, bounds=None, output=False, origin=0,
+    #                  length_rigid=0):
+    #     def f(c_c):
+    #         length_current, err = self.arclength(c_c[0])
+    #         return abs(target - length_current)
+    #
+    #     def f_index(dx):
+    #         if dx[0] < 0:
+    #             return 100
+    #         else:
+    #             self.x1_grid[index] = self.x1_grid[index-1] + dx[0]
+    #
+    #             # if self.name == 'CST':
+    #             #     length_current = length_rigid + self.improper_arclength_index(index)
+    #             # else:
+    #             length_current = length_rigid + self.arclength_index(index)
+    #             return target - length_current
+    #
+    #     def fprime_index(x):
+    #         dr = self.x3(x, 'x1')
+    #         return np.array([np.sqrt(1 + dr[0]**2)])
+    #
+    #     if len(length_target) == 1:
+    #         target = length_target[0]
+    #         x1 = [optimize.fsolve(f, 0, fprime=fprime_index)[0]]
+    #     else:
+    #         x1 = [origin]
+    #         if hasattr(self, 'x1_grid'):
+    #             if np.isnan(self.x1_grid).any():
+    #                 prev_values = False
+    #             else:
+    #                 prev_values = True
+    #         else:
+    #             prev_values = False
+    #         if not prev_values:
+    #             self.x1_grid = np.zeros(len(length_target))
+    #             self.darc = np.ones(len(length_target))
+    #             self.x1_grid[0] = origin
+    #             if not self.name == 'CST' and origin != 0:
+    #                 dr = self.x3(np.array([origin]), 'x1')
+    #                 self.darc[0] = np.sqrt(1 + dr**2)
+    #             elif self.name != 'CST' and origin != 0:
+    #                 raise(NotImplementedError)
+    #         for index in range(1, len(length_target)):
+    #             target = length_target[index]
+    #             if prev_values:
+    #                 x0 = self.x1_grid[index] - self.x1_grid[index-1]
+    #             else:
+    #                 x0 = length_target[index] - length_target[index-1]
+    #             dx = optimize.fsolve(f_index, x0, fprime=fprime_index)[0]
+    #             x1.append(self.x1_grid[index-1] + dx)
+    #     if output:
+    #         return np.array(x1)
+    #     else:
+    #         self.x1_grid = np.array(x1)
 
     def calculate_x1(self, length_target, bounds=None, output=False, origin=0, length_rigid=0):
         def f(c_c):
             length_current, err = self.arclength(c_c[0])
+            # print(c_c, length_current)
             return abs(target - length_current)
 
         def f_index(x):

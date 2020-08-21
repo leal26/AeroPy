@@ -394,7 +394,7 @@ class coupled_beams():
             R = self.bu._residual(Au) + self.bl._residual(Al)
             print('R', self.bu.R, R, Au)
             return R
-
+        # print('x0', x0)
         sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-.2, .2]])
         self.bu.g.D, self.bl.g.D = format_input(
             sol.x, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
@@ -407,19 +407,20 @@ class coupled_beams():
         print('sol', self.bu.g.D, self.bl.g.D)
 
     def calculate_force(self):
-        x_u = self.bu.g.calculate_x1(self.bu.l.concentrated_s)
-        x_l = self.bl.g.calculate_x1(self.bl.l.concentrated_s)
+        x_u = self.bu.g.calculate_x1(np.array(self.bu.l.concentrated_s), output=True)
+        x_l = self.bl.g.calculate_x1(np.array(self.bl.l.concentrated_s), output=True)
 
         y_u = self.bu.g.x3(np.array([x_u]))[0]
         y_l = self.bl.g.x3(np.array([x_l]))[0]
-
+        print('AH', x_u, x_l, y_u, y_l)
         dx = x_u - x_l
         dy = y_u - y_l
         ds = np.sqrt(dx**2 + dy**2)
-        Fx = self.bu.l.concentrated_magnitude*dx/ds
-        Fy = self.bu.l.concentrated_magnitude*dy/ds
-        self.bu.l.concentrated_load = [[-Fx, -Fy], ]
-        self.bl.l.concentrated_load = [[Fx, Fy], ]
+        Fx = self.bu.l.concentrated_magnitude[0]*dx/ds[0]
+        Fy = self.bu.l.concentrated_magnitude[0]*dy/ds[0]
+        self.bu.l.concentrated_load = [[-Fx[0], -Fy[0]], ]
+        self.bl.l.concentrated_load = [[Fx[0], Fy[0]], ]
+        print('loads', self.bu.l.concentrated_load, self.bl.l.concentrated_load)
 
 
 def derivative(f, a, method='central', h=0.01):
