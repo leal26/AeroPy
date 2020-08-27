@@ -63,7 +63,9 @@ class loads():
     def __init__(self, concentrated_load=None, load_s=None,
                  distributed_load=None, follower=False, torque=0):
         self.concentrated_load = concentrated_load
+        self.external_load = concentrated_load
         self.concentrated_s = load_s
+        self.external_s = load_s
         self.concentrated_x = None
         self.torque = 0
         self.distributed_load = distributed_load

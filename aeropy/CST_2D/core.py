@@ -145,8 +145,8 @@ def calculate_c_baseline(c_L, Au_C, Au_L, deltaz_C, deltaz_L=None, N1=0.5, N2=1)
     return c_C[0]
 
 
-def calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz,
-                       c_baseline, c_goal, N1=0.5, N2=1.0):
+def calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz_baseline,
+                       c_baseline, c_goal, N1=0.5, N2=1.0, deltaz_goal=None):
     """Find the value for psi that has the same location w on the upper
     surface of the goal as psi_baseline on the upper surface of the
     baseline"""
@@ -154,15 +154,16 @@ def calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz,
     def integrand(psi_baseline, Au, deltaz, c):
         return c*np.sqrt(1 + dxi_u(psi_baseline, Au, deltaz/c, N1=N1, N2=N2)**2)
 
-    def equation(psi_goal, L_baseline, Au_goal, deltaz, c):
-        y, err = quad(integrand, 0, psi_goal, args=(Au_goal, deltaz, c))
+    def equation(psi_goal, L_baseline, Au_goal, deltaz_goal, c):
+        y, err = quad(integrand, 0, psi_goal, args=(Au_goal, deltaz_goal, c))
         return y - L_baseline
-
+    if deltaz_goal is None:
+        deltaz_goal = deltaz_baseline
     L_baseline, err = quad(integrand, 0, psi_baseline,
-                           args=(Au_baseline, deltaz, c_baseline))
+                           args=(Au_baseline, deltaz_baseline, c_baseline))
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        y = fsolve(equation, psi_baseline, args=(L_baseline, Au_goal, deltaz,
+        y = fsolve(equation, psi_baseline, args=(L_baseline, Au_goal, deltaz_goal,
                                                  c_goal))
     return y[0]
 
@@ -174,26 +175,29 @@ def calculate_cbeta(psi_i, Au, delta_xi, N1=0.5, N2=1.):
     return dxi_u(psi_i, Au, delta_xi, N1=N1, N2=N2)/norm
 
 
-def calculate_spar_direction(psi_baseline, Au_baseline, Au_goal, deltaz,
-                             c_goal, N1=0.5, N2=1.0):
+def calculate_spar_direction(psi_baseline, Au_baseline, Au_goal, deltaz_baseline,
+                             c_goal, N1=0.5, N2=1.0, deltaz_goal=None):
     """Calculate the direction of the spar component based on a location
     at the upper surface for the cruise airfoil."""
+    if deltaz_goal is None:
+        deltaz_goal = deltaz_baseline
     # Calculate cruise chord
-    c_baseline = calculate_c_baseline(c_goal, Au_baseline, Au_goal, deltaz, N1=N1, N2=N2)
+    c_baseline = calculate_c_baseline(c_goal, Au_baseline, Au_goal,
+                                      deltaz_baseline, deltaz_goal, N1=N1, N2=N2)
     # Calculate psi at goal arifoil
-    psi_goal = calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz,
-                                  c_baseline, c_goal, N1=N1, N2=N2)
+    psi_goal = calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz_baseline,
+                                  c_baseline, c_goal, N1=N1, N2=N2, deltaz_goal=deltaz_goal)
     # non-normalized direction
     s = np.zeros(2)
     t = np.zeros(2)
 #    t_norm = np.sqrt(1 + (dxi_u(psi_goal, Au_goal[0], Au_goal[1], deltaz))**2)
 
     cbeta = calculate_cbeta(psi_baseline, Au_baseline,
-                            deltaz/c_baseline, N1=N1, N2=N2)
+                            deltaz_baseline/c_baseline, N1=N1, N2=N2)
     sbeta = np.sqrt(1-cbeta**2)
 
     t[0] = 1
-    t[1] = dxi_u(psi_goal, Au_goal, deltaz/c_goal, N1=N1, N2=N2)
+    t[1] = dxi_u(psi_goal, Au_goal, deltaz_goal/c_goal, N1=N1, N2=N2)
     t_norm = np.sqrt(t[0]**2 + t[1]**2)
     t = (1./t_norm)*t
 #    s[0] = t_norm*cbeta - dxi_u(psi_goal, Au_goal[0], Au_goal[1], deltaz)
@@ -210,7 +214,7 @@ def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
 
     def f(psi_lower_goal):
         y_lower_goal = CST(psi_lower_goal*c_goal, c_goal,
-                           [deltaz/2., deltaz/2.], Au_goal, Al_goal)
+                           [deltaz, deltaz], Au_goal, Al_goal)
         y_lower_goal = y_lower_goal['l']
         return psi_upper_goal + (s[0]/s[1])*(y_lower_goal -
                                              y_upper_goal)/c_goal
@@ -222,7 +226,7 @@ def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
     psi_upper_goal = calculate_psi_goal(psi_baseline, Au_baseline, Au_goal,
                                         deltaz, c_baseline, c_goal, N1=N1, N2=N2)
     y_upper_goal = CST(psi_upper_goal*c_goal, c_goal,
-                       [deltaz/2., deltaz/2.], Au_goal, Al_goal, N1=N1, N2=N2)
+                       [deltaz, deltaz], Au_goal, Al_goal, N1=N1, N2=N2)
     y_upper_goal = y_upper_goal['u']
 
     # Spar direction
@@ -235,7 +239,7 @@ def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
     np.seterr(divide='ignore', invalid='ignore')
     psi_lower_goal = optimize.fixed_point(f, [psi_upper_goal])
     x_lower_goal = psi_lower_goal*c_goal
-    y_lower_goal = CST(x_lower_goal, c_goal, [deltaz/2., deltaz/2.],
+    y_lower_goal = CST(x_lower_goal, c_goal, [deltaz, deltaz],
                        Au_goal, Al_goal, N1=N1, N2=N2)
     y_lower_goal = y_lower_goal['l']
 
