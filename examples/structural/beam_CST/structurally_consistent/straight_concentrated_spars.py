@@ -17,10 +17,6 @@ def format_l(gu, gu_p, gl, gl_p):
     """Calculate  dependent shape coefficients for children configuration for a 4 order
     Bernstein polynomial and return the children upper, lower shape
     coefficients, children chord and spar thicknesses. _P denotes parent parameters"""
-    def calculate_AC_u0(AC_u0):
-        Au_C = [AC_u0] + Au_C_1_to_n
-        c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz, N1=N1, N2=N2)
-        return np.sqrt(c_P/c_C)*Au_P[0]
 
     # Bersntein Polynomial
 
@@ -34,8 +30,10 @@ def format_l(gu, gu_p, gl, gl_p):
     Au_C_1_to_n = gu.D[1:-1]
     Au_P = gu_p.D[:-1]
     Al_P = gl_p.D[:-1]
-    deltaz_C = -gl.D[0]*gl.chord
-    deltaz_P = -gl_p.D[0]*gl_p.chord
+    zl_C = -gl.D[0]*gl.chord
+    zl_P = -gl_p.D[0]*gl_p.chord
+    zu_C = -gu.D[0]*gl.chord
+    zu_P = -gu_p.D[0]*gl_p.chord
     c_P = gu_p.chord
     # Find upper shape coefficient though iterative method since Au_0 is unknown
     # via fixed point iteration
@@ -43,9 +41,6 @@ def format_l(gu, gu_p, gl, gl_p):
 
     # Because the output is an array, need the extra [0]
     Au_C = [AC_u0] + Au_C_1_to_n
-
-    # Now that AC_u0 is known we can calculate the actual chord and AC_l0
-    c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz_P, deltaz_C, N1=N1, N2=N2)
 
     Al_C = np.zeros(n+1)
     Al_C[0] = gl.D[0]
@@ -60,14 +55,14 @@ def format_l(gu, gu_p, gl, gl_p):
     xi_lower_children = []
     xi_upper_children = []
 
-    c_C = calculate_c_baseline(c_P, Au_C, Au_P, deltaz_P, deltaz_C, N1=N1, N2=N2)
+    c_C = calculate_c_baseline(c_P, Au_P, Au_C, zu_P, zu_C, N1=N1, N2=N2)
     psi_upper_children = []
     for j in range(len(psi_spars)):
-        psi_upper_children.append(calculate_psi_goal(psi_spars[j], Au_P, Au_C, deltaz_C,
-                                                     c_P, c_C, N1=N1, N2=N2, ))
+        psi_upper_children.append(calculate_psi_goal(psi_spars[j], Au_P, Au_C, zu_P,
+                                                     c_P, c_C, N1=N1, N2=N2, deltaz_goal=zu_C))
     # Calculate xi for upper children. Do not care about lower so just gave it random shape coefficients
     xi_upper_children = CST(psi_upper_children, 1., deltasz=[
-                            deltaz_C/c_C, deltaz_C/c_C], Al=Au_C, Au=Au_C, N1=N1, N2=N2)
+        zu_C/c_C, -zu_C/c_C], Al=Au_C, Au=Au_C, N1=N1, N2=N2)
     xi_upper_children = xi_upper_children['u']
 
     # print xi_upper_children
@@ -75,21 +70,21 @@ def format_l(gu, gu_p, gl, gl_p):
 
     for j in range(len(psi_spars)):
         xi_parent = CST(psi_spars, 1., deltasz=[
-                        deltaz_P/c_P, deltaz_P/c_P], Al=Al_P, Au=Au_P, N1=N1, N2=N2)
+            zu_P/c_P, -zl_P/c_P], Al=Al_P, Au=Au_P, N1=N1, N2=N2)
         delta_j_P = xi_parent['u'][j]-xi_parent['l'][j] + gu_p.offset/c_P - gl_p.offset/c_P
 
         t_j = c_P*(delta_j_P)
         # Claculate orientation for children
         s_j = calculate_spar_direction(
-            psi_spars[j], Au_P, Au_C, deltaz_P, c_C, N1=N1, N2=N2, deltaz_goal=deltaz_C)
+            psi_spars[j], Au_P, Au_C, zu_P, c_C, N1=N1, N2=N2, deltaz_goal=zu_C)
         psi_l_j = psi_upper_children[j]-delta_j_P/c_C*s_j[0]
-        xi_l_j = xi_upper_children[j]+gu.offset-delta_j_P/c_C*s_j[1]
+        xi_l_j = xi_upper_children[j]+gu.offset/c_C-delta_j_P/c_C*s_j[1]
 
         spar_thicknesses.append(t_j)
         psi_lower_children.append(psi_l_j)
         xi_lower_children.append(xi_l_j)
 
-        f[j] = (xi_l_j - psi_l_j*deltaz_C/c_C - gl.offset/c_C) / \
+        f[j] = (xi_l_j - psi_l_j*zl_C/c_C - gl.offset/c_C) / \
             ((psi_l_j**N1)*(1-psi_l_j)**N2) - Al_C[0]*(1-psi_l_j)**n
 
         for k in range(1+len(psi_spars), n):
@@ -110,10 +105,10 @@ def format_l(gu, gu_p, gl, gl_p):
 
     for i in range(len(A_lower)):
         Al_C[i+1] = A_lower[i][0]  # extra [0] is necessary because of array
-    # print('directions', gl.spar_directions)
-    # print('coord', gl.spar_psi, gl.spar_xi)
-    # print('Coefficients', Al_C)
-    # BREAK
+    print('directions', gl.spar_directions)
+    print('coord', gl.spar_psi, gl.spar_xi)
+    print('Coefficients', Al_C)
+    BREAK
     return list(Al_C) + [-Al_C[0]]
 
 
@@ -144,17 +139,24 @@ def format_input(input, gu=None, gu_p=None, gl=None, gl_p=None):
     return Au, Al
 
 
+def constraint_f(input):
+    if hasattr(a.bl.g, 'spar_psi'):
+        return arc_spar - a.bl.g.arclength(np.array(a.bl.g.spar_psi))[0]
+    else:
+        return 0
+
+
 upper = np.loadtxt('upper_beam_spar2.csv', delimiter=',')
 lower = np.loadtxt('lower_beam_spar2.csv', delimiter=',')
 
 psi_spars = [0.2]
 m = len(psi_spars)
 
-g_upper = CoordinateSystem.CST(D=[0., 0., 0., 0., 0., 0., 0., ], chord=1, color='b', N1=1, N2=1,
+g_upper = CoordinateSystem.CST(D=[0., 0., 0., 0.], chord=1, color='b', N1=1, N2=1,
                                offset=.05)
-g_lower = CoordinateSystem.CST(D=[0., 0., 0., 0., 0., 0., 0., ], chord=1, color='b', N1=1, N2=1,
+g_lower = CoordinateSystem.CST(D=[0., 0., 0., 0.], chord=1, color='b', N1=1, N2=1,
                                offset=-.05)
-g_p = CoordinateSystem.CST(D=[0., 0., 0., 0., 0., 0., 0., ], chord=1, color='k', N1=1, N2=1)
+g_p = CoordinateSystem.CST(D=[0., 0., 0., 0.], chord=1, color='k', N1=1, N2=1)
 
 s_upper = np.linspace(0, g_p.arclength(np.array([1]))[0], 51)
 s_lower = np.linspace(0, g_p.arclength(np.array([1]))[0], 51)
@@ -162,10 +164,11 @@ p_upper = properties()
 p_lower = properties()
 l_upper = loads(concentrated_load=[[-np.sqrt(2)/2, -np.sqrt(2)/2]], load_s=[1])
 l_lower = loads(concentrated_load=[[np.sqrt(2)/2, np.sqrt(2)/2]], load_s=[1-0.1])
+arc_spar = g_lower.arclength(np.array([psi_spars[0]]))[0]
 a = coupled_beams(g_upper, g_lower, p_upper, p_lower, l_upper, l_lower, s_upper,
                   s_lower, ignore_ends=True, spars_s=psi_spars)
 a.calculate_x()
-
+constraints = ({'type': 'eq', 'fun': constraint_f})
 a.parameterized_solver(format_input=format_input, x0=list(
     g_upper.D[:-1]) + list(g_lower.D[:1]) + list(g_lower.D[2:-1]))
 print('LOADS', a.bl.l.concentrated_load, a.bu.l.concentrated_load)

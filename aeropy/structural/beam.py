@@ -153,7 +153,7 @@ class beam_chen():
                     # print('s', i, index, self.x[index], self.y[index], x, y, self.l.concentrated_s)
                     if s < self.l.concentrated_s[i]:
                         # print(i, index, self.l.concentrated_load, self.y)
-                        M_i += self.l.concentrated_load[i][0]*(self.y[index]-y)
+                        M_i -= self.l.concentrated_load[i][0]*(self.y[index]-y)
                         M_i += self.l.concentrated_load[i][1]*(self.x[index]-x)
 
         if self.l.distributed_load is not None:
@@ -390,7 +390,7 @@ class coupled_beams():
         else:
             raise(NotImplementedError)
 
-    def parameterized_solver(self, format_input=None, x0=None):
+    def parameterized_solver(self, format_input=None, x0=None, constraints=()):
         def formatted_residual(A):
             [Au, Al] = format_input(A, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
             self.bu.l.concentrated_load = self.bu.l.external_load.copy()
@@ -407,7 +407,8 @@ class coupled_beams():
             # BREAK
             return R
         # print('x0', x0)
-        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-.02, .02]])
+        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)
+                       * [[-.02, .02]], constraints=constraints)
         self.bu.g.D, self.bl.g.D = format_input(
             sol.x, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
         # self.bu.g.internal_variables(self.bu.length, origin=self.bu.origin)
@@ -450,12 +451,12 @@ class coupled_beams():
 
         sbeta = self.bl.g.spar_directions[0][0]
         cbeta = self.bl.g.spar_directions[0][1]
-        R = (LHS - self.bl.l.external_load[0][0]*sin -
-             self.bl.l.external_load[0][1]*cos)/(sbeta*sin+cbeta*cos)
-        self.Rx = -sbeta*R
+        R = (LHS + self.bl.l.external_load[0][0]*sin -
+             self.bl.l.external_load[0][1]*cos)/(-sbeta*sin+cbeta*cos)
+        self.Rx = sbeta*R
         self.Ry = cbeta*R
-        self.bl.l.concentrated_load = self.bl.l.external_load.copy() + [[self.Rx, self.Ry], ]
-        self.bu.l.concentrated_load = self.bu.l.external_load.copy() + [[-self.Rx, -self.Ry], ]
+        self.bl.l.concentrated_load = self.bl.l.external_load.copy() + [[-self.Rx, -self.Ry], ]
+        self.bu.l.concentrated_load = self.bu.l.external_load.copy() + [[self.Rx, self.Ry], ]
 
         self.bu.l.concentrated_s = self.bu.l.external_s.copy() + self.spars_s
         self.bl.l.concentrated_s = self.bl.l.external_s.copy() + self.spars_s

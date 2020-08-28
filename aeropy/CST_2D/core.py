@@ -209,7 +209,7 @@ def calculate_spar_direction(psi_baseline, Au_baseline, Au_goal, deltaz_baseline
 
 
 def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
-                            deltaz, c_goal, N1=.5, N2=1.):
+                            deltaz_baseline, c_goal, N1=.5, N2=1., deltaz_goal=None):
     """Calculate spar distance (dimensional)"""
 
     def f(psi_lower_goal):
@@ -219,12 +219,16 @@ def calculate_spar_distance(psi_baseline, Au_baseline, Au_goal, Al_goal,
         return psi_upper_goal + (s[0]/s[1])*(y_lower_goal -
                                              y_upper_goal)/c_goal
 
+    if deltaz_goal is None:
+        deltaz_goal = deltaz_baseline
     # Calculate cruise chord
-    c_baseline = calculate_c_baseline(c_goal, Au_baseline, Au_goal, deltaz, N1=N1, N2=N2)
+    c_baseline = calculate_c_baseline(c_goal, Au_baseline, Au_goal, deltaz_baseline,
+                                      deltaz_goal=deltaz_goal, N1=N1, N2=N2)
 
     # Calculate upper psi at goal airfoil
     psi_upper_goal = calculate_psi_goal(psi_baseline, Au_baseline, Au_goal,
-                                        deltaz, c_baseline, c_goal, N1=N1, N2=N2)
+                                        deltaz_baseline, c_baseline, c_goal,
+                                        N1=N1, N2=N2, deltaz_goal=deltaz_goal)
     y_upper_goal = CST(psi_upper_goal*c_goal, c_goal,
                        [deltaz, deltaz], Au_goal, Al_goal, N1=N1, N2=N2)
     y_upper_goal = y_upper_goal['u']
