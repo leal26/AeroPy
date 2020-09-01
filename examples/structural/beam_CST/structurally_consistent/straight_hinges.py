@@ -170,14 +170,14 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 upper = np.loadtxt('upper_beam_spar2.csv', delimiter=',')
 lower = np.loadtxt('lower_beam_spar2.csv', delimiter=',')
 
-psi_spars = [0.2]
+psi_spars = [0.25]
 m = len(psi_spars)
 
-g_upper = CoordinateSystem.CST(D=[0., 0., 0., 0., ], chord=1, color='b', N1=1, N2=1,
+g_upper = CoordinateSystem.CST(D=[0., 0., 0., 0., 0., 0., 0., 0.], chord=1, color='b', N1=1, N2=1,
                                offset=.05)
-g_lower = CoordinateSystem.CST(D=[0., 0., 0., 0., ], chord=1, color='b', N1=1, N2=1,
+g_lower = CoordinateSystem.CST(D=[0., 0., 0., 0., 0., 0., 0., 0.], chord=1, color='b', N1=1, N2=1,
                                offset=-.05)
-g_p = CoordinateSystem.CST(D=[0., 0., 0., 0., ], chord=1, color='k', N1=1, N2=1)
+g_p = CoordinateSystem.CST(D=[0., 0., 0., 0., 0., 0., 0., 0.], chord=1, color='k', N1=1, N2=1)
 
 s_upper = np.linspace(0, g_p.arclength(np.array([1]))[0], 21)
 s_lower = np.linspace(0, g_p.arclength(np.array([1]))[0], 21)
@@ -200,7 +200,7 @@ constraints = ({'type': 'eq', 'fun': constraint_f})
 # a.formatted_residual(format_input=format_input, x0=list(
 # g_upper.D[:-1]) + list(g_lower.D[:1]) + list(g_lower.D[2:-1]))
 a.parameterized_solver(format_input=format_input, x0=list(
-    g_upper.D[:-1]) + list(g_lower.D[:1]) + list(g_lower.D[2:-1]))
+    g_upper.D[:-1]) + list(g_lower.D[:-1]))
 print('loads', a.bl.l.concentrated_load, a.bu.l.concentrated_load)
 plt.figure()
 plt.plot(a.bu.g.x1_grid, a.bu.M, label='Upper')

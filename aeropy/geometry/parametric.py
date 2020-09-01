@@ -504,7 +504,8 @@ class CoordinateSystem(object):
         self.chord = 1
 
         nondimensional_length, err = self.arclength(chord=1., origin=origin/self.chord)
-
+        # print('target', target_length, origin, self.D, self.N1,
+        #       self.N2, target_length/nondimensional_length)
         self.chord = target_length/nondimensional_length
         self.deltaz = self.zetaT*self.chord
 

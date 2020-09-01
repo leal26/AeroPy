@@ -1,18 +1,21 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 
 from aeropy.geometry.airfoil import create_x, CST
 
 plt.figure()
-A = [1.,2.,1.]
-deltaz = 0.2
-x = create_x(1, distribution='polar')
+A = [2/math.pi, 2/math.pi, 2/math.pi]
+chord = 2/math.pi
+deltaz = -2/math.pi*chord
+
+x = create_x(chord, distribution='polar')
 for i in range(len(A)):
     A_i = [0,0,0]
     A_i[i] = A[i]
-    y = CST(x, 1., deltaz, A_i)
+    y = CST(x, chord, deltaz, A_i)
     plt.plot(x,y,'--')
-y = CST(x, 1., deltaz, A)
+y = CST(x, chord, deltaz, A, N1=1, N2=1)
 plt.plot(x,y,'k')
 plt.axis('equal')
 plt.grid()

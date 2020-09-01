@@ -225,7 +225,7 @@ class beam_chen():
             self.R = 100
             # BREAK
 
-        print('R: ', self.R)
+        # print('R: ', self.R)
 
     def iterative_solver(self):
         self.x = np.copy(self.s)
@@ -309,7 +309,7 @@ class beam_chen():
         self.Ry = cos*self.V - sin*self.T
         # self.Rx = cos*(self.T+sin*self.V)
         # self.Ry = self.V/cos  # - sin/cos*self.Rx
-        print('R', self.Rx, self.Ry)
+        # print('R', self.Rx, self.Ry)
         # print('g_p', self.g_p.rho)
         # print('rho_c', rho_c)
         # print('rho_p', rho_p)
@@ -391,24 +391,9 @@ class coupled_beams():
             raise(NotImplementedError)
 
     def parameterized_solver(self, format_input=None, x0=None, constraints=()):
-        def formatted_residual(A):
-            [Au, Al] = format_input(A, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
-            self.bu.l.concentrated_load = self.bu.l.external_load.copy()
-            self.bl.l.concentrated_load = self.bl.l.external_load.copy()
-            self.bu.l.concentrated_s = self.bu.l.external_s.copy()
-            self.bl.l.concentrated_s = self.bl.l.external_s.copy()
-            self.calculate_x()
-            self.calculate_force()
-            R = self.bu._residual(Au) + self.bl._residual(Al)
-            if self.spars_s is not None:
-                self.calculate_resultants()
-            R = self.bu._residual(Au) + self.bl._residual(Al)
-            # print('R', self.bu.R, R, Au)
-            # BREAK
-            return R
-        # print('x0', x0)
-        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)
-                       * [[-.02, .02]], constraints=constraints)
+
+        sol = minimize(self.formatted_residual, x0,  bounds=len(x0)
+                       * [[-.02, .02]], constraints=constraints, args=(format_input))
         self.bu.g.D, self.bl.g.D = format_input(
             sol.x, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
         # self.bu.g.internal_variables(self.bu.length, origin=self.bu.origin)
@@ -418,6 +403,25 @@ class coupled_beams():
         self.bu.y = self.bu.g.x3(self.bu.x)
         self.bl.y = self.bl.g.x3(self.bl.x)
         print('sol', self.bu.g.D, self.bl.g.D)
+
+    def formatted_residual(self, x0, format_input):
+        [Au, Al] = format_input(x0, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
+        self.bu.l.concentrated_load = self.bu.l.external_load.copy()
+        self.bl.l.concentrated_load = self.bl.l.external_load.copy()
+        self.bu.l.concentrated_s = self.bu.l.external_s.copy()
+        self.bl.l.concentrated_s = self.bl.l.external_s.copy()
+        self.calculate_x()
+        self.calculate_force()
+        R = self.bu._residual(Au) + self.bl._residual(Al)
+        if self.spars_s is not None:
+            self.calculate_resultants()
+        R = self.bu._residual(Au) + self.bl._residual(Al)
+        # print('directions', self.bl.g.spar_directions)
+        # print('psi', self.bl.g.spar_psi)
+        # print('xi', self.bl.g.spar_xi)
+        print('R', self.bu.R, self.bl.R)
+        # BREAK
+        return R
 
     def calculate_force(self):
         x_u = self.bu.g.calculate_x1(np.array(self.bu.l.external_s), output=True)
@@ -453,9 +457,11 @@ class coupled_beams():
         cbeta = self.bl.g.spar_directions[0][1]
         R = (LHS + self.bl.l.external_load[0][0]*sin -
              self.bl.l.external_load[0][1]*cos)/(-sbeta*sin+cbeta*cos)
+        # print('Reacion', LHS, sin, cos, sbeta, cbeta)
+        # print('rho', self.bl.g.rho[index+1], self.bl.g_p.rho[index+1], self.bl.g.rho[index-1],  self.bl.g_p.rho[index-1])
         self.Rx = sbeta*R
         self.Ry = cbeta*R
-        self.bl.l.concentrated_load = self.bl.l.external_load.copy() + [[-self.Rx, -self.Ry], ]
+        self.bl.l.concentrated_load = self.bl.l.external_load.copy() + [[self.Rx, self.Ry], ]
         self.bu.l.concentrated_load = self.bu.l.external_load.copy() + [[self.Rx, self.Ry], ]
 
         self.bu.l.concentrated_s = self.bu.l.external_s.copy() + self.spars_s
