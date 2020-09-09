@@ -173,11 +173,11 @@ lower = np.loadtxt('lower_beam_spar2.csv', delimiter=',')
 psi_spars = [0.2]
 m = len(psi_spars)
 
-g_upper = CoordinateSystem.CST(D=[0., 0., 0., 0., ], chord=1, color='b', N1=1, N2=1,
+g_upper = CoordinateSystem.CST(D=[0., 0., 0., 0., 0., 0., ], chord=1, color='b', N1=1, N2=1,
                                offset=.05)
-g_lower = CoordinateSystem.CST(D=[0., 0., 0., 0., ], chord=1, color='b', N1=1, N2=1,
+g_lower = CoordinateSystem.CST(D=[0., 0., 0., 0., 0., 0., ], chord=1, color='b', N1=1, N2=1,
                                offset=-.05)
-g_p = CoordinateSystem.CST(D=[0., 0., 0., 0., ], chord=1, color='k', N1=1, N2=1)
+g_p = CoordinateSystem.CST(D=[0., 0., 0., 0., 0., 0., ], chord=1, color='k', N1=1, N2=1)
 
 s_upper = np.linspace(0, g_p.arclength(np.array([1]))[0], 21)
 s_lower = np.linspace(0, g_p.arclength(np.array([1]))[0], 21)

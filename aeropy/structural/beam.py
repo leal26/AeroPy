@@ -5,7 +5,7 @@ import copy
 from findiff import FinDiff
 import numpy as np
 from scipy.integrate import quad, trapz
-from scipy.optimize import minimize
+from scipy.optimize import minimize, curve_fit
 
 
 class euler_bernoulle_curvilinear():
@@ -171,7 +171,12 @@ class beam_chen():
                 M_x = w*self.g.cos[index:i_end]*(self.x[index:i_end]-x)
                 M_y = w*self.g.sin[index:i_end]*(self.y[index:i_end]-y)
                 M_i -= trapz(M_x + M_y, self.s[index:i_end])
-        return M_i + self.l.torque
+        # Point torques
+        for j in range(len(self.l.torque)):
+            if s <= self.l.torque_s[j]:
+                M_i += self.l.torque[j]
+
+        return M_i
 
     def calculate_G(self):
         self.G = np.zeros(len(self.x))
@@ -443,29 +448,47 @@ class coupled_beams():
         # print('loads', self.bu.l.concentrated_load, self.bl.l.concentrated_load)
 
     def calculate_resultants(self):
+        def M_f(s, Ry):
+            self.bl.l.concentrated_load = self.bl.l.external_load.copy() + [[0, Ry], ]
+            self.bl.calculate_M()
+            if self.bl.ignore_ends:
+                return self.bl.M[1:-1]
+            else:
+                return self.bl.M
         self.bl.g.calculate_angles()
 
-        index = np.where(self.bl.s == self.spars_s[0])[0][0]
-        b = self.bl.g.rho[index+1] - self.bl.g_p.rho[index+1]
-        a = self.bl.g.rho[index-1] - self.bl.g_p.rho[index-1]
-        ds = self.bl.s[index+1] - self.bl.s[index-1]
-        LHS = (self.bl.p.young*self.bl.p.inertia)*(b-a)/ds
-        cos = self.bl.g.cos[index]
-        sin = self.bl.g.sin[index]
+        # index = np.where(self.bl.s == self.spars_s[0])[0][0]
+        # b = self.bl.g.rho[index+1] - self.bl.g_p.rho[index+1]
+        # a = self.bl.g.rho[index-1] - self.bl.g_p.rho[index-1]
+        # ds = self.bl.s[index+1] - self.bl.s[index-1]
+        # LHS = (self.bl.p.young*self.bl.p.inertia)*(b-a)/ds
+        # cos = self.bl.g.cos[index]
+        # sin = self.bl.g.sin[index]
+        #
+        # sbeta = self.bl.g.spar_directions[0][0]
+        # cbeta = self.bl.g.spar_directions[0][1]
+        # R = (LHS + self.bl.l.external_load[0][0]*sin -
+        #      self.bl.l.external_load[0][1]*cos)/(-sbeta*sin+cbeta*cos)
+        # print('rho', self.bl.g.rho[index+1], self.bl.g_p.rho[index+1],
+        #       self.bl.g.rho[index-1], self.bl.g_p.rho[index-1])
+        # print('Reaction', LHS, (b-a)/ds, sin, cos, sbeta, cbeta, -sbeta*sin+cbeta*cos)
 
-        sbeta = self.bl.g.spar_directions[0][0]
-        cbeta = self.bl.g.spar_directions[0][1]
-        R = (LHS + self.bl.l.external_load[0][0]*sin -
-             self.bl.l.external_load[0][1]*cos)/(-sbeta*sin+cbeta*cos)
-        # print('Reacion', LHS, sin, cos, sbeta, cbeta)
-        # print('rho', self.bl.g.rho[index+1], self.bl.g_p.rho[index+1], self.bl.g.rho[index-1],  self.bl.g_p.rho[index-1])
-        self.Rx = sbeta*R
-        self.Ry = cbeta*R
-        self.bl.l.concentrated_load = self.bl.l.external_load.copy() + [[self.Rx, self.Ry], ]
-        self.bu.l.concentrated_load = self.bu.l.external_load.copy() + [[self.Rx, self.Ry], ]
-
+        M = (self.bl.p.young*self.bl.p.inertia)*(self.bl.g.rho - self.bl.g_p.rho)
+        s = self.bl.s[1:-1]
         self.bu.l.concentrated_s = self.bu.l.external_s.copy() + self.spars_s
         self.bl.l.concentrated_s = self.bl.l.external_s.copy() + self.spars_s
+        if self.bl.ignore_ends:
+            M = M[1:-1]
+            s = s[1:-1]
+        popt, pcov = curve_fit(M_f, s, M, p0=[0])
+        # print('rho', self.bl.g.rho[index+1], self.bl.g_p.rho[index+1], self.bl.g.rho[index-1],  self.bl.g_p.rho[index-1])
+        self.Rx = 0  # -2.614  # sbeta*R
+        self.Ry = popt[0]  # -3.634  # cbeta*R
+        self.bl.l.concentrated_load = self.bl.l.external_load.copy() + [[self.Rx, self.Ry], ]
+        self.bu.l.concentrated_load = self.bu.l.external_load.copy() + [[-self.Rx, -self.Ry], ]
+
+        # self.bu.l.torque = [-2*R*sbeta*cbeta*self.bl.g.delta_P[0]]
+        # self.bu.l.torque_s = self.spars_s
 
 
 def derivative(f, a, method='central', h=0.01):
