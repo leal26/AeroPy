@@ -33,7 +33,25 @@ class CoordinateSystem(object):
             else:
                 self._D = values
 
-    def x1(self, x1, diff=None):
+    @property
+    def x1_grid(self):
+        return self._x1_grid
+
+    @x1_grid.setter
+    def x1_grid(self, values):
+        if self.name == 'pCST':
+            c_min = 0
+            for i in range(self.p):
+                c_max = c_min + self.cst[i].chord
+                if i == self.p - 1:
+                    indexes = np.where((values >= c_min) & (values <= c_max))
+                else:
+                    indexes = np.where((values >= c_min) & (values <= c_max))
+                self.cst[i].x1_grid = values[indexes]
+                c_min = c_max
+        self._x1_grid = values
+
+    def _x1(self, x1, diff=None):
         if diff is None:
             return x1
         elif diff == 'x1':
@@ -68,6 +86,19 @@ class CoordinateSystem(object):
         else:
             return(np.zeros(len(x1)))
 
+    def _x1_pCST(self, x1, diff=None):
+        output = np.zeros(len(x1))
+        c_min = 0
+        for i in range(self.p):
+            c_max = c_min + self.cst[i].chord
+            if i == self.p - 1:
+                indexes = np.where((x1 >= c_min) & (x1 <= c_max))
+            else:
+                indexes = np.where((x1 >= c_min) & (x1 <= c_max))
+            output[indexes] = self.cst[i].x1(x1[indexes], diff=diff)
+            c_min = c_max
+        return output
+
     def x2(self, x1, x2_value=0, diff=None):
         if diff is None:
             return np.zeros(len(x1))
@@ -77,17 +108,64 @@ class CoordinateSystem(object):
     @classmethod
     def polynomial(cls, D, chord=1, color='b', n=6, tol=1e-6):
         c = cls(D, chord=chord, color=color, n=n, tol=tol)
+        c.x1 = c._x1
         c.x3 = c._x3_poly
         c.name = 'polynomial'
         return c
 
     @classmethod
-    def CST(cls, D, chord, color, N1=.5, N2=1.0, deltaz=0, tol=1e-6, offset=0):
+    def CST(cls, D, chord, color, N1=.5, N2=1.0, deltaz=0, tol=1e-6, offset=0,
+            deltazLE=0, offset_x=0):
         c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2,
-                deltaz=deltaz, tol=tol, offset=offset)
+                deltaz=deltaz, tol=tol, offset=offset, deltazLE=deltazLE,
+                offset_x=offset_x)
+        c.x1 = c._x1
         c.x3 = c._x3_CST
         c.name = 'CST'
         c.zetaT = c.deltaz/c.chord
+        c.zetaL = c.deltazLE/c.chord
+        return c
+
+    @classmethod
+    def pCST(cls, D, chord=np.array([.5, .5]), color='b', N1=[1, 1.], N2=[1.0, 1.0],
+             tol=1e-6, offset=0):
+        c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2,
+                tol=tol, offset=offset)
+        c.x1 = c._x1_pCST
+        c.x3 = c._x3_pCST
+        c.name = 'pCST'
+        c.p = len(chord)
+        n = int((len(D)-2)/c.p)
+
+        c.cst = []
+        zetaL = []
+        zetaT = []
+        A0 = []
+        for i in range(c.p):
+            j = i - 1
+            # From shape coefficients 1 to n
+            Ai = D[1+i*n:1+(i+1)*n]
+            Aj = D[1+j*n:1+(j+1)*n]
+            if i == 0:
+                offset_x = 0
+                A0.append(D[0])
+                zetaT.append(D[-1])
+                zetaL.append(0)
+            else:
+                if N1[i] == 1. and N2[i] == 1.:
+                    offset_x = chord[j]
+                    ddj = n*Aj[-2] - (N1[j]+n)*Aj[-1]
+                    A0.append((-chord[i]/chord[j]*ddj+Ai[0]*n)/(n+1))
+                    zetaL.append(chord[j]/chord[i]*zetaT[j])
+                    zetaT.append(-Aj[-1] + zetaT[j] - A0[-1] + zetaL[i] - zetaL[j])
+                else:
+                    raise(NotImplementedError)
+            Di = [A0[i]] + list(Ai) + [zetaL[i]]
+            c.cst.append(CoordinateSystem.CST(Di, chord[i],
+                                              color[i], N1=N1[i], N2=N2[i],
+                                              deltaz=zetaT[-1]*chord[i],
+                                              deltazLE=zetaL[-1]*chord[i],
+                                              offset_x=offset_x, offset=offset))
         return c
 
     @classmethod
@@ -125,20 +203,27 @@ class CoordinateSystem(object):
 
     def _x3_CST(self, x1, diff=None):
         A = self.D[:-1]
+        x1 = x1 - self.offset_x
         psi = x1 / self.chord
         if diff is None:
             return(self.offset + CST(x1, self.chord, deltasz=self.deltaz, Au=A,
-                                     N1=self.N1, N2=self.N2))
+                                     N1=self.N1, N2=self.N2, deltasLE=self.deltazLE))
         elif diff == 'x1':
-            d = dxi_u(psi, A, self.zetaT, N1=self.N1, N2=self.N2)
-            if abs(x1[-1] - self.chord) < 1e-6:
-                d[-1] = -A[-1] + self.zetaT
+            d = dxi_u(psi, A, self.zetaT, N1=self.N1, N2=self.N2, zetaL=self.zetaL)
+            if x1[0] < 1e-6 and self.N1 == 1:
+                d[0] = +A[0] + self.zetaT - self.zetaL
+            if abs(x1[-1] - self.chord) < 1e-6 and self.N2 == 1:
+                d[-1] = -A[-1] + self.zetaT - self.zetaL
             return d
         elif diff == 'x11':
             dd = (1/self.chord)*ddxi_u(psi, A, N1=self.N1, N2=self.N2)
-            if abs(x1[-1] - self.chord) < 1e-6:
+            if abs(x1[0]) < 1e-6 and self.N1 == 1 and self.N2 == 1:
                 n = len(A) - 1
-                dd[-1] = 2*n*A[-2] - 2*(self.N1+n)*A[-1]
+                print('n', n)
+                dd[0] = (1/self.chord)*(-2*(n+1)*A[0] + 2*A[1]*n)
+            if abs(x1[-1] - self.chord) < 1e-6 and self.N2 == 1:
+                n = len(A) - 1
+                dd[-1] = (1/self.chord)*(2*n*A[-2] - 2*(self.N1+n)*A[-1])
             return dd
         elif diff == 'theta1':
             return self.x3(x1, 'x1')*self.x1(x1, 'theta1')
@@ -147,6 +232,19 @@ class CoordinateSystem(object):
                 self.x3(x1, 'x1')*self.x1(x1, 'theta11')
         elif diff == 'theta3':
             return(np.zeros(len(x1)))
+
+    def _x3_pCST(self, x1, diff=None):
+        output = np.zeros(len(x1))
+        c_min = 0
+        for i in range(self.p):
+            c_max = c_min + self.cst[i].chord
+            if i == self.p - 1:
+                indexes = np.where((x1 >= c_min) & (x1 <= c_max))
+            else:
+                indexes = np.where((x1 >= c_min) & (x1 <= c_max))
+            output[indexes] = self.cst[i].x3(x1[indexes], diff=diff)
+            c_min = c_max
+        return output
 
     def _x3_cylindrical(self, x1, diff=None, R=None):
         """ z2 (checked)"""
@@ -445,35 +543,39 @@ class CoordinateSystem(object):
             return np.array(s_list)
 
     def plot(self, basis=False, r=None, label=None, linestyle='-', color=None, scatter=False, zorder=0, marker='.'):
-        if r is None:
-            r = self.r(self.x1_grid)
-        print('x_p', r[:, 0])
-        print('y_p', r[:, 1])
-        if color is None:
-            color = self.color
-
-        if scatter:
-            if label is None:
-                plt.scatter(r[:, 0], r[:, 1], c=color, zorder=2, marker=marker)
-            else:
-                plt.scatter(r[:, 0], r[:, 1], c=color, label=label,
-                            zorder=2, edgecolors='k', marker=marker)
+        if self.name == 'pCST':
+            for i in range(self.p):
+                self.cst[i].plot(basis, label=label[i])
         else:
-            if label is None:
-                plt.plot(r[:, 0], r[:, 1], color, linestyle=linestyle, lw=3,
-                         zorder=zorder)
+            if r is None:
+                r = self.r(self.x1_grid)
+            print('x_p', r[:, 0])
+            print('y_p', r[:, 1])
+            if color is None:
+                color = self.color
+
+            if scatter:
+                if label is None:
+                    plt.scatter(r[:, 0], r[:, 1], c=color, zorder=2, marker=marker)
+                else:
+                    plt.scatter(r[:, 0], r[:, 1], c=color, label=label,
+                                zorder=2, edgecolors='k', marker=marker)
             else:
-                plt.plot(r[:, 0], r[:, 1], color, linestyle=linestyle, lw=3,
-                         label=label, zorder=zorder)
-        if basis:
-            plt.quiver(r[:, 0], r[:, 2],
-                       self.a[0, :, 0], self.a[0, :, 2],
-                       angles='xy', color=color, scale_units='xy')
-            plt.quiver(r[:, 0], r[:, 2],
-                       self.a[2, :, 0], self.a[2, :, 2],
-                       angles='xy', color=color, scale_units='xy')
-        plt.xlabel('x (m)')
-        plt.ylabel('y (m)')
+                if label is None:
+                    plt.plot(r[:, 0], r[:, 1], color, linestyle=linestyle, lw=3,
+                             zorder=zorder)
+                else:
+                    plt.plot(r[:, 0], r[:, 1], color, linestyle=linestyle, lw=3,
+                             label=label, zorder=zorder)
+            if basis:
+                plt.quiver(r[:, 0], r[:, 2],
+                           self.a[0, :, 0], self.a[0, :, 2],
+                           angles='xy', color=color, scale_units='xy')
+                plt.quiver(r[:, 0], r[:, 2],
+                           self.a[2, :, 0], self.a[2, :, 2],
+                           angles='xy', color=color, scale_units='xy')
+            plt.xlabel('x (m)')
+            plt.ylabel('y (m)')
 
     def radius_curvature(self, x, output_only=False, parametric=False):
         if parametric:
