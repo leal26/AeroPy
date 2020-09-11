@@ -107,7 +107,6 @@ class beam_chen():
         self.l = load
         self.s = s
         self.origin = origin
-        self.length = self.g.arclength(origin=origin)[0]
         self.ignore_ends = ignore_ends
         self.rotated = rotated
         self.length_preserving = length_preserving
@@ -116,7 +115,7 @@ class beam_chen():
             self.integral_ends()
         self.g_p = copy.deepcopy(geometry)
         if length_preserving:
-            self.g_p.internal_variables(self.length, origin=self.origin)
+            self.g_p.internal_variables(self.g.length, origin=self.origin)
         self.g_p.calculate_x1(self.s, origin=origin, length_rigid=s[0])
         self.g_p.radius_curvature(self.g_p.x1_grid)
 
@@ -258,7 +257,7 @@ class beam_chen():
                        constraints=constraints)
         self.g.D = format_input(sol.x, self.g, self.g_p)
         if self.length_preserving:
-            self.g.internal_variables(self.length, origin=self.origin)
+            self.g.internal_variables(self.g.length, origin=self.origin)
         # self.g.calculate_x1(self.s)
         self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
@@ -268,7 +267,7 @@ class beam_chen():
     def _residual(self, A):
         self.g.D = A
         if self.length_preserving:
-            self.g.internal_variables(self.length, origin=self.origin)
+            self.g.internal_variables(self.g.length, origin=self.origin)
         self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)
@@ -304,7 +303,7 @@ class beam_chen():
         rho_c = self.g.rho[-1]
         rho_p = self.g_p.rho[-1]
         # self.T = Qt - self.p.inertia*self.p.young*(rho_c - rho_p)*(1-rho_c)
-        self.T = self.p.area*self.p.young*(length_child/self.length-1)
+        self.T = self.p.area*self.p.young*(length_child/self.g.length-1)
         b = self.g.rho[-1] - self.g_p.rho[-1]
         a = self.g.rho[-2] - self.g_p.rho[-2]
         ds = self.s[-1] - self.s[-2]

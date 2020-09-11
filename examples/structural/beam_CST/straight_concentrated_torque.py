@@ -15,13 +15,14 @@ def format_input(input, g=None, g_p=None):
 
 abaqus = np.loadtxt('beam_torque.csv', delimiter=',')
 
-g = CoordinateSystem.CST(D=[0, 0, 0], chord=1, color='b', N1=1, N2=1)
+g = CoordinateSystem.pCST(D=[0, 0, 0, 0, 0, 0], chord=[.5, .5], color=['b', 'g'],
+                          N1=[1, 1], N2=[1, 1])
 p = properties()
 l = loads(torque=[1], torque_s=[.5])
 s = np.linspace(0, 1, 101)
 
 b = beam_chen(g, p, l, s, ignore_ends=True)
-b.parameterized_solver(format_input, x0=g.D[:-1])
+b.parameterized_solver(format_input, x0=g.D)
 # b.g.calculate_x1(b.s)
 b.calculate_resultants()
 print(b.Rx, b.Ry)

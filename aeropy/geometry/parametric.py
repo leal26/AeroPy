@@ -24,14 +24,21 @@ class CoordinateSystem(object):
 
     @D.setter
     def D(self, values):
-        if self.n == 1 and (isinstance(values, float) or isinstance(values, np.float64)):
+        if hasattr(self, 'name') and self.name == 'pCST':
             self._D = values
+            # Update internal variables if class already populated
+            if hasattr(self, 'cst'):
+                self._pCST_update()
+
         else:
-            if len(values) != self.n:
-                self._D = np.zeros(self.n)
-                self._D[:len(values)] = values
-            else:
+            if self.n == 1 and (isinstance(values, float) or isinstance(values, np.float64)):
                 self._D = values
+            else:
+                if len(values) != self.n:
+                    self._D = np.zeros(self.n)
+                    self._D[:len(values)] = values
+                else:
+                    self._D = values
 
     @property
     def x1_grid(self):
@@ -39,14 +46,14 @@ class CoordinateSystem(object):
 
     @x1_grid.setter
     def x1_grid(self, values):
+        if type(values) == list:
+            values = np.array(values)
+
         if self.name == 'pCST':
             c_min = 0
             for i in range(self.p):
                 c_max = c_min + self.cst[i].chord
-                if i == self.p - 1:
-                    indexes = np.where((values >= c_min) & (values <= c_max))
-                else:
-                    indexes = np.where((values >= c_min) & (values <= c_max))
+                indexes = np.where((values >= (c_min-self.tol)) & (values <= (c_max+self.tol)))
                 self.cst[i].x1_grid = values[indexes]
                 c_min = c_max
         self._x1_grid = values
@@ -91,10 +98,7 @@ class CoordinateSystem(object):
         c_min = 0
         for i in range(self.p):
             c_max = c_min + self.cst[i].chord
-            if i == self.p - 1:
-                indexes = np.where((x1 >= c_min) & (x1 <= c_max))
-            else:
-                indexes = np.where((x1 >= c_min) & (x1 <= c_max))
+            indexes = np.where((x1 >= (c_min-self.tol)) & (x1 <= (c_max+self.tol)))
             output[indexes] = self.cst[i].x1(x1[indexes], diff=diff)
             c_min = c_max
         return output
@@ -107,7 +111,7 @@ class CoordinateSystem(object):
 
     @classmethod
     def polynomial(cls, D, chord=1, color='b', n=6, tol=1e-6):
-        c = cls(D, chord=chord, color=color, n=n, tol=tol)
+        c = cls(D, chord=chord, color=color, n=n, tol=tol, offset_x=0)
         c.x1 = c._x1
         c.x3 = c._x3_poly
         c.name = 'polynomial'
@@ -124,13 +128,14 @@ class CoordinateSystem(object):
         c.name = 'CST'
         c.zetaT = c.deltaz/c.chord
         c.zetaL = c.deltazLE/c.chord
+        c.length = c.arclength()[0]
         return c
 
     @classmethod
     def pCST(cls, D, chord=np.array([.5, .5]), color='b', N1=[1, 1.], N2=[1.0, 1.0],
-             tol=1e-6, offset=0):
+             tol=1e-6, offset=0, offset_x=0):
         c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2,
-                tol=tol, offset=offset)
+                tol=tol, offset=offset, offset_x=offset_x)
         c.x1 = c._x1_pCST
         c.x3 = c._x3_pCST
         c.name = 'pCST'
@@ -138,9 +143,10 @@ class CoordinateSystem(object):
         n = int((len(D)-2)/c.p)
 
         c.cst = []
-        zetaL = []
-        zetaT = []
-        A0 = []
+        c.zetaL = []
+        c.zetaT = []
+        c.A0 = []
+        offset_s = 0
         for i in range(c.p):
             j = i - 1
             # From shape coefficients 1 to n
@@ -148,25 +154,69 @@ class CoordinateSystem(object):
             Aj = D[1+j*n:1+(j+1)*n]
             if i == 0:
                 offset_x = 0
-                A0.append(D[0])
-                zetaT.append(D[-1])
-                zetaL.append(0)
+                c.A0.append(D[0])
+                c.zetaT.append(D[-1])
+                c.zetaL.append(0)
             else:
                 if N1[i] == 1. and N2[i] == 1.:
                     offset_x = chord[j]
                     ddj = n*Aj[-2] - (N1[j]+n)*Aj[-1]
-                    A0.append((-chord[i]/chord[j]*ddj+Ai[0]*n)/(n+1))
-                    zetaL.append(chord[j]/chord[i]*zetaT[j])
-                    zetaT.append(-Aj[-1] + zetaT[j] - A0[-1] + zetaL[i] - zetaL[j])
+                    c.A0.append((-chord[i]/chord[j]*ddj+Ai[0]*n)/(n+1))
+                    c.zetaL.append(chord[j]/chord[i]*c.zetaT[j])
+                    c.zetaT.append(-Aj[-1] + c.zetaT[j] - c.A0[-1] + c.zetaL[i] - c.zetaL[j])
                 else:
                     raise(NotImplementedError)
-            Di = [A0[i]] + list(Ai) + [zetaL[i]]
+            Di = [c.A0[i]] + list(Ai) + [c.zetaT[i]]
             c.cst.append(CoordinateSystem.CST(Di, chord[i],
                                               color[i], N1=N1[i], N2=N2[i],
-                                              deltaz=zetaT[-1]*chord[i],
-                                              deltazLE=zetaL[-1]*chord[i],
+                                              deltaz=c.zetaT[-1]*chord[i],
+                                              deltazLE=c.zetaL[-1]*chord[i],
                                               offset_x=offset_x, offset=offset))
+            c.cst[i].offset_s = offset_s
+            offset_s += c.cst[i].length
+        c.total_chord = sum([c.cst[i].chord for i in range(c.p)])
+        c.total_length = sum([c.cst[i].length for i in range(c.p)])
         return c
+
+    def _pCST_update(self):
+        n = int((len(self.D)-2)/self.p)
+        offset_s = 0
+        for i in range(self.p):
+            j = i - 1
+            # From shape coefficients 1 to n
+            Ai = self.D[1+i*n:1+(i+1)*n]
+            Aj = self.D[1+j*n:1+(j+1)*n]
+            error = 999
+            while error > 1e-4:
+                chord0 = self.cst[i].chord
+                if i == 0:
+                    offset_x = 0
+                    self.A0[i] = self.D[0]
+                    self.zetaT[i] = self.D[-1]
+                    self.zetaL[i] = 0
+                else:
+                    if self.N1[i] == 1. and self.N2[i] == 1.:
+                        offset_x = self.cst[j].chord
+                        ddj = n*Aj[-2] - (self.N1[j]+n)*Aj[-1]
+                        self.A0[i] = (-self.cst[i].chord/self.cst[j].chord*ddj+Ai[0]*n)/(n+1)
+                        self.zetaL[i] = self.cst[j].chord/self.cst[i].chord*self.zetaT[j]
+                        self.zetaT[i] = -Aj[-1] + self.zetaT[j] - self.A0[i] + \
+                            self.zetaL[i] - self.zetaL[j]
+                    else:
+                        raise(NotImplementedError)
+                Di = [self.A0[i]] + list(Ai) + [self.zetaT[i]]
+                self.cst[i].D = Di
+                self.cst[i].zetaT = self.zetaT[i]
+                self.cst[i].zetaL = self.zetaL[i]
+                self.cst[i].offset_x = offset_x
+                self.cst[i].internal_variables(self.cst[i].length)
+                if i == 0:
+                    error = 0
+                else:
+                    error = abs(chord0 - self.cst[i].chord)
+            self.cst[i].offset_s = offset_s
+            offset_s += self.cst[i].length
+        self.total_chord = sum([self.cst[i].chord for i in range(self.p)])
 
     @classmethod
     def cylindrical(cls, D, chord=1, color='k', configuration=0):
@@ -201,13 +251,14 @@ class CoordinateSystem(object):
         else:
             return(np.zeros(len(x1)))
 
-    def _x3_CST(self, x1, diff=None):
+    def _x3_CST(self, x1, diff=None, offset=True):
         A = self.D[:-1]
-        x1 = x1 - self.offset_x
+        if offset:
+            x1 = x1 - self.offset_x
         psi = x1 / self.chord
         if diff is None:
-            return(self.offset + CST(x1, self.chord, deltasz=self.deltaz, Au=A,
-                                     N1=self.N1, N2=self.N2, deltasLE=self.deltazLE))
+            return(self.offset + CST(x1, self.chord, deltasz=self.zetaT*self.chord, Au=A,
+                                     N1=self.N1, N2=self.N2, deltasLE=self.zetaL*self.chord))
         elif diff == 'x1':
             d = dxi_u(psi, A, self.zetaT, N1=self.N1, N2=self.N2, zetaL=self.zetaL)
             if x1[0] < 1e-6 and self.N1 == 1:
@@ -219,7 +270,6 @@ class CoordinateSystem(object):
             dd = (1/self.chord)*ddxi_u(psi, A, N1=self.N1, N2=self.N2)
             if abs(x1[0]) < 1e-6 and self.N1 == 1 and self.N2 == 1:
                 n = len(A) - 1
-                print('n', n)
                 dd[0] = (1/self.chord)*(-2*(n+1)*A[0] + 2*A[1]*n)
             if abs(x1[-1] - self.chord) < 1e-6 and self.N2 == 1:
                 n = len(A) - 1
@@ -238,10 +288,7 @@ class CoordinateSystem(object):
         c_min = 0
         for i in range(self.p):
             c_max = c_min + self.cst[i].chord
-            if i == self.p - 1:
-                indexes = np.where((x1 >= c_min) & (x1 <= c_max))
-            else:
-                indexes = np.where((x1 >= c_min) & (x1 <= c_max))
+            indexes = np.where((x1 >= (c_min-self.tol)) & (x1 <= (c_max+self.tol)))
             output[indexes] = self.cst[i].x3(x1[indexes], diff=diff)
             c_min = c_max
         return output
@@ -341,15 +388,18 @@ class CoordinateSystem(object):
             for beta in range(2):
                 self.B[alpha, beta] = self.christoffel(alpha, beta, 2)
 
-    def arclength(self, chord=None, origin=0):
+    def arclength(self, chord=None, origin=None):
         def integrand(x1):
-            dr = self.x3(np.array([x1]), 'x1')
+            dr = self.x3(np.array([x1]), 'x1', offset=False)
             return np.sqrt(1 + dr**2)
+
         if chord is None:
             chord = self.chord
+        if origin is None:
+            origin = self.origin
         if chord == 0:
             return [0, 0]
-        return integrate.quad(integrand, origin, chord, limit=500)
+        return integrate.quad(integrand, origin, chord, limit=500)[0]
 
     def arclength_index(self, index):
         x1 = self.x1_grid[index]
@@ -360,7 +410,7 @@ class CoordinateSystem(object):
             else:
                 dr = self.x3(np.array([x1-self.tol]), 'x1')
         self.darc[index] = np.sqrt(1 + dr[0]**2)
-        return integrate.trapz(self.darc[:index+1], self.x1_grid[:index+1])
+        return integrate.trapz(self.darc[:index+1], self.x1_grid[:index+1]-self.offset_x)
 
     def improper_arclength_index(self, index):
         x1 = self.x1_grid[index]
@@ -370,13 +420,13 @@ class CoordinateSystem(object):
 
     def arclength_chord(self):
         self.darc = np.ones(len(self.x1_grid))
-        dr = self.x3(np.array([1e-7]), 'x1')
+        dr = self.x3(np.array([1e-7]), 'x1', offset=False)
         self.darc[0] = np.sqrt(1 + dr[0]**2)
         for index in range(1, len(self.x1_grid)-1):
             x1 = self.x1_grid[index]
-            dr = self.x3(np.array([x1]), 'x1')
+            dr = self.x3(np.array([x1]), 'x1', offset=False)
             self.darc[index] = np.sqrt(1 + dr[0]**2)
-        self.darc[-1] = np.sqrt(1 + (-self.D[-2]+self.D[-1])**2)
+        self.darc[-1] = np.sqrt(1 + (-self.D[-2]+self.D[-1]-self.zetaL)**2)
         return integrate.trapz(self.darc, self.x1_grid)
 
     def improper_arclength_chord(self):
@@ -396,7 +446,7 @@ class CoordinateSystem(object):
             # - np.sqrt(1 + B/np.sqrt(x))
             return np.sqrt(1 + (-self.D[-2]+self.D[-1])**2) - np.sqrt(1 + A/x)
         else:
-            dr = self.x3(np.array([x]), 'x1')
+            dr = self.x3(np.array([x]), 'x1', offset=False)
             return np.sqrt(1 + dr[0]**2) - np.sqrt(1 + A/x)
 
     def unbounded_integral(self, end, start=0):
@@ -404,62 +454,6 @@ class CoordinateSystem(object):
             return np.sqrt(x*(A + x)) + A*np.log(np.sqrt(A+x) + np.sqrt(x))
         A = self.N1**2*self.D[0]**2
         return indefinite_integral(end) - indefinite_integral(start)
-
-    # def calculate_x1(self, length_target, bounds=None, output=False, origin=0,
-    #                  length_rigid=0):
-    #     def f(c_c):
-    #         length_current, err = self.arclength(c_c[0])
-    #         return abs(target - length_current)
-    #
-    #     def f_index(dx):
-    #         if dx[0] < 0:
-    #             return 100
-    #         else:
-    #             self.x1_grid[index] = self.x1_grid[index-1] + dx[0]
-    #
-    #             # if self.name == 'CST':
-    #             #     length_current = length_rigid + self.improper_arclength_index(index)
-    #             # else:
-    #             length_current = length_rigid + self.arclength_index(index)
-    #             return target - length_current
-    #
-    #     def fprime_index(x):
-    #         dr = self.x3(x, 'x1')
-    #         return np.array([np.sqrt(1 + dr[0]**2)])
-    #
-    #     if len(length_target) == 1:
-    #         target = length_target[0]
-    #         x1 = [optimize.fsolve(f, 0, fprime=fprime_index)[0]]
-    #     else:
-    #         x1 = [origin]
-    #         if hasattr(self, 'x1_grid'):
-    #             if np.isnan(self.x1_grid).any():
-    #                 prev_values = False
-    #             else:
-    #                 prev_values = True
-    #         else:
-    #             prev_values = False
-    #         if not prev_values:
-    #             self.x1_grid = np.zeros(len(length_target))
-    #             self.darc = np.ones(len(length_target))
-    #             self.x1_grid[0] = origin
-    #             if not self.name == 'CST' and origin != 0:
-    #                 dr = self.x3(np.array([origin]), 'x1')
-    #                 self.darc[0] = np.sqrt(1 + dr**2)
-    #             elif self.name != 'CST' and origin != 0:
-    #                 raise(NotImplementedError)
-    #         for index in range(1, len(length_target)):
-    #             target = length_target[index]
-    #             if prev_values:
-    #                 x0 = self.x1_grid[index] - self.x1_grid[index-1]
-    #             else:
-    #                 x0 = length_target[index] - length_target[index-1]
-    #             dx = optimize.fsolve(f_index, x0, fprime=fprime_index)[0]
-    #             x1.append(self.x1_grid[index-1] + dx)
-    #     if output:
-    #         return np.array(x1)
-    #     else:
-    #         self.x1_grid = np.array(x1)
 
     def calculate_x1(self, length_target, bounds=None, output=False, origin=0, length_rigid=0):
         def f(c_c):
@@ -472,34 +466,48 @@ class CoordinateSystem(object):
             if x < 0:
                 return 100
             else:
-                self.x1_grid[index] = x
+                self.x1_grid[index] = x + self.offset_x
                 # if self.name == 'CST':
                 #     length_current = length_rigid + self.improper_arclength_index(index)
                 # else:
                 length_current = length_rigid + self.arclength_index(index)
                 return abs(target - length_current)
 
-    #     def fprime_index(x):
-    #         dr = self.x3(x, 'x1')
-    #         return np.array([np.sqrt(1 + dr[0]**2)])
-        x1 = []
-
-        if len(length_target) == 1:
-            target = length_target[0]
-            x1.append(optimize.fsolve(f, origin)[0])
+        if self.name == 'pCST':
+            self.s = length_target
+            s_min = 0
+            for i in range(self.p):
+                s_max = s_min + self.cst[i].length
+                indexes = np.where((length_target >= (s_min-self.tol)) &
+                                   (length_target <= (s_max+self.tol)))
+                self.cst[i].s = length_target[indexes]
+                self.cst[i].calculate_x1(length_target[indexes] - self.cst[i].offset_s)
+                s_min = s_max
+            x1_grid = []
+            for i in range(self.p):
+                x1_grid += list(self.cst[i].x1_grid)
+            self.x1_grid = x1_grid  # [self.cst[i].x1_grid for i in range(self.p)]
         else:
-            self.x1_grid = np.zeros(len(length_target))
-            self.darc = np.zeros(len(length_target))
-            for index in range(len(length_target)):
-                if index == 0 and origin != 0:
-                    dr = self.x3(np.array([origin]), 'x1')
-                    self.darc[index] = np.sqrt(1 + dr[0]**2)
-                    self.x1_grid[index] = origin
-                else:
-                    target = length_target[index]
-                    self.x1_grid[index] = optimize.fsolve(f_index, target)[0]
-        if output:
-            return np.array(x1)
+            #     def fprime_index(x):
+            #         dr = self.x3(x, 'x1')
+            #         return np.array([np.sqrt(1 + dr[0]**2)])
+            x1 = []
+            if len(length_target) == 1:
+                target = length_target[0]
+                x1.append(optimize.fsolve(f, origin)[0])
+            else:
+                self.x1_grid = np.zeros(len(length_target))
+                self.darc = np.zeros(len(length_target))
+                for index in range(len(length_target)):
+                    if index == 0 and origin != 0:
+                        dr = self.x3(np.array([origin + self.offset_x]), 'x1')
+                        self.darc[index] = np.sqrt(1 + dr[0]**2)
+                        self.x1_grid[index] = origin + self.offset_x
+                    else:
+                        target = length_target[index]
+                        self.x1_grid[index] = optimize.fsolve(f_index, target)[0] + self.offset_x
+            if output:
+                return np.array(x1)
 
     def calculate_s(self, N, target_length=None, density='gradient', origin=0):
         def integrand(s):
@@ -523,7 +531,7 @@ class CoordinateSystem(object):
             return [output]
 
         if density == 'gradient':
-            s_epsilon = self.arclength(np.array([origin]))[0]
+            s_epsilon = self.arclength(np.array([origin]))
             return np.linspace(s_epsilon, target_length, N)
         elif density == 'curvature':
             total = integrate.quad(integrand, origin, self.chord, limit=500)[0]
@@ -545,7 +553,7 @@ class CoordinateSystem(object):
     def plot(self, basis=False, r=None, label=None, linestyle='-', color=None, scatter=False, zorder=0, marker='.'):
         if self.name == 'pCST':
             for i in range(self.p):
-                self.cst[i].plot(basis, label=label[i])
+                self.cst[i].plot(basis, label=label[i], scatter=scatter)
         else:
             if r is None:
                 r = self.r(self.x1_grid)
@@ -610,6 +618,7 @@ class CoordinateSystem(object):
         #       self.N2, target_length/nondimensional_length)
         self.chord = target_length/nondimensional_length
         self.deltaz = self.zetaT*self.chord
+        self.deltazLE = self.zetaL*self.chord
 
     def calculate_angles(self):
         self.cos = self.x1(self.x1_grid, 'theta1')
