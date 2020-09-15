@@ -82,7 +82,6 @@ def dxi_l(psi, Al, delta_xi, N1=0.5, N2=1):
 def ddxi_u(psi, Au, abs_output=False, N1=0.5, N2=1):
     """Calculate upper second derivate of xi for a given psi"""
     n = len(Au)-1
-    print('Au', Au)
     C_i = C(N1, N2, psi)
     diff = 0
     for i in range(n+1):

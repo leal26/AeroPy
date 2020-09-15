@@ -105,7 +105,10 @@ class beam_chen():
         self.g = copy.deepcopy(geometry)
         self.p = properties
         self.l = load
-        self.s = s
+        if self.g.name == 'pCST':
+            self.s = self.g.s
+        else:
+            self.s = s
         self.origin = origin
         self.ignore_ends = ignore_ends
         self.rotated = rotated
@@ -114,9 +117,9 @@ class beam_chen():
         if self.ignore_ends:
             self.integral_ends()
         self.g_p = copy.deepcopy(geometry)
-        if length_preserving:
-            self.g_p.internal_variables(self.g.length, origin=self.origin)
-        self.g_p.calculate_x1(self.s, origin=origin, length_rigid=s[0])
+        # if length_preserving:
+        #     self.g_p.internal_variables(self.g.length, origin=self.origin)
+        self.g_p.calculate_x1(self.s, origin=origin, length_rigid=self.s[0])
         self.g_p.radius_curvature(self.g_p.x1_grid)
 
         if self.rotated:
@@ -124,6 +127,10 @@ class beam_chen():
 
     def calculate_M(self):
         self.M = np.zeros(len(self.x))
+        # print('x', self.x)
+        # print('s', self.s)
+        # print('y', self.y)
+        self.repeat = False
         for i in range(len(self.M)):
             self.M[i] = self._M(self.x[i], self.s[i], self.y[i])
 
@@ -149,9 +156,7 @@ class beam_chen():
             else:
                 for i in range(len(self.l.concentrated_s)):
                     index = np.where(self.s == self.l.concentrated_s[i])[0][0]
-                    # print('s', i, index, self.x[index], self.y[index], x, y, self.l.concentrated_s)
                     if s < self.l.concentrated_s[i]:
-                        # print(i, index, self.l.concentrated_load, self.y)
                         M_i -= self.l.concentrated_load[i][0]*(self.y[index]-y)
                         M_i += self.l.concentrated_load[i][1]*(self.x[index]-x)
 
@@ -173,7 +178,15 @@ class beam_chen():
         # Point torques
         for j in range(len(self.l.torque)):
             if s <= self.l.torque_s[j]:
-                M_i += self.l.torque[j]
+                if s == self.l.torque_s[j]:
+                    if self.repeat:
+                        self.repeat = False
+                    else:
+                        self.repeat = True
+                        M_i += self.l.torque[j]
+                else:
+                    M_i += self.l.torque[j]
+                # M_i += self.l.torque[j]
 
         return M_i
 
@@ -256,7 +269,7 @@ class beam_chen():
         sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-1, 1]],
                        constraints=constraints)
         self.g.D = format_input(sol.x, self.g, self.g_p)
-        if self.length_preserving:
+        if self.length_preserving and self.g.name != 'pCST':
             self.g.internal_variables(self.g.length, origin=self.origin)
         # self.g.calculate_x1(self.s)
         self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
@@ -266,7 +279,7 @@ class beam_chen():
 
     def _residual(self, A):
         self.g.D = A
-        if self.length_preserving:
+        if self.length_preserving and self.g.name != 'pCST':
             self.g.internal_variables(self.g.length, origin=self.origin)
         self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
@@ -281,7 +294,7 @@ class beam_chen():
     def integral_ends(self):
         # Correct point
         origin = np.array([self.origin])
-        tip = np.array([self.g.chord])
+        tip = np.array([self.g.total_chord])
         if np.isnan(self.g.x3(origin, diff='x1')[0]) or \
                 np.isnan(self.g.x3(origin, diff='x11')[0]):
             self.s = np.insert(self.s, 1, origin + self.g.tol)
@@ -290,37 +303,6 @@ class beam_chen():
                 np.isnan(self.g.x3(tip, diff='x11')[0]):
             self.s = np.insert(self.s, -1, self.s[-1] - self.g.tol)
         self.g.calculate_x1(self.s)
-
-    def calculate_resultants(self):
-        length_child = self.g.arclength(np.array([self.g.chord]))[0]
-        self.g.calculate_angles()
-        cos = self.g.cos[-1]
-        sin = self.g.sin[-1]
-        # print('cos', self.g.cos)
-        Qx = 0
-        Qy = 0
-        Qt = Qx*cos + Qy*sin
-        rho_c = self.g.rho[-1]
-        rho_p = self.g_p.rho[-1]
-        # self.T = Qt - self.p.inertia*self.p.young*(rho_c - rho_p)*(1-rho_c)
-        self.T = self.p.area*self.p.young*(length_child/self.g.length-1)
-        b = self.g.rho[-1] - self.g_p.rho[-1]
-        a = self.g.rho[-2] - self.g_p.rho[-2]
-        ds = self.s[-1] - self.s[-2]
-        self.V = - self.p.young*self.p.inertia*(b-a)/ds
-
-        self.Rx = sin*self.V + cos*self.T
-        self.Ry = cos*self.V - sin*self.T
-        # self.Rx = cos*(self.T+sin*self.V)
-        # self.Ry = self.V/cos  # - sin/cos*self.Rx
-        # print('R', self.Rx, self.Ry)
-        # print('g_p', self.g_p.rho)
-        # print('rho_c', rho_c)
-        # print('rho_p', rho_p)
-        # print('V', self.V)
-        # print('T', self.T)
-        # print('eqs', self.V/cos, self.T/sin)
-        # print('cos/sin', cos, sin)
 
 
 class airfoil():
