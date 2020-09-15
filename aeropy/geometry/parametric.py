@@ -132,14 +132,18 @@ class CoordinateSystem(object):
         c.x3 = c._x3_pCST
         c.name = 'pCST'
         c.p = len(chord)
+        # For conevinence n is order of CST and nn is number of shape coeff (n+1)
         if continuity == 'C2':
-            n = (len(D)-2)/c.p
+            c.nn = (len(D)-2)/c.p
         elif continuity == 'C1':
-            n = (len(D)-1)/c.p
-        if (n % 1) != 0:
+            c.nn = (len(D)-1)/c.p
+        if (c.nn % 1) != 0:
             raise ValueError('Incorrect number of inputs D')
         else:
-            n = int(n)
+            c.nn = int(c.nn)
+            c.n = c.nn
+        # print('N', c.n, c.nn)
+        # BREAK
         c.cst = []
         c.zetaL = []
         c.zetaT = []
@@ -149,11 +153,11 @@ class CoordinateSystem(object):
             j = i - 1
             # From shape coefficients 1 to n
             if continuity == 'C2':
-                Ai = D[1+i*n:1+(i+1)*n]
-                Aj = D[1+j*n:1+(j+1)*n]
+                Ai = D[1+i*c.nn:1+(i+1)*c.nn]
+                Aj = D[1+j*c.nn:1+(j+1)*c.nn]
             elif continuity == 'C1':
-                Ai = D[i*n:(i+1)*n]
-                Aj = D[j*n:(j+1)*n]
+                Ai = D[i*c.nn:(i+1)*c.nn]
+                Aj = D[j*c.nn:(j+1)*c.nn]
             if i == 0:
                 offset_x = 0
                 c.A0.append(D[0])
@@ -163,8 +167,8 @@ class CoordinateSystem(object):
                 if N1[i] == 1. and N2[i] == 1.:
                     offset_x = chord[j]
                     if continuity == 'C2':
-                        ddj = n*Aj[-2] - (N1[j]+n)*Aj[-1]
-                        c.A0.append((-chord[i]/chord[j]*ddj+Ai[0]*n)/(n+1))
+                        ddj = c.n*Aj[-2] - (N1[j]+c.n)*Aj[-1]
+                        c.A0.append((-chord[i]/chord[j]*ddj+Ai[0]*c.n)/(c.n+1))
                     elif continuity == 'C1':
                         c.A0.append(Ai[0])
                     c.zetaL.append(chord[j]/chord[i]*c.zetaT[j])
@@ -189,20 +193,20 @@ class CoordinateSystem(object):
         return c
 
     def _pCST_update(self):
-        n = int((len(self.D)-2)/self.p)
         offset_s = 0
         for i in range(self.p):
             j = i - 1
             # From shape coefficients 1 to n
             if self.continuity == 'C2':
-                Ai = self.D[1+i*n:1+(i+1)*n]
-                Aj = self.D[1+j*n:1+(j+1)*n]
+                Ai = self.D[1+i*self.nn:1+(i+1)*self.nn]
+                Aj = self.D[1+j*self.nn:1+(j+1)*self.nn]
             elif self.continuity == 'C1':
-                Ai = self.D[i*n:(i+1)*n]
-                Aj = self.D[j*n:(j+1)*n]
+                Ai = self.D[i*self.nn:(i+1)*self.nn]
+                Aj = self.D[j*self.nn:(j+1)*self.nn]
             error = 999
             while error > 1e-4:
-                chord0 = self.cst[i].chord
+                prev = np.array([self.cst[i].chord, self.cst[i].zetaT,
+                                 self.cst[i].zetaL, self.cst[i].D[0]])
                 if i == 0:
                     offset_x = 0
                     self.A0[i] = self.D[0]
@@ -212,16 +216,17 @@ class CoordinateSystem(object):
                     if self.N1[i] == 1. and self.N2[i] == 1.:
                         offset_x = self.cst[j].chord
                         if self.continuity == 'C2':
-                            ddj = n*Aj[-2] - (self.N1[j]+n)*Aj[-1]
-                            self.A0.append((-self.chord[i]/self.chord[j]*ddj+Ai[0]*n)/(n+1))
+                            ddj = self.n*Aj[-2] - (self.N1[j]+self.n)*Aj[-1]
+                            self.A0[i] = (-self.chord[i]/self.chord[j]*ddj+Ai[0]*self.n)/(self.n+1)
+
                         elif self.continuity == 'C1':
-                            self.A0.append(Ai[0])
+                            self.A0[i] = Ai[0]
+
                         self.zetaL[i] = self.cst[j].chord/self.cst[i].chord*self.zetaT[j]
                         self.zetaT[i] = -Aj[-1] + self.zetaT[j] - self.A0[i] + \
                             self.zetaL[i] - self.zetaL[j]
                     else:
                         raise(NotImplementedError)
-
                 if self.continuity == 'C2':
                     Di = [self.A0[i]] + list(Ai) + [self.zetaT[i]]
                 elif self.continuity == 'C1':
@@ -230,13 +235,16 @@ class CoordinateSystem(object):
                 self.cst[i].zetaT = self.zetaT[i]
                 self.cst[i].zetaL = self.zetaL[i]
                 self.cst[i].offset_x = offset_x
+
                 self.cst[i].internal_variables(self.cst[i].length)
                 if i == 0:
                     error = 0
                 else:
-                    error = abs(chord0 - self.cst[i].chord)
-                print('ERROR', error, self.cst[i].chord, chord0,
-                      self.cst[i].zetaT, self.cst[i].zetaL)
+                    current = np.array([self.cst[i].chord, self.cst[i].zetaT,
+                                        self.cst[i].zetaL, self.cst[i].D[0]])
+                    error = np.linalg.norm(current-prev)
+                    prev = current
+
             self.cst[i].offset_s = offset_s
             offset_s += self.cst[i].length
         self.total_chord = sum([self.cst[i].chord for i in range(self.p)])
@@ -283,7 +291,7 @@ class CoordinateSystem(object):
             return(self.offset + CST(x1, self.chord, deltasz=self.zetaT*self.chord, Au=A,
                                      N1=self.N1, N2=self.N2, deltasLE=self.zetaL*self.chord))
         elif diff == 'x1':
-            print('x3 inside', self.zetaT, self.zetaL)
+            # print('x3 inside', self.zetaT, self.zetaL)
             d = dxi_u(psi, A, self.zetaT, N1=self.N1, N2=self.N2, zetaL=self.zetaL)
             if x1[0] < self.tol and self.N1 == 1:
                 d[0] = +A[0] + self.zetaT - self.zetaL
@@ -648,7 +656,7 @@ class CoordinateSystem(object):
         self.chord = 1
 
         nondimensional_length = self.arclength(chord=1., origin=origin/self.chord)
-        print('ND', nondimensional_length, self.zetaT, self.zetaL, self.zetaT - self.zetaL)
+
         # print('target', target_length, origin, self.D, self.N1,
         #       self.N2, target_length/nondimensional_length)
         self.chord = target_length/nondimensional_length
