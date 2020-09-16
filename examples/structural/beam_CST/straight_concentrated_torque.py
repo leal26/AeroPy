@@ -15,14 +15,14 @@ def format_input(input, g=None, g_p=None):
 
 abaqus = np.loadtxt('beam_torque.csv', delimiter=',')
 
-g = CoordinateSystem.pCST(D=[0, 0, 0, 0, 0, 0, 0], chord=[.5, .5], color=['b', 'g'],
-                          N1=[1, 1], N2=[1, 1], continuity='C1', tol=1e-3)
+g = CoordinateSystem.pCST(D=[0, 0, 0, 0, 0], chord=[.5, .5], color=['b', 'g'],
+                          N1=[1, 1], N2=[1, 1], continuity='C1', free_end=True)
 
 p = properties()
 l = loads(torque=[1], torque_s=[.5])
 g.calculate_s(N=[11, 11])
 b = beam_chen(g, p, l, s=None, ignore_ends=True)
-b.parameterized_solver(format_input, x0=g.D)
+b.parameterized_solver(format_input, x0=g.D[:-1])
 # [-0.00428542530710673, -0.004284305844033915, -0.00428524698261122, -
 #                                          3.5282148257309257e-06, -3.054801179069392e-07, -2.9282143007525176e-06, 0.0, 0.00428542530710673]
 # b.g.calculate_x1(b.s)
@@ -42,11 +42,12 @@ plt.plot(b.s, b.M, c='b')
 # print('arc', b.g.darc)
 # print('rho', b.g.rho)
 print('states')
-print(b.g.cst[1].zetaT)
-print(b.g.cst[1].zetaL)
-print(b.g.cst[1].chord)
-print(b.g.cst[0].D)
-print(b.g.cst[1].D)
+print(b.g.n)
+print(b.g.cst[0].zetaT, b.g.cst[1].zetaT)
+print(b.g.cst[0].zetaL, b.g.cst[1].zetaL)
+print(b.g.cst[0].chord, b.g.cst[1].chord)
+print(b.g.cst[0].D, b.g.cst[1].D)
+print()
 # Results from Abaqus
 abaqus_data = pickle.load(open('neutral_line.p', 'rb'))
 

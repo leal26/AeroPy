@@ -1,4 +1,5 @@
 import math
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import integrate, optimize
@@ -125,9 +126,10 @@ class CoordinateSystem(object):
 
     @classmethod
     def pCST(cls, D, chord=np.array([.5, .5]), color='b', N1=[1, 1.], N2=[1.0, 1.0],
-             tol=1e-6, offset=0, offset_x=0, continuity='C2'):
+             tol=1e-6, offset=0, offset_x=0, continuity='C2', free_end=False):
         c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2,
-                tol=tol, offset=offset, offset_x=offset_x, continuity=continuity)
+                tol=tol, offset=offset, offset_x=offset_x, continuity=continuity,
+                free_end=free_end)
         c.x1 = c._x1_pCST
         c.x3 = c._x3_pCST
         c.name = 'pCST'
@@ -141,10 +143,14 @@ class CoordinateSystem(object):
             raise ValueError('Incorrect number of inputs D')
         else:
             c.nn = int(c.nn)
-            c.n = c.nn
+            if continuity == 'C1':
+                c.n = c.nn - 1
+            else:
+                c.n = c.nn
         # print('N', c.n, c.nn)
         # BREAK
         c.cst = []
+        c.cst_p = []
         c.zetaL = []
         c.zetaT = []
         c.A0 = []
@@ -186,6 +192,7 @@ class CoordinateSystem(object):
                                               deltaz=c.zetaT[-1]*chord[i],
                                               deltazLE=c.zetaL[-1]*chord[i],
                                               offset_x=offset_x, offset=offset))
+            c.cst_p.append(copy.deepcopy(c.cst[-1]))
             c.cst[i].offset_s = offset_s
             offset_s += c.cst[i].length
         c.total_chord = sum([c.cst[i].chord for i in range(c.p)])
@@ -198,10 +205,16 @@ class CoordinateSystem(object):
             j = i - 1
             # From shape coefficients 1 to n
             if self.continuity == 'C2':
-                Ai = self.D[1+i*self.nn:1+(i+1)*self.nn]
+                if i == self.p-1 and self.free_end:
+                    Ai0 = self.D[1+i*self.nn:1+(i+1)*self.nn-1]
+                else:
+                    Ai = self.D[1+i*self.nn:1+(i+1)*self.nn]
                 Aj = self.D[1+j*self.nn:1+(j+1)*self.nn]
             elif self.continuity == 'C1':
-                Ai = self.D[i*self.nn:(i+1)*self.nn]
+                if i == self.p-1 and self.free_end:
+                    Ai0 = self.D[i*self.nn:(i+1)*self.nn-1]
+                else:
+                    Ai = self.D[i*self.nn:(i+1)*self.nn]
                 Aj = self.D[j*self.nn:(j+1)*self.nn]
             error = 999
             while error > 1e-4:
@@ -213,6 +226,16 @@ class CoordinateSystem(object):
                     self.zetaT[i] = self.D[-1]
                     self.zetaL[i] = 0
                 else:
+                    if i == self.p-1 and self.free_end:
+                        Pi = self.cst_p[i].D[:-1]
+                        chordp = self.cst_p[i].chord
+                        den_p = (1+(-Pi[-1] + self.cst_p[i].zetaT - self.cst_p[i].zetaL)**2)**(1.5)
+                        den_c = (1+(-self.cst[i].D[-2] + self.cst[i].zetaT -
+                                    self.cst[i].zetaL)**2)**(1.5)
+                        rho_p = (1/chordp)*(self.n*Pi[-2] - (self.N1[i]+self.n)*Pi[-1])/den_p
+                        An = (-den_c*self.chord[i]*rho_p+Ai0[-1]*self.n)/(self.n+1)
+                        Ai = Ai0 + [An]
+                        rho_c = (1/self.chord[i])*(self.n*Ai[-2] - (self.N1[i]+self.n)*Ai[-1])/den_c
                     if self.N1[i] == 1. and self.N2[i] == 1.:
                         offset_x = self.cst[j].chord
                         if self.continuity == 'C2':
@@ -231,6 +254,7 @@ class CoordinateSystem(object):
                     Di = [self.A0[i]] + list(Ai) + [self.zetaT[i]]
                 elif self.continuity == 'C1':
                     Di = list(Ai) + [self.zetaT[i]]
+
                 self.cst[i].D = Di
                 self.cst[i].zetaT = self.zetaT[i]
                 self.cst[i].zetaL = self.zetaL[i]
@@ -638,12 +662,12 @@ class CoordinateSystem(object):
             rho = (dx*ddy-dy*ddx)/(dx**2 + dy**2)**(1.5)
         else:
             rho = self.x3(x, diff='x11')/(1+(self.x3(x, diff='x1'))**2)**(3/2)
-            if self.name == 'CST':
-                if x[0] == 0:
-                    if self.D[0] == 0:
-                        rho[0] = 0
-                    else:
-                        rho[0] = -2/(self.D[0]**2)/self.chord
+            # if self.name == 'CST':
+            #     if x[0] == 0:
+            #         if self.D[0] == 0:
+            #             rho[0] = 0
+            #         else:
+            #             rho[0] = -2/(self.D[0]**2)/self.chord
         if output_only:
             return rho
         else:
