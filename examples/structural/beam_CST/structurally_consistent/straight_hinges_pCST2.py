@@ -53,17 +53,17 @@ lower = np.loadtxt('lower_beam_hinge.csv', delimiter=',')
 psi_spars = [0.2]
 m = len(psi_spars)
 
-g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
+g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0.],
                                 chord=[psi_spars[0], 1-psi_spars[0]],
                                 color=['b', 'r'], N1=[1., 1], N2=[1, 1],
                                 offset=.05, continuity='C2', free_end=True)
 g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
-                                chord=[psi_spars[0], 1-psi_spars[0]],
-                                color=['b', 'r'], N1=[1., 1], N2=[1, 1],
+                                chord=[psi_spars[0], 0.7, 0.1],
+                                color=['b', 'r', 'g'], N1=[1., 1, 1], N2=[1, 1, 1],
                                 offset=-.05, continuity='C2', free_end=True)
 
 g_upper.calculate_s(N=[11, 9])
-g_lower.calculate_s(N=[11, 9])
+g_lower.calculate_s(N=[11, 8, 6])
 p_upper = properties()
 p_lower = properties()
 l_upper = loads(concentrated_load=[[-np.sqrt(2)/2, -np.sqrt(2)/2]], load_s=[1])

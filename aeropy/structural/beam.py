@@ -155,7 +155,13 @@ class beam_chen():
                     M_i += self.l.concentrated_magnitude[i]*f2*(self.x[index]-x)
             else:
                 for i in range(len(self.l.concentrated_s)):
-                    index = np.where(self.s == self.l.concentrated_s[i])[0][0]
+                    # print(s, self.s)
+                    # print(self.l.concentrated_s)
+                    # print(self.l.concentrated_s[i])
+                    # print(self.s[18])
+                    # print(type(self.s), type(self.l.concentrated_s))
+                    index = np.where(np.around(self.s, decimals=7) ==
+                                     self.l.concentrated_s[i])[0][0]
                     if s < self.l.concentrated_s[i]:
                         M_i -= self.l.concentrated_load[i][0]*(self.y[index]-y)
                         M_i += self.l.concentrated_load[i][1]*(self.x[index]-x)
@@ -294,7 +300,10 @@ class beam_chen():
     def integral_ends(self):
         # Correct point
         origin = np.array([self.origin])
-        tip = np.array([self.g.total_chord])
+        if self.g.name == 'pCST':
+            tip = np.array([self.g.total_chord])
+        else:
+            tip = np.array([self.g.chord])
         if np.isnan(self.g.x3(origin, diff='x1')[0]) or \
                 np.isnan(self.g.x3(origin, diff='x11')[0]):
             self.s = np.insert(self.s, 1, origin + self.g.tol)
@@ -337,8 +346,8 @@ class airfoil():
             self.bl.calculate_resultants()
             # self.bu.l.concentrated_load[0][0] = -self.bl.Rx
             # self.bu.l.concentrated_load[0][1] = -1 - self.bl.Ry
-            R = self.bu._residual(Au)
-            print('R', self.bu.R, R, Au)
+            R = self.bu._residual(Au) + self.bl._residual(Al)
+            print('R', self.bu.R, self.bl.R, Au)
             return R
 
         sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-.2, .2]])
@@ -410,8 +419,12 @@ class coupled_beams():
         return R
 
     def calculate_force(self):
-        x_u = self.bu.g.calculate_x1(np.array(self.bu.l.external_s), output=True)
-        x_l = self.bl.g.calculate_x1(np.array(self.bl.l.external_s), output=True)
+        index = np.where(np.around(self.bu.s, decimals=7) ==
+                         self.bu.l.concentrated_s[0])[0][0]
+        x_u = self.bu.g.x1_grid[index]
+        index = np.where(np.around(self.bl.s, decimals=7) ==
+                         self.bl.l.concentrated_s[0])[0][0]
+        x_l = self.bl.g.x1_grid[index]
 
         y_u = self.bu.g.x3(np.array([x_u]))[0]
         y_l = self.bl.g.x3(np.array([x_l]))[0]
@@ -420,10 +433,10 @@ class coupled_beams():
         dy = y_u - y_l
         ds = np.sqrt(dx**2 + dy**2)
 
-        Fx = self.bu.l.concentrated_magnitude[0]*dx/ds[0]
-        Fy = self.bu.l.concentrated_magnitude[0]*dy/ds[0]
-        self.bu.l.concentrated_load = [[-Fx[0], -Fy[0]], ]
-        self.bl.l.concentrated_load = [[Fx[0], Fy[0]], ]
+        Fx = self.bu.l.concentrated_magnitude[0]*dx/ds
+        Fy = self.bu.l.concentrated_magnitude[0]*dy/ds
+        self.bu.l.concentrated_load = [[-Fx, -Fy], ]
+        self.bl.l.concentrated_load = [[Fx, Fy], ]
         self.bu.l.external_load = self.bu.l.concentrated_load.copy()
         self.bl.l.external_load = self.bl.l.concentrated_load.copy()
         # print('loads', self.bu.l.concentrated_load, self.bl.l.concentrated_load)

@@ -155,6 +155,7 @@ class CoordinateSystem(object):
         c.zetaT = []
         c.A0 = []
         offset_s = 0
+        offset_x = 0
         for i in range(c.p):
             j = i - 1
             # From shape coefficients 1 to n
@@ -165,13 +166,12 @@ class CoordinateSystem(object):
                 Ai = D[i*c.nn:(i+1)*c.nn]
                 Aj = D[j*c.nn:(j+1)*c.nn]
             if i == 0:
-                offset_x = 0
                 c.A0.append(D[0])
                 c.zetaT.append(D[-1])
                 c.zetaL.append(0)
             else:
                 if N1[i] == 1. and N2[i] == 1.:
-                    offset_x = chord[j]
+                    offset_x += chord[j]
                     if continuity == 'C2':
                         ddj = c.n*Aj[-2] - (N1[j]+c.n)*Aj[-1]
                         c.A0.append((-chord[i]/chord[j]*ddj+Ai[0]*c.n)/(c.n+1))
@@ -197,6 +197,7 @@ class CoordinateSystem(object):
             offset_s += c.cst[i].length
         c.total_chord = sum([c.cst[i].chord for i in range(c.p)])
         c.total_length = sum([c.cst[i].length for i in range(c.p)])
+        c.joint_s = sum([c.cst[i].offset_s for i in range(1, c.p)])
         return c
 
     def _pCST_update(self):
@@ -237,7 +238,7 @@ class CoordinateSystem(object):
                         Ai = Ai0 + [An]
                         rho_c = (1/self.chord[i])*(self.n*Ai[-2] - (self.N1[i]+self.n)*Ai[-1])/den_c
                     if self.N1[i] == 1. and self.N2[i] == 1.:
-                        offset_x = self.cst[j].chord
+                        offset_x += self.cst[j].chord
                         if self.continuity == 'C2':
                             ddj = self.n*Aj[-2] - (self.N1[j]+self.n)*Aj[-1]
                             self.A0[i] = (-self.chord[i]/self.chord[j]*ddj+Ai[0]*self.n)/(self.n+1)
@@ -518,7 +519,7 @@ class CoordinateSystem(object):
 
     def calculate_x1(self, length_target, bounds=None, output=False, origin=0, length_rigid=0):
         def f(c_c):
-            length_current, err = self.arclength(c_c[0])
+            length_current = self.arclength(c_c[0])
             # print(c_c, length_current)
             return abs(target - length_current)
 
@@ -594,7 +595,7 @@ class CoordinateSystem(object):
                     self.s = np.append(self.s, self.cst[i].calculate_s(N[i]))
                     self.cst[i].indexes = list(range(Nj, Nj + N[i]))
                     self.indexes += list(range(Nj, Nj + N[i]))
-                    Nj = N[i]
+                    Nj += N[i]
             else:
                 s_epsilon = self.arclength(np.array([origin]))[0] + self.offset_s
                 self.s = np.linspace(s_epsilon, target_length + self.offset_s, N)

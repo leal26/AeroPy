@@ -103,8 +103,8 @@ g_lower = CoordinateSystem.CST(D=[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.
 g_p = CoordinateSystem.CST(D=[0., 0., 0., 0., 0., 0., 0., 0., 0.,
                               0., 0.], chord=1, color='k', N1=1, N2=1)
 
-s_upper = np.linspace(0, g_p.arclength(np.array([1]))[0], 81)
-s_lower = np.linspace(0, g_p.arclength(np.array([1]))[0], 81)
+s_upper = np.linspace(0, g_p.arclength(np.array([1])), 21)
+s_lower = np.linspace(0, g_p.arclength(np.array([1])), 21)
 p_upper = properties()
 p_lower = properties()
 l_upper = loads(concentrated_load=[[-np.sqrt(2)/2, -np.sqrt(2)/2]], load_s=[1])
@@ -113,7 +113,7 @@ l_lower = loads(concentrated_load=[[np.sqrt(2)/2, np.sqrt(2)/2]], load_s=[1-0.1]
 # l_lower = loads(concentrated_load=[[0, 1]], load_s=[1])
 arc_upper = 1.0
 arc_lower = 1.0
-arc_spar = g_lower.arclength(np.array([psi_spars[0]]))[0]
+arc_spar = g_lower.arclength(np.array([psi_spars[0]]))
 
 a = coupled_beams(g_upper, g_lower, p_upper, p_lower, l_upper, l_lower, s_upper,
                   s_lower, ignore_ends=True, spars_s=psi_spars)
