@@ -126,10 +126,11 @@ class CoordinateSystem(object):
 
     @classmethod
     def pCST(cls, D, chord=np.array([.5, .5]), color='b', N1=[1, 1.], N2=[1.0, 1.0],
-             tol=1e-6, offset=0, offset_x=0, continuity='C2', free_end=False):
+             tol=1e-6, offset=0, offset_x=0, continuity='C2', free_end=False,
+             root_fixed=False):
         c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2,
                 tol=tol, offset=offset, offset_x=offset_x, continuity=continuity,
-                free_end=free_end)
+                free_end=free_end, root_fixed=root_fixed)
         c.x1 = c._x1_pCST
         c.x3 = c._x3_pCST
         c.name = 'pCST'
@@ -147,8 +148,7 @@ class CoordinateSystem(object):
                 c.n = c.nn - 1
             else:
                 c.n = c.nn
-        # print('N', c.n, c.nn)
-        # BREAK
+
         c.cst = []
         c.cst_p = []
         c.zetaL = []
@@ -167,7 +167,10 @@ class CoordinateSystem(object):
                 Aj = D[j*c.nn:(j+1)*c.nn]
             if i == 0:
                 c.A0.append(D[0])
-                c.zetaT.append(D[-1])
+                if c.root_fixed and c.N1[i] == 1:
+                    c.zetaT.append(-D[0])
+                else:
+                    c.zetaT.append(D[-1])
                 c.zetaL.append(0)
             else:
                 if N1[i] == 1. and N2[i] == 1.:
@@ -218,13 +221,17 @@ class CoordinateSystem(object):
                     Ai = self.D[i*self.nn:(i+1)*self.nn]
                 Aj = self.D[j*self.nn:(j+1)*self.nn]
             error = 999
-            while error > 1e-4:
+            offset_x = 0
+            while error > 1e-6:
                 prev = np.array([self.cst[i].chord, self.cst[i].zetaT,
                                  self.cst[i].zetaL, self.cst[i].D[0]])
+
                 if i == 0:
-                    offset_x = 0
                     self.A0[i] = self.D[0]
-                    self.zetaT[i] = self.D[-1]
+                    if self.root_fixed and self.N1[i] == 1:
+                        self.zetaT[i] = -self.D[0]
+                    else:
+                        self.zetaT[i] = self.D[-1]
                     self.zetaL[i] = 0
                 else:
                     if i == self.p-1 and self.free_end:
@@ -234,14 +241,16 @@ class CoordinateSystem(object):
                         den_c = (1+(-self.cst[i].D[-2] + self.cst[i].zetaT -
                                     self.cst[i].zetaL)**2)**(1.5)
                         rho_p = (1/chordp)*(self.n*Pi[-2] - (self.N1[i]+self.n)*Pi[-1])/den_p
-                        An = (-den_c*self.chord[i]*rho_p+Ai0[-1]*self.n)/(self.n+1)
+                        An = (-den_c*self.cst[i].chord*rho_p+Ai0[-1]*self.n)/(self.n+1)
                         Ai = Ai0 + [An]
-                        rho_c = (1/self.chord[i])*(self.n*Ai[-2] - (self.N1[i]+self.n)*Ai[-1])/den_c
+                        rho_c = (1/self.cst[i].chord)*(self.n*Ai[-2] -
+                                                       (self.N1[i]+self.n)*Ai[-1])/den_c
                     if self.N1[i] == 1. and self.N2[i] == 1.:
-                        offset_x += self.cst[j].chord
+                        offset_x = self.cst[j].offset + self.cst[j].chord
                         if self.continuity == 'C2':
                             ddj = self.n*Aj[-2] - (self.N1[j]+self.n)*Aj[-1]
-                            self.A0[i] = (-self.chord[i]/self.chord[j]*ddj+Ai[0]*self.n)/(self.n+1)
+                            self.A0[i] = (-self.cst[i].chord/self.cst[j].chord *
+                                          ddj+Ai[0]*self.n)/(self.n+1)
 
                         elif self.continuity == 'C1':
                             self.A0[i] = Ai[0]
@@ -262,6 +271,7 @@ class CoordinateSystem(object):
                 self.cst[i].offset_x = offset_x
 
                 self.cst[i].internal_variables(self.cst[i].length)
+
                 if i == 0:
                     error = 0
                 else:
@@ -543,7 +553,10 @@ class CoordinateSystem(object):
             x1_grid = []
             for i in range(self.p):
                 x1_grid += list(self.cst[i].x1_grid[:])
-            self.x1_grid = x1_grid
+            if output:
+                return x1_grid
+            else:
+                self.x1_grid = x1_grid
         else:
             x1 = []
             if len(length_target) == 1:
@@ -682,8 +695,6 @@ class CoordinateSystem(object):
 
         nondimensional_length = self.arclength(chord=1., origin=origin/self.chord)
 
-        # print('target', target_length, origin, self.D, self.N1,
-        #       self.N2, target_length/nondimensional_length)
         self.chord = target_length/nondimensional_length
         self.deltaz = self.zetaT*self.chord
         self.deltazLE = self.zetaL*self.chord

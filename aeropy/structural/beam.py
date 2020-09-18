@@ -101,7 +101,8 @@ class euler_bernoulle_curvilinear():
 
 class beam_chen():
     def __init__(self, geometry, properties, load, s, ignore_ends=False,
-                 rotated=False, origin=0, g2=None, length_preserving=True):
+                 rotated=False, origin=0, g2=None, length_preserving=True,
+                 calculate_resultant=False):
         self.g = copy.deepcopy(geometry)
         self.p = properties
         self.l = load
@@ -124,6 +125,8 @@ class beam_chen():
 
         if self.rotated:
             self.g_p.calculate_angles()
+
+        self.calculate_resultant = calculate_resultant
 
     def calculate_M(self):
         self.M = np.zeros(len(self.x))
@@ -292,8 +295,10 @@ class beam_chen():
         self.y = self.g.x3(self.x)
         if self.l.follower:
             self.g.calculate_angles()
-        self.calculate_M()
         self.g.radius_curvature(self.g.x1_grid)
+        if self.calculate_resultant:
+            self.calculate_resultants()
+        self.calculate_M()
         self.calculate_residual()
         return self.R
 
@@ -312,6 +317,28 @@ class beam_chen():
                 np.isnan(self.g.x3(tip, diff='x11')[0]):
             self.s = np.insert(self.s, -1, self.s[-1] - self.g.tol)
         self.g.calculate_x1(self.s)
+
+    def calculate_resultants(self):
+        def M_f(s, Ry):
+            self.l.concentrated_load = self.l.external_load.copy() + [[0, Ry], ]
+            self.calculate_M()
+            if self.ignore_ends:
+                return self.M[1:-1]
+            else:
+                return self.M
+        self.g.calculate_angles()
+
+        M = (self.p.young*self.p.inertia)*(self.g.rho - self.g_p.rho)
+        s = self.s[1:-1]
+        self.l.concentrated_s = self.l.external_s.copy() + self.spars_s
+        if self.ignore_ends:
+            M = M[1:-1]
+            s = s[1:-1]
+        popt, pcov = curve_fit(M_f, s, M, p0=[0])
+
+        self.Rx = 0  # -2.614  # sbeta*R
+        self.Ry = popt[0]  # -3.634  # cbeta*R
+        self.l.concentrated_load = self.l.external_load.copy() + [[self.Rx, self.Ry], ]
 
 
 class airfoil():
@@ -451,22 +478,6 @@ class coupled_beams():
                 return self.bl.M
         self.bl.g.calculate_angles()
 
-        # index = np.where(self.bl.s == self.spars_s[0])[0][0]
-        # b = self.bl.g.rho[index+1] - self.bl.g_p.rho[index+1]
-        # a = self.bl.g.rho[index-1] - self.bl.g_p.rho[index-1]
-        # ds = self.bl.s[index+1] - self.bl.s[index-1]
-        # LHS = (self.bl.p.young*self.bl.p.inertia)*(b-a)/ds
-        # cos = self.bl.g.cos[index]
-        # sin = self.bl.g.sin[index]
-        #
-        # sbeta = self.bl.g.spar_directions[0][0]
-        # cbeta = self.bl.g.spar_directions[0][1]
-        # R = (LHS + self.bl.l.external_load[0][0]*sin -
-        #      self.bl.l.external_load[0][1]*cos)/(-sbeta*sin+cbeta*cos)
-        # print('rho', self.bl.g.rho[index+1], self.bl.g_p.rho[index+1],
-        #       self.bl.g.rho[index-1], self.bl.g_p.rho[index-1])
-        # print('Reaction', LHS, (b-a)/ds, sin, cos, sbeta, cbeta, -sbeta*sin+cbeta*cos)
-
         M = (self.bl.p.young*self.bl.p.inertia)*(self.bl.g.rho - self.bl.g_p.rho)
         s = self.bl.s[1:-1]
         self.bu.l.concentrated_s = self.bu.l.external_s.copy() + self.spars_s
@@ -475,14 +486,11 @@ class coupled_beams():
             M = M[1:-1]
             s = s[1:-1]
         popt, pcov = curve_fit(M_f, s, M, p0=[0])
-        # print('rho', self.bl.g.rho[index+1], self.bl.g_p.rho[index+1], self.bl.g.rho[index-1],  self.bl.g_p.rho[index-1])
+
         self.Rx = 0  # -2.614  # sbeta*R
         self.Ry = popt[0]  # -3.634  # cbeta*R
         self.bl.l.concentrated_load = self.bl.l.external_load.copy() + [[self.Rx, self.Ry], ]
         self.bu.l.concentrated_load = self.bu.l.external_load.copy() + [[-self.Rx, -self.Ry], ]
-
-        # self.bu.l.torque = [-2*R*sbeta*cbeta*self.bl.g.delta_P[0]]
-        # self.bu.l.torque_s = self.spars_s
 
 
 def derivative(f, a, method='central', h=0.01):

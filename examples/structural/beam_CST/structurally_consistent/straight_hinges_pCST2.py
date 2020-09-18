@@ -20,18 +20,25 @@ def constraint_f(input):
     a.bu.g.D = Au
     a.bl.g.D = Al
 
-    index = np.where(a.bl.s == a.spars_s[0])[0][0]
-    x_u = a.bu.g.x1_grid[index]
-    x_l = a.bl.g.x1_grid[index]
+    index_u = np.where(a.bu.s == a.spars_s[0])[0][0]
+    index_l = np.where(a.bl.s == a.spars_s[0])[0][0]
+    a.bu.g.calculate_x1(a.bu.s)
+    a.bl.g.calculate_x1(a.bl.s)
+    x_u = a.bu.g.x1_grid[index_u]
+    x_l = a.bl.g.x1_grid[index_l]
+    # x_u = a.bu.g.x1_grid[index]
+    # x_l = a.bl.g.x1_grid[index]
     y_u = a.bu.g.x3(np.array([x_u]))[0]
     y_l = a.bl.g.x3(np.array([x_l]))[0]
 
     norm = math.sqrt((x_u-x_l)**2+(y_u-y_l)**2)
     s1 = (x_u - x_l)/norm
     s2 = (y_u - y_l)/norm
-    x_p = np.array([a.bu.g_p.x1_grid[index]])
-    delta = a.bu.g_p.x3(x_p)[0] - a.bl.g_p.x3(x_p)[0]
+    xp_u = np.array([a.bu.g_p.x1_grid[index_u]])
+    xp_l = np.array([a.bl.g_p.x1_grid[index_l]])
+    delta = a.bu.g_p.x3(xp_u)[0] - a.bl.g_p.x3(xp_l)[0]
     a.bl.g.spar_directions = [[s1, s2]]
+    print('Constraint', norm - delta)
     return norm - delta
 
 
@@ -47,8 +54,6 @@ def format_input(input, gu=None, gu_p=None, gl=None, gl_p=None):
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-upper = np.loadtxt('upper_beam_hinge.csv', delimiter=',')
-lower = np.loadtxt('lower_beam_hinge.csv', delimiter=',')
 
 psi_spars = [0.2]
 m = len(psi_spars)
@@ -113,9 +118,22 @@ plt.plot([xu_p, xl_p], [a.bu.g_p.x3(xu_p), a.bl.g_p.x3(xl_p)], 'b', lw=3)
 xu_c = np.array([a.bu.g.x1_grid[index]])
 xl_c = np.array([a.bl.g.x1_grid[index]])
 plt.plot([xu_c, xl_c], [a.bu.g.x3(xu_c), a.bl.g.x3(xl_c)], '.5', lw=3)
-plt.scatter(upper[0, :], upper[1, :], c='.5', label='FEA: %.3f N' % -
-            l_upper.concentrated_load[0][-1], edgecolors='k', zorder=10, marker="^")
+upper = np.loadtxt('upper_beam_L-B21.csv', delimiter=',')
+lower = np.loadtxt('lower_beam_L-B21.csv', delimiter=',')
+plt.scatter(upper[0, :], upper[1, :], c='.5', label='L-B21', edgecolors='k', zorder=10, marker="^")
 plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10, marker="^")
+upper = np.loadtxt('upper_beam_NL-B21.csv', delimiter=',')
+lower = np.loadtxt('lower_beam_Nl-B21.csv', delimiter=',')
+plt.scatter(upper[0, :], upper[1, :], c='.5', label='NL-B21', edgecolors='k', zorder=10, marker="o")
+plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10, marker="o")
+upper = np.loadtxt('upper_beam_NL-B22.csv', delimiter=',')
+lower = np.loadtxt('lower_beam_NL-B22.csv', delimiter=',')
+plt.scatter(upper[0, :], upper[1, :], c='.5', label='NL-B22', edgecolors='k', zorder=10, marker="s")
+plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10, marker="s")
+pper = np.loadtxt('upper_beam_L-B22.csv', delimiter=',')
+lower = np.loadtxt('lower_beam_L-B22.csv', delimiter=',')
+plt.scatter(upper[0, :], upper[1, :], c='.5', label='L-B22', edgecolors='k', zorder=10, marker="D")
+plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10, marker="D")
 # x = [a.bu.g.chord*a.bl.g.spar_psi_upper[0], a.bl.g.chord*a.bl.g.spar_psi[0]]
 # y = [a.bu.g.chord*a.bl.g.spar_xi_upper[0], a.bl.g.chord*a.bl.g.spar_xi[0]]
 # dx = x[1]-x[0]

@@ -47,8 +47,8 @@ def format_input(input, gu=None, gu_p=None, gl=None, gl_p=None):
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-upper = np.loadtxt('upper_beam_hinge.csv', delimiter=',')
-lower = np.loadtxt('lower_beam_hinge.csv', delimiter=',')
+upper = np.loadtxt('upper_beam_simpler1.csv', delimiter=',')
+lower = np.loadtxt('lower_beam_simpler1.csv', delimiter=',')
 
 psi_spars = [0.2]
 m = len(psi_spars)
@@ -66,8 +66,8 @@ g_upper.calculate_s(N=[11, 9])
 g_lower.calculate_s(N=[11, 9])
 p_upper = properties()
 p_lower = properties()
-l_upper = loads(concentrated_load=[[-np.sqrt(2)/2, -np.sqrt(2)/2]], load_s=[1])
-l_lower = loads(concentrated_load=[[np.sqrt(2)/2, np.sqrt(2)/2]], load_s=[1-0.1])
+l_upper = loads(concentrated_load=[[0, -1]], load_s=[1])
+l_lower = loads(concentrated_load=[[0, 1]], load_s=[1])
 arc_upper = 1.0
 arc_lower = 1.0
 
