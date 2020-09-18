@@ -21,8 +21,10 @@ g = CoordinateSystem.pCST(D=[.2, .3, .3, .4, .4, 1., 1., -.4], chord=[.2, .7, .1
                           N1=[1., 1, 1], N2=[1, 1, 1], continuity='C2', free_end=True)
 g.calculate_s([11, 11, 5])
 
-# g.D = [.2, .3, .1, .5, .0, -.4]
+g.D = [.2, .3, .1, .5, .0, -.4]
 g.calculate_x1(g.s)
+print('chord', g.cst[0].chord, g.cst[1].chord, g.cst[2].chord)
+print('offset_x', g.cst[0].offset_x, g.cst[1].offset_x, g.cst[2].offset_x)
 dd = g.x3(g.x1_grid, diff='x11')
 plt.plot(g.x1_grid, dd)
 plt.figure()

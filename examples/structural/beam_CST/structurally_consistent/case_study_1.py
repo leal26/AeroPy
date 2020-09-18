@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import warnings
 import numpy as np
 import pickle
 
@@ -21,9 +22,11 @@ def constraint_f(input):
 
 def format_input(input, g=None, g_p=None):
     # COnsidering BC for zero derivative at the root
-    return [0]+list(input)
+    return list(input)
     # return input
 
+
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 abaqus = np.loadtxt('case_study_1.csv', delimiter=',')
 
@@ -37,7 +40,7 @@ l = loads(concentrated_load=[[0, -1]], load_s=[1])
 g.calculate_s(N=[11, 11])
 b = beam_chen(g, p, l, s=None, ignore_ends=True, calculate_resultant=True)
 b.spars_s = [0.5]
-b.parameterized_solver(format_input, x0=[0, 0, 0])
+b.parameterized_solver(format_input, x0=[0, 0, 0, 0], constraints=constraints)
 # b.g.D = [0, .1, .2, .3]
 # b.g.calculate_x1(b.g.s)
 # Checking stuff
@@ -48,7 +51,7 @@ b.parameterized_solver(format_input, x0=[0, 0, 0])
 # print('zetaT', b.g.cst[0].zetaT, b.g.cst[1].zetaT, b.g.zetaT)
 # print('zetaL', b.g.cst[0].zetaL, b.g.cst[1].zetaL, b.g.zetaL)
 # print('A0', b.g.A0)
-# print('loads', b.l.concentrated_load)
+print('loads', b.l.concentrated_load)
 # print('D', b.g.cst[0].D, b.g.cst[1].D)
 plt.figure()
 plt.plot(b.g.x1_grid[1:], b.M[1:], 'b', label='From forces')
