@@ -29,7 +29,13 @@ class CoordinateSystem(object):
             self._D = values
             # Update internal variables if class already populated
             if hasattr(self, 'cst'):
-                self._pCST_update()
+                bool, given_length, required_length = self._check_input(values)
+                if bool:
+                    self._pCST_update()
+                else:
+                    raise Exception('Input length is incorrect. ' +
+                                    'It is %i and it should be %i' % (
+                                        given_length, required_length))
 
         else:
             if self.n == 1 and (isinstance(values, float) or isinstance(values, np.float64)):
@@ -246,7 +252,7 @@ class CoordinateSystem(object):
                         rho_c = (1/self.cst[i].chord)*(self.n*Ai[-2] -
                                                        (self.N1[i]+self.n)*Ai[-1])/den_c
                     if self.N1[i] == 1. and self.N2[i] == 1.:
-                        offset_x = self.cst[j].offset + self.cst[j].chord
+                        offset_x = self.cst[j].offset_x + self.cst[j].chord
                         if self.continuity == 'C2':
                             ddj = self.n*Aj[-2] - (self.N1[j]+self.n)*Aj[-1]
                             self.A0[i] = (-self.cst[i].chord/self.cst[j].chord *
@@ -269,9 +275,7 @@ class CoordinateSystem(object):
                 self.cst[i].zetaT = self.zetaT[i]
                 self.cst[i].zetaL = self.zetaL[i]
                 self.cst[i].offset_x = offset_x
-
                 self.cst[i].internal_variables(self.cst[i].length)
-
                 if i == 0:
                     error = 0
                 else:
@@ -706,3 +710,19 @@ class CoordinateSystem(object):
         if self.x1_grid[0] == 0 and self.N1 == 1:
             self.cos[0] = 1
             self.sin[0] = 0
+
+    def _check_input(self, input):
+        # shape coefficients, zetaL, and zetaT
+        total = (self.n+3)*self.p
+        # y, dy boundary conditions
+        dependent = 2*(self.p-1)
+        # zetaL0 is always the same
+        dependent += 1
+        if self.free_end:
+            dependent += 1
+        if self.root_fixed:
+            dependent += 1
+        if self.continuity == 'C2':
+            dependent += (self.p-1)
+        independent = total - dependent
+        return len(input) == independent, len(input), independent

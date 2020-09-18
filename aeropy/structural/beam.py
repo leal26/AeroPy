@@ -170,7 +170,7 @@ class beam_chen():
                         M_i += self.l.concentrated_load[i][1]*(self.x[index]-x)
 
         if self.l.distributed_load is not None:
-            index = np.where(self.s == s)[0][0]
+            index = np.where(np.around(self.s, decimals=7) == np.around(s, decimals=7))[0][0]
 
             if self.ignore_ends:
                 i_end = -1
@@ -186,8 +186,8 @@ class beam_chen():
                 M_i -= trapz(M_x + M_y, self.s[index:i_end])
         # Point torques
         for j in range(len(self.l.torque)):
-            if s <= self.l.torque_s[j]:
-                if s == self.l.torque_s[j]:
+            if np.around(s, decimals=7) <= self.l.torque_s[j]:
+                if np.around(s, decimals=7) == self.l.torque_s[j]:
                     if self.repeat:
                         self.repeat = False
                     else:
@@ -195,8 +195,6 @@ class beam_chen():
                         M_i += self.l.torque[j]
                 else:
                     M_i += self.l.torque[j]
-                # M_i += self.l.torque[j]
-
         return M_i
 
     def calculate_G(self):
@@ -392,7 +390,8 @@ class airfoil():
 class coupled_beams():
     def __init__(self, g_upper, g_lower, properties_upper, properties_lower,
                  load_upper, load_lower, s_upper, s_lower, ignore_ends=False,
-                 rotated=False, origin=0, chord=1, zetaT=0, spars_s=None):
+                 rotated=False, origin=0, chord=1, zetaT=0, spars_s=None,
+                 spars_k=None):
         self.bu = beam_chen(g_upper, properties_upper, load_upper, s_upper,
                             origin=origin, ignore_ends=ignore_ends,
                             rotated=rotated)
@@ -400,6 +399,7 @@ class coupled_beams():
                             origin=origin, ignore_ends=ignore_ends,
                             rotated=rotated)
         self.spars_s = spars_s
+        self.spars_k = spars_k
 
     def calculate_x(self, s_upper=None, s_lower=None):
         if s_upper is None and s_lower is None:
@@ -482,15 +482,50 @@ class coupled_beams():
         s = self.bl.s[1:-1]
         self.bu.l.concentrated_s = self.bu.l.external_s.copy() + self.spars_s
         self.bl.l.concentrated_s = self.bl.l.external_s.copy() + self.spars_s
-        if self.bl.ignore_ends:
-            M = M[1:-1]
-            s = s[1:-1]
-        popt, pcov = curve_fit(M_f, s, M, p0=[0])
 
-        self.Rx = 0  # -2.614  # sbeta*R
-        self.Ry = popt[0]  # -3.634  # cbeta*R
-        self.bl.l.concentrated_load = self.bl.l.external_load.copy() + [[self.Rx, self.Ry], ]
-        self.bu.l.concentrated_load = self.bu.l.external_load.copy() + [[-self.Rx, -self.Ry], ]
+        for i in range(len(self.spars_s)):
+            if self.spars_k[i] is None:
+                if self.bl.ignore_ends:
+                    M = M[1:-1]
+                    s = s[1:-1]
+                popt, pcov = curve_fit(M_f, s, M, p0=[0])
+
+                self.Rx = 0  # -2.614  # sbeta*R
+                self.Ry = popt[0]  # -3.634  # cbeta*R
+            else:
+                # Current length for child
+                index_u = np.where(np.around(self.bu.s, decimals=7) ==
+                                   self.spars_s[0])[0][0]
+                x_u = self.bu.g.x1_grid[index_u]
+                index_l = np.where(np.around(self.bl.s, decimals=7) ==
+                                   self.spars_s[0])[0][0]
+                x_l = self.bl.g.x1_grid[index_l]
+
+                y_u = self.bu.g.x3(np.array([x_u]))[0]
+                y_l = self.bl.g.x3(np.array([x_l]))[0]
+                # print('AH', x_u, x_l, y_u, y_l, self.bu.l.concentrated_s)
+                dx = x_u - x_l
+                dy = y_u - y_l
+                ds = np.sqrt(dx**2 + dy**2)
+
+                # Original length for parent
+                x_u = self.bu.g_p.x1_grid[index_u]
+                x_l = self.bl.g_p.x1_grid[index_l]
+
+                y_u = self.bu.g_p.x3(np.array([x_u]))[0]
+                y_l = self.bl.g_p.x3(np.array([x_l]))[0]
+                # print('AH', x_u, x_l, y_u, y_l, self.bu.l.concentrated_s)
+                dx = x_u - x_l
+                dy = y_u - y_l
+                ds0 = np.sqrt(dx**2 + dy**2)
+
+                magnitude = self.spars_k[i]*(ds-ds0)
+
+                self.Rx = magnitude*dx/ds
+                self.Ry = magnitude*dy/ds
+            print(self.Rx, self.Ry)
+            self.bl.l.concentrated_load = self.bl.l.external_load.copy() + [[self.Rx, self.Ry], ]
+            self.bu.l.concentrated_load = self.bu.l.external_load.copy() + [[-self.Rx, -self.Ry], ]
 
 
 def derivative(f, a, method='central', h=0.01):
