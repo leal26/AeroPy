@@ -414,8 +414,8 @@ class coupled_beams():
 
     def parameterized_solver(self, format_input=None, x0=None, constraints=()):
 
-        sol = minimize(self.formatted_residual, x0,  bounds=len(x0)
-                       * [[-.02, .02]], constraints=constraints, args=(format_input))
+        sol = minimize(self.formatted_residual, x0, method='SLSQP', bounds=len(x0)
+                       * [[-.04, .04]], constraints=constraints, args=(format_input))
         self.bu.g.D, self.bl.g.D = format_input(
             sol.x, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
         # self.bu.g.internal_variables(self.bu.length, origin=self.bu.origin)
@@ -484,7 +484,7 @@ class coupled_beams():
         self.bl.l.concentrated_s = self.bl.l.external_s.copy() + self.spars_s
 
         for i in range(len(self.spars_s)):
-            if self.spars_k[i] is None:
+            if self.spars_k is None:
                 if self.bl.ignore_ends:
                     M = M[1:-1]
                     s = s[1:-1]
@@ -523,7 +523,6 @@ class coupled_beams():
 
                 self.Rx = magnitude*dx/ds
                 self.Ry = magnitude*dy/ds
-            print(self.Rx, self.Ry)
             self.bl.l.concentrated_load = self.bl.l.external_load.copy() + [[self.Rx, self.Ry], ]
             self.bu.l.concentrated_load = self.bu.l.external_load.copy() + [[-self.Rx, -self.Ry], ]
 
