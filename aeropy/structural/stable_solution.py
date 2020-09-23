@@ -60,7 +60,7 @@ class properties():
 
 
 class loads():
-    def __init__(self, concentrated_load=None, load_s=None,
+    def __init__(self, concentrated_load=[], load_s=[],
                  distributed_load=None, follower=False, torque=[0], torque_s=[0]):
         self.concentrated_load = concentrated_load
         self.external_load = concentrated_load
@@ -72,7 +72,7 @@ class loads():
         self.distributed_load = distributed_load
         self.follower = follower
 
-        if self.concentrated_load is not None:
+        if len(self.concentrated_load) != 0:
             self.concentrated_direction = []
             self.concentrated_magnitude = []
             for load in self.concentrated_load:

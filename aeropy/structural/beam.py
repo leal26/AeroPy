@@ -391,7 +391,7 @@ class coupled_beams():
     def __init__(self, g_upper, g_lower, properties_upper, properties_lower,
                  load_upper, load_lower, s_upper, s_lower, ignore_ends=False,
                  rotated=False, origin=0, chord=1, zetaT=0, spars_s=None,
-                 spars_k=None):
+                 spars_k=None, coupled_forces=True):
         self.bu = beam_chen(g_upper, properties_upper, load_upper, s_upper,
                             origin=origin, ignore_ends=ignore_ends,
                             rotated=rotated)
@@ -400,6 +400,7 @@ class coupled_beams():
                             rotated=rotated)
         self.spars_s = spars_s
         self.spars_k = spars_k
+        self.coupled_forces = coupled_forces
 
     def calculate_x(self, s_upper=None, s_lower=None):
         if s_upper is None and s_lower is None:
@@ -446,26 +447,27 @@ class coupled_beams():
         return R
 
     def calculate_force(self):
-        index = np.where(np.around(self.bu.s, decimals=7) ==
-                         self.bu.l.concentrated_s[0])[0][0]
-        x_u = self.bu.g.x1_grid[index]
-        index = np.where(np.around(self.bl.s, decimals=7) ==
-                         self.bl.l.concentrated_s[0])[0][0]
-        x_l = self.bl.g.x1_grid[index]
+        if self.coupled_forces:
+            index = np.where(np.around(self.bu.s, decimals=7) ==
+                             self.bu.l.concentrated_s[0])[0][0]
+            x_u = self.bu.g.x1_grid[index]
+            index = np.where(np.around(self.bl.s, decimals=7) ==
+                             self.bl.l.concentrated_s[0])[0][0]
+            x_l = self.bl.g.x1_grid[index]
 
-        y_u = self.bu.g.x3(np.array([x_u]))[0]
-        y_l = self.bl.g.x3(np.array([x_l]))[0]
-        # print('AH', x_u, x_l, y_u, y_l, self.bu.l.concentrated_s)
-        dx = x_u - x_l
-        dy = y_u - y_l
-        ds = np.sqrt(dx**2 + dy**2)
+            y_u = self.bu.g.x3(np.array([x_u]))[0]
+            y_l = self.bl.g.x3(np.array([x_l]))[0]
+            # print('AH', x_u, x_l, y_u, y_l, self.bu.l.concentrated_s)
+            dx = x_u - x_l
+            dy = y_u - y_l
+            ds = np.sqrt(dx**2 + dy**2)
 
-        Fx = self.bu.l.concentrated_magnitude[0]*dx/ds
-        Fy = self.bu.l.concentrated_magnitude[0]*dy/ds
-        self.bu.l.concentrated_load = [[-Fx, -Fy], ]
-        self.bl.l.concentrated_load = [[Fx, Fy], ]
-        self.bu.l.external_load = self.bu.l.concentrated_load.copy()
-        self.bl.l.external_load = self.bl.l.concentrated_load.copy()
+            Fx = self.bu.l.concentrated_magnitude[0]*dx/ds
+            Fy = self.bu.l.concentrated_magnitude[0]*dy/ds
+            self.bu.l.concentrated_load = [[-Fx, -Fy], ]
+            self.bl.l.concentrated_load = [[Fx, Fy], ]
+            self.bu.l.external_load = self.bu.l.concentrated_load.copy()
+            self.bl.l.external_load = self.bl.l.concentrated_load.copy()
         # print('loads', self.bu.l.concentrated_load, self.bl.l.concentrated_load)
 
     def calculate_resultants(self):

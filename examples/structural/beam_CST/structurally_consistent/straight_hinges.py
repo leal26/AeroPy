@@ -90,8 +90,8 @@ def format_input(input, gu=None, gu_p=None, gl=None, gl_p=None):
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-upper = np.loadtxt('upper_beam_hinge.csv', delimiter=',')
-lower = np.loadtxt('lower_beam_hinge.csv', delimiter=',')
+upper = np.loadtxt('coupled_beam_upper.csv', delimiter=',')
+lower = np.loadtxt('coupled_beam_lower.csv', delimiter=',')
 
 psi_spars = [0.2]
 m = len(psi_spars)
