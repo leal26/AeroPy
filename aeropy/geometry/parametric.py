@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 from scipy import integrate, optimize
 
 from aeropy.geometry.airfoil import CST
-from aeropy.CST_2D import dxi_u, ddxi_u
+from aeropy.CST_2D import (dxi_u, ddxi_u, calculate_c_baseline, K,
+                           calculate_psi_goal, calculate_spar_direction, S)
 
 
 class CoordinateSystem(object):
@@ -216,8 +217,19 @@ class CoordinateSystem(object):
 
     def _pCST_update(self):
         offset_s = 0
+        self.n_start = 0
+        self.spar_i = 0
+        if self.continuity == 'C2':
+            self.n_end = 1
+        else:
+            self.n_end = 0
         for i in range(self.p):
-            if not self.dependent[i]:
+            if self.dependent[i]:
+                if not hasattr(self, 'g_independent'):
+                    raise Exception('No geometry defined as reference for dependent')
+                self._calculate_spar(i)
+                self._update_dependent(i)
+            else:
                 self._update_independent(i)
             self.cst[i].offset_s = offset_s
             offset_s += self.cst[i].length
@@ -225,18 +237,8 @@ class CoordinateSystem(object):
 
     def _update_independent(self, i):
         j = i - 1
-        if self.continuity == 'C2':
-            if i == self.p-1 and self.free_end:
-                Ai0 = self.D[1+i*self.nn:1+(i+1)*self.nn-1]
-            else:
-                Ai = self.D[1+i*self.nn:1+(i+1)*self.nn]
-            Aj = self.D[1+j*self.nn:1+(j+1)*self.nn]
-        elif self.continuity == 'C1':
-            if i == self.p-1 and self.free_end:
-                Ai0 = self.D[i*self.nn:(i+1)*self.nn-1]
-            else:
-                Ai = self.D[i*self.nn:(i+1)*self.nn]
-            Aj = self.D[j*self.nn:(j+1)*self.nn]
+        Ai0, Ai, Aj = self._select_D(i, j)
+
         error = 999
         offset_x = 0
         while error > 1e-6:
@@ -250,37 +252,76 @@ class CoordinateSystem(object):
                 else:
                     self.zetaT[i] = self.D[-1]
                 self.zetaL[i] = 0
+            elif self.N1[i] == 1. and self.N2[i] == 1.:
+                offset_x = self.cst[j].offset_x + self.cst[j].chord
+                if self.continuity == 'C2':
+                    ddj = self.n*Aj[-2] - (self.N1[j]+self.n)*Aj[-1]
+                    self.A0[i] = (-self.cst[i].chord/self.cst[j].chord *
+                                  ddj+Ai0[0]*self.n)/(self.n+1)
+
+                elif self.continuity == 'C1':
+                    self.A0[i] = Ai0[0]
+
+                self.zetaL[i] = self.cst[j].chord/self.cst[i].chord*self.zetaT[j]
+                self.zetaT[i] = -Aj[-1] + self.zetaT[j] - self.A0[i] + \
+                    self.zetaL[i] - self.zetaL[j]
             else:
-                if i == self.p-1 and self.free_end:
-                    Pi = self.cst_p[i].D[:-1]
-                    chordp = self.cst_p[i].chord
-                    den_p = (1+(-Pi[-1] + self.cst_p[i].zetaT - self.cst_p[i].zetaL)**2)**(1.5)
-                    den_c = (1+(-self.cst[i].D[-2] + self.cst[i].zetaT -
-                                self.cst[i].zetaL)**2)**(1.5)
-                    rho_p = (1/chordp)*(self.n*Pi[-2] - (self.N1[i]+self.n)*Pi[-1])/den_p
-                    An = (-den_c*self.cst[i].chord*rho_p+Ai0[-1]*self.n)/(self.n+1)
-                    Ai = Ai0 + [An]
-                    rho_c = (1/self.cst[i].chord)*(self.n*Ai[-2] -
-                                                   (self.N1[i]+self.n)*Ai[-1])/den_c
-                if self.N1[i] == 1. and self.N2[i] == 1.:
-                    offset_x = self.cst[j].offset_x + self.cst[j].chord
-                    if self.continuity == 'C2':
-                        ddj = self.n*Aj[-2] - (self.N1[j]+self.n)*Aj[-1]
-                        self.A0[i] = (-self.cst[i].chord/self.cst[j].chord *
-                                      ddj+Ai[0]*self.n)/(self.n+1)
+                raise(NotImplementedError)
 
-                    elif self.continuity == 'C1':
-                        self.A0[i] = Ai[0]
-
-                    self.zetaL[i] = self.cst[j].chord/self.cst[i].chord*self.zetaT[j]
-                    self.zetaT[i] = -Aj[-1] + self.zetaT[j] - self.A0[i] + \
-                        self.zetaL[i] - self.zetaL[j]
-                else:
-                    raise(NotImplementedError)
+            An = self._calculate_Dn(i, Ai0, Ai)
             if self.continuity == 'C2':
-                Di = [self.A0[i]] + list(Ai) + [self.zetaT[i]]
+                Di = [self.A0[i]] + list(Ai0) + [An, self.zetaT[i]]
             elif self.continuity == 'C1':
-                Di = list(Ai) + [self.zetaT[i]]
+                Di = list(Ai0) + [An, self.zetaT[i]]
+            print(Di)
+            self.cst[i].D = Di
+            self.cst[i].zetaT = self.zetaT[i]
+            self.cst[i].zetaL = self.zetaL[i]
+            self.cst[i].offset_x = offset_x
+            self.cst[i].internal_variables(self.cst[i].length)
+            if i == 0:
+                error = 0
+            else:
+                current = np.array([self.cst[i].chord, self.cst[i].zetaT,
+                                    self.cst[i].zetaL, self.cst[i].D[0]])
+                error = np.linalg.norm(current-prev)
+                prev = current
+
+    def _update_dependent(self, i):
+        j = i - 1
+        Ai0, Ai, Aj = self._select_D(i, j)
+
+        error = 999
+        offset_x = 0
+        while error > 1e-6:
+            prev = np.array([self.cst[i].chord, self.cst[i].zetaT,
+                             self.cst[i].zetaL, self.cst[i].D[0]])
+
+            if i == 0:
+                self.cst[i].chord = self.spar_x[self.spar_i]
+                self.zetaT[i] = self.spar_y[self.spar_i]/self.cst[i].chord
+                self.zetaL[i] = 0
+            elif self.N1[i] == 1. and self.N2[i] == 1.:
+                offset_x = self.cst[j].offset_x + self.cst[j].chord
+                if self.continuity == 'C2':
+                    ddj = self.n*Aj[-2] - (self.N1[j]+self.n)*Aj[-1]
+                    self.A1[i] = (self.cst[i].chord/self.cst[j].chord *
+                                  ddj-Ai0[0]*(self.n+1))/self.n
+
+                elif self.continuity == 'C1':
+                    raise(NotImplementedError)
+
+                self.zetaL[i] = self.cst[j].chord/self.cst[i].chord*self.zetaT[j]
+                self.A0[i] = -Aj[-1] + self.zetaT[j] - self.zetaT[i] + \
+                    self.zetaL[i] - self.zetaL[j]
+            else:
+                raise(NotImplementedError)
+
+            An = self._calculate_Dn(i, Ai0)
+            if self.continuity == 'C2':
+                Di = [self.A0[i], self.A1[i]] + list(Ai0) + [An, self.zetaT[i]]
+            elif self.continuity == 'C1':
+                raise(NotImplementedError)
 
             self.cst[i].D = Di
             self.cst[i].zetaT = self.zetaT[i]
@@ -294,6 +335,107 @@ class CoordinateSystem(object):
                                     self.cst[i].zetaL, self.cst[i].D[0]])
                 error = np.linalg.norm(current-prev)
                 prev = current
+        self.spar_i += 1
+
+    def _select_D(self, i, j):
+        self.n_start = self.n_end
+        if self.dependent[i]:
+            modifier = 1
+        else:
+            modifier = 0
+        if i == self.p-1 and self.free_end:
+            self.n_end = self.n_start + self.nn - 1
+            Ai0 = self.D[self.n_start:self.n_end]
+            Ai = None
+        else:
+            self.n_end = self.n_start + self.nn - modifier
+            Ai = self.D[self.n_start:self.n_end]
+            Ai0 = Ai[:-1]
+        Aj = self.D[j*self.nn:(j+1)*self.nn]
+        return (Ai0, Ai, Aj)
+
+    def _calculate_Dn(self, i, Ai0, Ai=None):
+        def f(An):
+            self.cst[i].D[-2] = An
+            length_current = self.cst[i].arclength(self.cst[i].chord)
+            return abs(self.cst[i].length - length_current)
+
+        if self.dependent[i]:
+            An = optimize.fsolve(f, self.cst[i].D[-2])[0]
+        elif i == self.p-1 and self.free_end:
+            Pi = self.cst_p[i].D[:-1]
+            chordp = self.cst_p[i].chord
+            den_p = (1+(-Pi[-1] + self.cst_p[i].zetaT - self.cst_p[i].zetaL)**2)**(1.5)
+            den_c = (1+(-self.cst[i].D[-2] + self.cst[i].zetaT -
+                        self.cst[i].zetaL)**2)**(1.5)
+            rho_p = (1/chordp)*(self.n*Pi[-2] - (self.N1[i]+self.n)*Pi[-1])/den_p
+            An = (-den_c*self.cst[i].chord*rho_p + Ai0[-1]*self.n)/(self.n+1)
+        else:
+            An = Ai[-1]
+        return An
+
+    def _calculate_spar(self, i):
+        # Bernstein Polynomial order
+        # dependent child
+        dc = self.cst[i]
+        # dependent parent
+        dp = self.cst_p[i]
+        # independent child
+        ic = self.g_independent.cst[i]
+        # independent parent
+        ip = self.g_independent.cst_p[i]
+
+        # Defining local variables
+        N1 = dc.N1
+        N2 = dc.N2
+        A_ic = ic.D[0:-1]
+        A_ip = ip.D[:-1]
+        A_dp = dp.D[:-1]
+        c_ip = ip.chord
+        c_dp = dp.chord
+        zT_ip = ip.D[-1]*c_ip
+        zT_dp = dp.D[-1]*c_dp
+        zL_ip = ip.zetaL*c_ip
+        zL_dp = dp.zetaL*c_dp
+
+        xi_upper_children = []
+        ic.internal_variables(ic.length)
+        c_ic = ic.chord
+        zT_ic = ic.D[-1]*c_ic
+        zL_ic = ic.zetaL*c_ic
+        psi_spar = np.array([1])
+        # psi_upper_children = calculate_psi_goal(psi_spar, A_ip, A_ic, zT_ip,
+        #                                         c_ip, c_ic, N1=N1, N2=N2,
+        #                                         deltaz_goal=zT_ic,
+        #                                         deltaL_baseline=zL_ip,
+        #                                         deltaL_goal=zL_ic)
+
+        # Calculate xi for upper children. Do not care about lower so
+        # just gave it random shape coefficients
+        xi_upper_children = CST(psi_spar, 1., deltasz=[
+            zT_ic/c_ic, -zT_ic/c_ic], Al=A_ic, Au=A_ic, N1=N1, N2=N2,
+            deltasLE=[zL_ic/c_ic, zL_ic/c_ic])
+        xi_upper_children = xi_upper_children['u']
+
+        self.spar_psi_upper = psi_spar
+        self.spar_xi_upper = np.array(xi_upper_children) + ic.offset/c_ic
+
+        xi_parent = CST(psi_spar, 1., deltasz=[
+            zT_ip/c_ip, -zT_dp/c_dp], Al=A_dp, Au=A_ip, N1=N1, N2=N2,
+            deltasLE=[zL_ip/c_ip, zL_ip/c_ip])
+        self.delta_P = c_ip*(xi_parent['u']-xi_parent['l']) + ip.offset - \
+            dp.offset
+        print('delta', self.delta_P)
+        # Claculate orientation for children
+        s_j = calculate_spar_direction(
+            psi_spar, A_ip, A_ic, zT_ip, c_ic, N1=N1, N2=N2, deltaz_goal=zT_ic,
+            deltaL_baseline=zL_ip, deltaL_goal=zL_ic)
+        self.spar_directions = s_j
+        print('spar_directions', self.spar_directions)
+
+        self.spar_x = psi_spar*c_ic - self.delta_P*s_j[0]
+        self.spar_y = xi_upper_children*c_ic + ic.offset - self.delta_P*s_j[1]
+        print(self.spar_x, self.spar_y)
 
     @classmethod
     def cylindrical(cls, D, chord=1, color='k', configuration=0):
@@ -731,5 +873,8 @@ class CoordinateSystem(object):
             dependent += 1
         if self.continuity == 'C2':
             dependent += (self.p-1)
+        # for structurally consistent
+        dependent += np.count_nonzero(self.dependent)
+        print('Trues', np.count_nonzero(self.dependent))
         independent = total - dependent
         return len(input) == independent, len(input), independent

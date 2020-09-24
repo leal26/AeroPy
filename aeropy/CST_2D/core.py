@@ -62,6 +62,9 @@ def dxi_u(psi, Au, delta_xi, N1=0.5, N2=1, indexes=None, zetaL=0):
         dS1 = (N1+i)/psi
         dS2 = (i-n-N2)/(1-psi)
         diff += Au[i]*C_i*S_i*(dS1+dS2)
+
+    if psi[-1] == 1 and N2 == 1:
+        diff[-1] = - zetaL - Au[-1] + delta_xi
     return diff
 
 
@@ -118,19 +121,23 @@ def ddxi_l(psi, Al, abs_output=False, N1=0.5, N2=1):
         return diff
 
 
-def calculate_c_baseline(c_L, Au_C, Au_L, deltaz_C, deltaz_L=None, N1=0.5, N2=1):
+def calculate_c_baseline(c_L, Au_C, Au_L, deltaz_C, deltaz_L=None, N1=0.5,
+                         N2=1, deltaL_C=0, deltaL_L=0):
     """Equations in the New_CST.pdf. Calculates the upper chord in order for
        the cruise and landing airfoils ot have the same length."""
 
-    def integrand(psi, Au, delta_xi):
-        return np.sqrt(1 + dxi_u(psi, Au, delta_xi, N1=N1, N2=N2)**2)
+    def integrand(psi, Au, delta_xi, deltaL_xi):
+        return np.sqrt(1 + dxi_u(psi, Au, delta_xi, N1=N1, N2=N2,
+                                 zetaL=deltaL_xi)**2)
 
     def f(c_C):
         """Function dependent of c_C and that outputs c_C."""
         if hasattr(c_C, "__len__"):
             c_C = c_C[0]
-        y_C, err = quad(integrand, 0, 1, args=(Au_C, deltaz_C/c_C))
-        y_L, err = quad(integrand, 0, 1, args=(Au_L, deltaz_L/c_L))
+        y_C, err = quad(integrand, 0, 1, args=(Au_C, deltaz_C/c_C,
+                                               deltaL_C/c_C))
+        y_L, err = quad(integrand, 0, 1, args=(Au_L, deltaz_L/c_L,
+                                               deltaL_L/c_L))
         # print(c_C, y_L, y_C)
         return c_L*y_L/y_C
     if deltaz_L is None:
@@ -145,21 +152,25 @@ def calculate_c_baseline(c_L, Au_C, Au_L, deltaz_C, deltaz_L=None, N1=0.5, N2=1)
 
 
 def calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz_baseline,
-                       c_baseline, c_goal, N1=0.5, N2=1.0, deltaz_goal=None):
+                       c_baseline, c_goal, N1=0.5, N2=1.0, deltaz_goal=None,
+                       deltaL_baseline=0, deltaL_goal=0):
     """Find the value for psi that has the same location w on the upper
     surface of the goal as psi_baseline on the upper surface of the
     baseline"""
 
-    def integrand(psi_baseline, Au, deltaz, c):
-        return c*np.sqrt(1 + dxi_u(psi_baseline, Au, deltaz/c, N1=N1, N2=N2)**2)
+    def integrand(psi_baseline, Au, deltaz, c, deltazL):
+        return c*np.sqrt(1 + dxi_u(psi_baseline, Au, deltaz/c, N1=N1, N2=N2,
+                                   zetaL=deltazL)**2)
 
     def equation(psi_goal, L_baseline, Au_goal, deltaz_goal, c):
-        y, err = quad(integrand, 0, psi_goal, args=(Au_goal, deltaz_goal, c))
+        y, err = quad(integrand, 0, psi_goal, args=(Au_goal, deltaz_goal, c,
+                                                    deltaL_goal))
         return y - L_baseline
     if deltaz_goal is None:
         deltaz_goal = deltaz_baseline
     L_baseline, err = quad(integrand, 0, psi_baseline,
-                           args=(Au_baseline, deltaz_baseline, c_baseline))
+                           args=(Au_baseline, deltaz_baseline, c_baseline,
+                                 deltaL_baseline))
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         y = fsolve(equation, psi_baseline, args=(L_baseline, Au_goal, deltaz_goal,
@@ -167,36 +178,49 @@ def calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz_baseline,
     return y[0]
 
 
-def calculate_cbeta(psi_i, Au, delta_xi, N1=0.5, N2=1.):
+def calculate_cbeta(psi_i, Au, delta_xi, N1=0.5, N2=1., deltaL_xi=0):
     """Calculate cosine for angles between vertical spars and outer mold
     line for cruise"""
-    norm = np.sqrt(1+dxi_u(psi_i, Au, delta_xi, N1=N1, N2=N2)**2)
-    return dxi_u(psi_i, Au, delta_xi, N1=N1, N2=N2)/norm
+
+    d = dxi_u(psi_i, Au, delta_xi, N1=N1, N2=N2,
+              zetaL=deltaL_xi)
+    norm = np.sqrt(1 + d**2)
+    return d/norm
 
 
 def calculate_spar_direction(psi_baseline, Au_baseline, Au_goal, deltaz_baseline,
-                             c_goal, N1=0.5, N2=1.0, deltaz_goal=None):
+                             c_goal, N1=0.5, N2=1.0, deltaz_goal=None,
+                             deltaL_baseline=0, deltaL_goal=0):
     """Calculate the direction of the spar component based on a location
     at the upper surface for the cruise airfoil."""
     if deltaz_goal is None:
         deltaz_goal = deltaz_baseline
     # Calculate cruise chord
     c_baseline = calculate_c_baseline(c_goal, Au_baseline, Au_goal,
-                                      deltaz_baseline, deltaz_goal, N1=N1, N2=N2)
+                                      deltaz_baseline, deltaz_goal, N1=N1,
+                                      N2=N2, deltaL_C=deltaL_baseline,
+                                      deltaL_L=deltaL_goal)
+    print('c_baseline', c_baseline)
     # Calculate psi at goal arifoil
-    psi_goal = calculate_psi_goal(psi_baseline, Au_baseline, Au_goal, deltaz_baseline,
-                                  c_baseline, c_goal, N1=N1, N2=N2, deltaz_goal=deltaz_goal)
+    psi_goal = calculate_psi_goal(psi_baseline, Au_baseline, Au_goal,
+                                  deltaz_baseline, c_baseline, c_goal, N1=N1,
+                                  N2=N2, deltaz_goal=deltaz_goal,
+                                  deltaL_baseline=deltaL_baseline,
+                                  deltaL_goal=deltaL_goal)
+    print('psi_goal', psi_goal)
     # non-normalized direction
     s = np.zeros(2)
     t = np.zeros(2)
 #    t_norm = np.sqrt(1 + (dxi_u(psi_goal, Au_goal[0], Au_goal[1], deltaz))**2)
 
     cbeta = calculate_cbeta(psi_baseline, Au_baseline,
-                            deltaz_baseline/c_baseline, N1=N1, N2=N2)
+                            deltaz_baseline/c_baseline, N1=N1, N2=N2,
+                            deltaL_xi=deltaL_baseline)
     sbeta = np.sqrt(1-cbeta**2)
-
+    print('beta', cbeta, sbeta)
     t[0] = 1
-    t[1] = dxi_u(psi_goal, Au_goal, deltaz_goal/c_goal, N1=N1, N2=N2)
+    t[1] = dxi_u(psi_goal, Au_goal, deltaz_goal/c_goal, N1=N1, N2=N2,
+                 zetaL=deltaL_goal/c_goal)
     t_norm = np.sqrt(t[0]**2 + t[1]**2)
     t = (1./t_norm)*t
 #    s[0] = t_norm*cbeta - dxi_u(psi_goal, Au_goal[0], Au_goal[1], deltaz)

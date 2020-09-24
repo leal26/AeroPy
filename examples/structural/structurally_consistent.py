@@ -69,72 +69,13 @@ g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
                                 chord=[psi_spars[0], 0.7, 0.1],
                                 color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
                                 offset=-.05, continuity='C2', free_end=True,
-                                root_fixed=True, dependent=True)
+                                root_fixed=False, dependent=[True, False, False])
 
 g_upper.calculate_s(N=[11, 9])
 g_lower.calculate_s(N=[11, 8, 6])
-p_upper = properties()
-p_lower = properties()
-l_upper = loads(concentrated_load=[[-np.sqrt(2)/2, -np.sqrt(2)/2]], load_s=[1])
-l_lower = loads(concentrated_load=[[np.sqrt(2)/2, np.sqrt(2)/2]], load_s=[1-0.1])
-arc_upper = 1.0
-arc_lower = 1.0
 
-g_upper.D = [0.01, 0.02, 0.03, 0.04, 0.05]
-
-print(a.bu.g.D, a.bl.g.D)
-print('upper', a.bu.g.D)
-print('upper 1', a.bu.g.cst[0].D)
-print('upper 2', a.bu.g.cst[1].D)
-print('lower', a.bl.g.D)
-print('lower 1', a.bl.g.cst[0].D)
-print('lower 2', a.bl.g.cst[1].D)
-print('lower 3', a.bl.g.cst[2].D)
-print('loads', a.bl.l.concentrated_load, a.bu.l.concentrated_load)
-plt.figure()
-plt.plot(a.bu.g.x1_grid[1:], a.bu.M[1:], 'b', label='Upper')
-plt.plot(a.bl.g.x1_grid[1:], a.bl.M[1:], 'r', label='Lower')
-
-Ml = (a.bl.p.young*a.bl.p.inertia)*(a.bl.g.rho - a.bl.g_p.rho)
-Mu = (a.bu.p.young*a.bu.p.inertia)*(a.bu.g.rho - a.bu.g_p.rho)
-plt.plot(a.bu.g.x1_grid[1:], Mu[1:], '--b', label='Upper')
-plt.plot(a.bl.g.x1_grid[1:], Ml[1:], '--r', label='Lower')
-plt.legend()
-
-# print('chords', a.bl.g.chord, a.bu.g.chord)
-index = np.where(a.bl.s == a.spars_s[0])[0][0]
-plt.figure()
-plt.plot(a.bu.g_p.x1_grid, a.bu.g_p.x3(a.bu.g_p.x1_grid), 'b',
-         label='Upper Parent', lw=3)
-plt.plot(a.bu.g.x1_grid, a.bu.g.x3(a.bu.g.x1_grid), c='.5',
-         label='Upper Child: %.3f N' % -l_upper.concentrated_load[0][-1], lw=3)
-plt.plot(a.bl.g_p.x1_grid, a.bl.g_p.x3(a.bl.g_p.x1_grid), 'b', linestyle='dashed',
-         label='Lower Parent', lw=3)
-plt.plot(a.bl.g.x1_grid, a.bl.g.x3(a.bl.g.x1_grid), '.5', linestyle='dashed',
-         label='Lower Child: %.3f N' % -l_upper.concentrated_load[0][-1], lw=3)
-xu_p = np.array([a.bu.g_p.x1_grid[index]])
-xl_p = np.array([a.bl.g_p.x1_grid[index]])
-plt.plot([xu_p, xl_p], [a.bu.g_p.x3(xu_p), a.bl.g_p.x3(xl_p)], 'b', lw=3)
-xu_c = np.array([a.bu.g.x1_grid[index]])
-xl_c = np.array([a.bl.g.x1_grid[index]])
-plt.plot([xu_c, xl_c], [a.bu.g.x3(xu_c), a.bl.g.x3(xl_c)], '.5', lw=3)
-upper = np.loadtxt('case_study_6_upper.csv', delimiter=',')
-lower = np.loadtxt('case_study_6_lower.csv', delimiter=',')
-plt.scatter(upper[0, :], upper[1, :], c='.5', label='Abaqus', edgecolors='k',
-            zorder=10, marker="^")
-plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10,
-            marker="^")
-# x = [a.bu.g.chord*a.bl.g.spar_psi_upper[0], a.bl.g.chord*a.bl.g.spar_psi[0]]
-# y = [a.bu.g.chord*a.bl.g.spar_xi_upper[0], a.bl.g.chord*a.bl.g.spar_xi[0]]
-# dx = x[1]-x[0]
-# dy = y[1]-y[0]
-# norm = math.sqrt(dx**2+dy**2)
-# print('spar direction', a.bl.g.spar_directions)
-# print('actual direction', dx/norm, dy/norm)
-# plt.plot(x, y, c='g', label='spars', lw=3)
-# plt.arrow(x[0], y[0], -a.bl.g.spar_directions[0][0]*a.bl.g.delta_P[0],
-#           -a.bl.g.spar_directions[0][1]*a.bl.g.delta_P[0])
-# print(a.bl.g.delta_P[0])
-plt.legend()
-# plt.gca().set_aspect('equal', adjustable='box')
-plt.show()
+# g_upper.D = [0.01, 0.02, 0.03, 0.04]
+g_upper.D = [0, 0, 0, 0]
+g_lower.g_independent = g_upper
+# g_lower.D = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06]
+g_lower.D = [0, 0, 0, 0, 0, 0]
