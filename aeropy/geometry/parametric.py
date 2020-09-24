@@ -133,7 +133,7 @@ class CoordinateSystem(object):
     @classmethod
     def pCST(cls, D, chord=np.array([.5, .5]), color='b', N1=[1, 1.], N2=[1.0, 1.0],
              tol=1e-6, offset=0, offset_x=0, continuity='C2', free_end=False,
-             root_fixed=False):
+             root_fixed=False, dependent=None):
         c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2,
                 tol=tol, offset=offset, offset_x=offset_x, continuity=continuity,
                 free_end=free_end, root_fixed=root_fixed)
@@ -141,6 +141,11 @@ class CoordinateSystem(object):
         c.x3 = c._x3_pCST
         c.name = 'pCST'
         c.p = len(chord)
+        if dependent is None:
+            c.dependent = len(N1)*[False]
+        else:
+            c.dependent = dependent
+
         # For conevinence n is order of CST and nn is number of shape coeff (n+1)
         if continuity == 'C2':
             c.nn = (len(D)-2)/c.p
@@ -212,81 +217,83 @@ class CoordinateSystem(object):
     def _pCST_update(self):
         offset_s = 0
         for i in range(self.p):
-            j = i - 1
-            # From shape coefficients 1 to n
-            if self.continuity == 'C2':
-                if i == self.p-1 and self.free_end:
-                    Ai0 = self.D[1+i*self.nn:1+(i+1)*self.nn-1]
-                else:
-                    Ai = self.D[1+i*self.nn:1+(i+1)*self.nn]
-                Aj = self.D[1+j*self.nn:1+(j+1)*self.nn]
-            elif self.continuity == 'C1':
-                if i == self.p-1 and self.free_end:
-                    Ai0 = self.D[i*self.nn:(i+1)*self.nn-1]
-                else:
-                    Ai = self.D[i*self.nn:(i+1)*self.nn]
-                Aj = self.D[j*self.nn:(j+1)*self.nn]
-            error = 999
-            offset_x = 0
-            while error > 1e-6:
-                prev = np.array([self.cst[i].chord, self.cst[i].zetaT,
-                                 self.cst[i].zetaL, self.cst[i].D[0]])
-
-                if i == 0:
-                    self.A0[i] = self.D[0]
-                    if self.root_fixed and self.N1[i] == 1:
-                        self.zetaT[i] = -self.D[0]
-                    else:
-                        self.zetaT[i] = self.D[-1]
-                    self.zetaL[i] = 0
-                else:
-                    if i == self.p-1 and self.free_end:
-                        Pi = self.cst_p[i].D[:-1]
-                        chordp = self.cst_p[i].chord
-                        den_p = (1+(-Pi[-1] + self.cst_p[i].zetaT - self.cst_p[i].zetaL)**2)**(1.5)
-                        den_c = (1+(-self.cst[i].D[-2] + self.cst[i].zetaT -
-                                    self.cst[i].zetaL)**2)**(1.5)
-                        rho_p = (1/chordp)*(self.n*Pi[-2] - (self.N1[i]+self.n)*Pi[-1])/den_p
-                        An = (-den_c*self.cst[i].chord*rho_p+Ai0[-1]*self.n)/(self.n+1)
-                        Ai = Ai0 + [An]
-                        rho_c = (1/self.cst[i].chord)*(self.n*Ai[-2] -
-                                                       (self.N1[i]+self.n)*Ai[-1])/den_c
-                    if self.N1[i] == 1. and self.N2[i] == 1.:
-                        offset_x = self.cst[j].offset_x + self.cst[j].chord
-                        if self.continuity == 'C2':
-                            ddj = self.n*Aj[-2] - (self.N1[j]+self.n)*Aj[-1]
-                            self.A0[i] = (-self.cst[i].chord/self.cst[j].chord *
-                                          ddj+Ai[0]*self.n)/(self.n+1)
-
-                        elif self.continuity == 'C1':
-                            self.A0[i] = Ai[0]
-
-                        self.zetaL[i] = self.cst[j].chord/self.cst[i].chord*self.zetaT[j]
-                        self.zetaT[i] = -Aj[-1] + self.zetaT[j] - self.A0[i] + \
-                            self.zetaL[i] - self.zetaL[j]
-                    else:
-                        raise(NotImplementedError)
-                if self.continuity == 'C2':
-                    Di = [self.A0[i]] + list(Ai) + [self.zetaT[i]]
-                elif self.continuity == 'C1':
-                    Di = list(Ai) + [self.zetaT[i]]
-
-                self.cst[i].D = Di
-                self.cst[i].zetaT = self.zetaT[i]
-                self.cst[i].zetaL = self.zetaL[i]
-                self.cst[i].offset_x = offset_x
-                self.cst[i].internal_variables(self.cst[i].length)
-                if i == 0:
-                    error = 0
-                else:
-                    current = np.array([self.cst[i].chord, self.cst[i].zetaT,
-                                        self.cst[i].zetaL, self.cst[i].D[0]])
-                    error = np.linalg.norm(current-prev)
-                    prev = current
-
+            if not self.dependent[i]:
+                self._update_independent(i)
             self.cst[i].offset_s = offset_s
             offset_s += self.cst[i].length
         self.total_chord = sum([self.cst[i].chord for i in range(self.p)])
+
+    def _update_independent(self, i):
+        j = i - 1
+        if self.continuity == 'C2':
+            if i == self.p-1 and self.free_end:
+                Ai0 = self.D[1+i*self.nn:1+(i+1)*self.nn-1]
+            else:
+                Ai = self.D[1+i*self.nn:1+(i+1)*self.nn]
+            Aj = self.D[1+j*self.nn:1+(j+1)*self.nn]
+        elif self.continuity == 'C1':
+            if i == self.p-1 and self.free_end:
+                Ai0 = self.D[i*self.nn:(i+1)*self.nn-1]
+            else:
+                Ai = self.D[i*self.nn:(i+1)*self.nn]
+            Aj = self.D[j*self.nn:(j+1)*self.nn]
+        error = 999
+        offset_x = 0
+        while error > 1e-6:
+            prev = np.array([self.cst[i].chord, self.cst[i].zetaT,
+                             self.cst[i].zetaL, self.cst[i].D[0]])
+
+            if i == 0:
+                self.A0[i] = self.D[0]
+                if self.root_fixed and self.N1[i] == 1:
+                    self.zetaT[i] = -self.D[0]
+                else:
+                    self.zetaT[i] = self.D[-1]
+                self.zetaL[i] = 0
+            else:
+                if i == self.p-1 and self.free_end:
+                    Pi = self.cst_p[i].D[:-1]
+                    chordp = self.cst_p[i].chord
+                    den_p = (1+(-Pi[-1] + self.cst_p[i].zetaT - self.cst_p[i].zetaL)**2)**(1.5)
+                    den_c = (1+(-self.cst[i].D[-2] + self.cst[i].zetaT -
+                                self.cst[i].zetaL)**2)**(1.5)
+                    rho_p = (1/chordp)*(self.n*Pi[-2] - (self.N1[i]+self.n)*Pi[-1])/den_p
+                    An = (-den_c*self.cst[i].chord*rho_p+Ai0[-1]*self.n)/(self.n+1)
+                    Ai = Ai0 + [An]
+                    rho_c = (1/self.cst[i].chord)*(self.n*Ai[-2] -
+                                                   (self.N1[i]+self.n)*Ai[-1])/den_c
+                if self.N1[i] == 1. and self.N2[i] == 1.:
+                    offset_x = self.cst[j].offset_x + self.cst[j].chord
+                    if self.continuity == 'C2':
+                        ddj = self.n*Aj[-2] - (self.N1[j]+self.n)*Aj[-1]
+                        self.A0[i] = (-self.cst[i].chord/self.cst[j].chord *
+                                      ddj+Ai[0]*self.n)/(self.n+1)
+
+                    elif self.continuity == 'C1':
+                        self.A0[i] = Ai[0]
+
+                    self.zetaL[i] = self.cst[j].chord/self.cst[i].chord*self.zetaT[j]
+                    self.zetaT[i] = -Aj[-1] + self.zetaT[j] - self.A0[i] + \
+                        self.zetaL[i] - self.zetaL[j]
+                else:
+                    raise(NotImplementedError)
+            if self.continuity == 'C2':
+                Di = [self.A0[i]] + list(Ai) + [self.zetaT[i]]
+            elif self.continuity == 'C1':
+                Di = list(Ai) + [self.zetaT[i]]
+
+            self.cst[i].D = Di
+            self.cst[i].zetaT = self.zetaT[i]
+            self.cst[i].zetaL = self.zetaL[i]
+            self.cst[i].offset_x = offset_x
+            self.cst[i].internal_variables(self.cst[i].length)
+            if i == 0:
+                error = 0
+            else:
+                current = np.array([self.cst[i].chord, self.cst[i].zetaT,
+                                    self.cst[i].zetaL, self.cst[i].D[0]])
+                error = np.linalg.norm(current-prev)
+                prev = current
 
     @classmethod
     def cylindrical(cls, D, chord=1, color='k', configuration=0):

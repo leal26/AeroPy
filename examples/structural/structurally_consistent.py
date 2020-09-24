@@ -60,16 +60,16 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 psi_spars = [0.2]
 m = len(psi_spars)
 
-g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
+g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0.],
                                 chord=[psi_spars[0], 1-psi_spars[0]],
                                 color=['b', 'r'], N1=[1., 1.], N2=[1., 1.],
                                 offset=.05, continuity='C2', free_end=True,
                                 root_fixed=True)
-g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
                                 chord=[psi_spars[0], 0.7, 0.1],
                                 color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
                                 offset=-.05, continuity='C2', free_end=True,
-                                root_fixed=True)
+                                root_fixed=True, dependent=True)
 
 g_upper.calculate_s(N=[11, 9])
 g_lower.calculate_s(N=[11, 8, 6])
@@ -80,20 +80,8 @@ l_lower = loads(concentrated_load=[[np.sqrt(2)/2, np.sqrt(2)/2]], load_s=[1-0.1]
 arc_upper = 1.0
 arc_lower = 1.0
 
-a = coupled_beams(g_upper, g_lower, p_upper, p_lower, l_upper, l_lower, None,
-                  None, ignore_ends=True, spars_s=psi_spars)
+g_upper.D = [0.01, 0.02, 0.03, 0.04, 0.05]
 
-a.calculate_x()
-# constraints = ({'type': 'eq', 'fun': constraint_f})
-# a.formatted_residual(format_input=format_input, x0=[
-#                      0.00200144, 0.00350643, 0.00255035, 0.00226923] + [-0.00219846, - 0.00313221, - 0.00193564, - 0.00191324])
-# a.formatted_residual(format_input=format_input, x0=[
-#                      0.00200144, 0.00350643, 0.00255035, 0.00226923, 0.00183999] + [-0.00219846, - 0.00313221, - 0.00193564, - 0.00191324, - 0.00127513])
-# a.formatted_residual(format_input=format_input, x0=list(
-# g_upper.D[:-1]) + list(g_lower.D[:1]) + list(g_lower.D[2:-1]))
-_, _, n_u = g_upper._check_input([])
-_, _, n_l = g_lower._check_input([])
-a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l), constraints=constraints)
 print(a.bu.g.D, a.bl.g.D)
 print('upper', a.bu.g.D)
 print('upper 1', a.bu.g.cst[0].D)
@@ -130,26 +118,12 @@ plt.plot([xu_p, xl_p], [a.bu.g_p.x3(xu_p), a.bl.g_p.x3(xl_p)], 'b', lw=3)
 xu_c = np.array([a.bu.g.x1_grid[index]])
 xl_c = np.array([a.bl.g.x1_grid[index]])
 plt.plot([xu_c, xl_c], [a.bu.g.x3(xu_c), a.bl.g.x3(xl_c)], '.5', lw=3)
-upper = np.loadtxt('upper_beam_L-B21.csv', delimiter=',')
-lower = np.loadtxt('lower_beam_L-B21.csv', delimiter=',')
-plt.scatter(upper[0, :], upper[1, :], c='.5', label='L-B21', edgecolors='k', zorder=10, marker="^")
-plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10, marker="^")
-upper = np.loadtxt('upper_beam_NL-B21.csv', delimiter=',')
-lower = np.loadtxt('lower_beam_Nl-B21.csv', delimiter=',')
-plt.scatter(upper[0, :], upper[1, :], c='.5', label='NL-B21', edgecolors='k', zorder=10, marker="o")
-plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10, marker="o")
-upper = np.loadtxt('upper_beam_NL-B22.csv', delimiter=',')
-lower = np.loadtxt('lower_beam_NL-B22.csv', delimiter=',')
-plt.scatter(upper[0, :], upper[1, :], c='.5', label='NL-B22', edgecolors='k', zorder=10, marker="s")
-plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10, marker="s")
-upper = np.loadtxt('upper_beam_L-B22.csv', delimiter=',')
-lower = np.loadtxt('lower_beam_L-B22.csv', delimiter=',')
-plt.scatter(upper[0, :], upper[1, :], c='.5', label='L-B22', edgecolors='k', zorder=10, marker="D")
-plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10, marker="D")
-upper = np.loadtxt('coupled_beam_upper.csv', delimiter=',')
-lower = np.loadtxt('coupled_beam_lower.csv', delimiter=',')
-plt.scatter(upper[0, :], upper[1, :], c='b', label='TIE', edgecolors='k', zorder=10, marker="D")
-plt.scatter(lower[0, :], lower[1, :], c='b', edgecolors='k', zorder=10, marker="D")
+upper = np.loadtxt('case_study_6_upper.csv', delimiter=',')
+lower = np.loadtxt('case_study_6_lower.csv', delimiter=',')
+plt.scatter(upper[0, :], upper[1, :], c='.5', label='Abaqus', edgecolors='k',
+            zorder=10, marker="^")
+plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10,
+            marker="^")
 # x = [a.bu.g.chord*a.bl.g.spar_psi_upper[0], a.bl.g.chord*a.bl.g.spar_psi[0]]
 # y = [a.bu.g.chord*a.bl.g.spar_xi_upper[0], a.bl.g.chord*a.bl.g.spar_xi[0]]
 # dx = x[1]-x[0]

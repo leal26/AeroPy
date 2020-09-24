@@ -47,7 +47,7 @@ def format_u(input, g=None, g_p=None):
 
 
 def format_l(input, g=None, g_p=None):
-    return [0] + list(input)
+    return list(input)
 
 
 def format_input(input, gu=None, gu_p=None, gl=None, gl_p=None):
@@ -79,7 +79,7 @@ g_upper.calculate_s(N=[11, 9])
 g_lower.calculate_s(N=[11, 8, 6])
 p_upper = properties()
 p_lower = properties()
-l_upper = loads(concentrated_load=[[-np.sqrt(2)/2, -np.sqrt(2)/2]], load_s=[1])
+l_upper = loads(concentrated_load=[[0, -1]], load_s=[1])
 l_lower = loads()
 
 a = coupled_beams(g_upper, g_lower, p_upper, p_lower, l_upper, l_lower, None,
@@ -96,7 +96,7 @@ a.calculate_x()
 _, _, n_u = g_upper._check_input([])
 _, _, n_l = g_lower._check_input([])
 a.parameterized_solver(format_input=format_input, x0=list(
-    np.zeros(n_u+n_l-1)), constraints=constraints)
+    np.zeros(n_u+n_l)), constraints=constraints)
 # input = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10]
 # [Au, Al] = format_input(input, a.bu.g, a.bu.g_p, a.bl.g, a.bl.g_p)
 # a.calculate_x()
@@ -112,7 +112,7 @@ print('lower', a.bl.g.D)
 print('lower 1', a.bl.g.cst[0].D)
 print('lower 2', a.bl.g.cst[1].D)
 print('lower 3', a.bl.g.cst[2].D)
-print('loads', a.bl.l.concentrated_load, a.bu.l.concentrated_load)
+print('loads', a.bu.l.concentrated_load, a.bl.l.concentrated_load)
 plt.figure()
 plt.plot(a.bu.g.x1_grid[1:], a.bu.M[1:], 'b', label='Upper')
 plt.plot(a.bl.g.x1_grid[1:], a.bl.M[1:], 'r', label='Lower')
