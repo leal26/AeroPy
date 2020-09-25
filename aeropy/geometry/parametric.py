@@ -166,6 +166,7 @@ class CoordinateSystem(object):
         c.zetaL = []
         c.zetaT = []
         c.A0 = []
+        c.A1 = c.p*[0]
         offset_s = 0
         offset_x = 0
         for i in range(c.p):
@@ -173,10 +174,8 @@ class CoordinateSystem(object):
             # From shape coefficients 1 to n
             if continuity == 'C2':
                 Ai = D[1+i*c.nn:1+(i+1)*c.nn]
-                Aj = D[1+j*c.nn:1+(j+1)*c.nn]
             elif continuity == 'C1':
                 Ai = D[i*c.nn:(i+1)*c.nn]
-                Aj = D[j*c.nn:(j+1)*c.nn]
             if i == 0:
                 c.A0.append(D[0])
                 if c.root_fixed and c.N1[i] == 1:
@@ -188,12 +187,13 @@ class CoordinateSystem(object):
                 if N1[i] == 1. and N2[i] == 1.:
                     offset_x += chord[j]
                     if continuity == 'C2':
-                        ddj = c.n*Aj[-2] - (N1[j]+c.n)*Aj[-1]
+                        ddj = c.n*c.cst[j].D[-3] - (N1[j]+c.n)*c.cst[j].D[-2]
                         c.A0.append((-chord[i]/chord[j]*ddj+Ai[0]*c.n)/(c.n+1))
                     elif continuity == 'C1':
                         c.A0.append(Ai[0])
                     c.zetaL.append(chord[j]/chord[i]*c.zetaT[j])
-                    c.zetaT.append(-Aj[-1] + c.zetaT[j] - c.A0[-1] + c.zetaL[i] - c.zetaL[j])
+                    c.zetaT.append(-c.cst[j].D[-2] + c.zetaT[j] -
+                                   c.A0[-1] + c.zetaL[i] - c.zetaL[j])
                 else:
                     raise(NotImplementedError)
 
@@ -219,10 +219,7 @@ class CoordinateSystem(object):
         offset_s = 0
         self.n_start = 0
         self.spar_i = 0
-        if self.continuity == 'C2':
-            self.n_end = 1
-        else:
-            self.n_end = 0
+
         for i in range(self.p):
             if self.dependent[i]:
                 if not hasattr(self, 'g_independent'):
@@ -237,7 +234,7 @@ class CoordinateSystem(object):
 
     def _update_independent(self, i):
         j = i - 1
-        Ai0, Ai, Aj = self._select_D(i, j)
+        Ai0, Ai = self._select_D(i)
 
         error = 999
         offset_x = 0
@@ -255,7 +252,7 @@ class CoordinateSystem(object):
             elif self.N1[i] == 1. and self.N2[i] == 1.:
                 offset_x = self.cst[j].offset_x + self.cst[j].chord
                 if self.continuity == 'C2':
-                    ddj = self.n*Aj[-2] - (self.N1[j]+self.n)*Aj[-1]
+                    ddj = self.n*self.cst[j].D[-3] - (self.N1[j]+self.n)*self.cst[j].D[-2]
                     self.A0[i] = (-self.cst[i].chord/self.cst[j].chord *
                                   ddj+Ai0[0]*self.n)/(self.n+1)
 
@@ -263,7 +260,7 @@ class CoordinateSystem(object):
                     self.A0[i] = Ai0[0]
 
                 self.zetaL[i] = self.cst[j].chord/self.cst[i].chord*self.zetaT[j]
-                self.zetaT[i] = -Aj[-1] + self.zetaT[j] - self.A0[i] + \
+                self.zetaT[i] = -self.cst[j].D[-2] + self.zetaT[j] - self.A0[i] + \
                     self.zetaL[i] - self.zetaL[j]
             else:
                 raise(NotImplementedError)
@@ -273,7 +270,7 @@ class CoordinateSystem(object):
                 Di = [self.A0[i]] + list(Ai0) + [An, self.zetaT[i]]
             elif self.continuity == 'C1':
                 Di = list(Ai0) + [An, self.zetaT[i]]
-            print(Di)
+            # print(Di)
             self.cst[i].D = Di
             self.cst[i].zetaT = self.zetaT[i]
             self.cst[i].zetaL = self.zetaL[i]
@@ -289,7 +286,7 @@ class CoordinateSystem(object):
 
     def _update_dependent(self, i):
         j = i - 1
-        Ai0, Ai, Aj = self._select_D(i, j)
+        Ai0, Ai = self._select_D(i)
 
         error = 999
         offset_x = 0
@@ -298,13 +295,15 @@ class CoordinateSystem(object):
                              self.cst[i].zetaL, self.cst[i].D[0]])
 
             if i == 0:
+                self.A0[i] = self.D[0]
+                self.A1[i] = self.D[1]
                 self.cst[i].chord = self.spar_x[self.spar_i]
-                self.zetaT[i] = self.spar_y[self.spar_i]/self.cst[i].chord
+                self.zetaT[i] = (self.spar_y[self.spar_i]-self.offset)/self.cst[i].chord
                 self.zetaL[i] = 0
             elif self.N1[i] == 1. and self.N2[i] == 1.:
                 offset_x = self.cst[j].offset_x + self.cst[j].chord
                 if self.continuity == 'C2':
-                    ddj = self.n*Aj[-2] - (self.N1[j]+self.n)*Aj[-1]
+                    ddj = self.n*self.cst[j].D[-3] - (self.N1[j]+self.n)*self.cst[j].D[-2]
                     self.A1[i] = (self.cst[i].chord/self.cst[j].chord *
                                   ddj-Ai0[0]*(self.n+1))/self.n
 
@@ -312,8 +311,8 @@ class CoordinateSystem(object):
                     raise(NotImplementedError)
 
                 self.zetaL[i] = self.cst[j].chord/self.cst[i].chord*self.zetaT[j]
-                self.A0[i] = -Aj[-1] + self.zetaT[j] - self.zetaT[i] + \
-                    self.zetaL[i] - self.zetaL[j]
+                self.A0[i] = -self.cst[j].D[-2] + self.zetaT[j] - \
+                    self.zetaT[i] + self.zetaL[i] - self.zetaL[j]
             else:
                 raise(NotImplementedError)
 
@@ -337,10 +336,16 @@ class CoordinateSystem(object):
                 prev = current
         self.spar_i += 1
 
-    def _select_D(self, i, j):
+    def _select_D(self, i):
+        if i == 0:
+            if self.continuity == 'C2':
+                self.n_end = 1
+            else:
+                self.n_end = 0
+
         self.n_start = self.n_end
         if self.dependent[i]:
-            modifier = 1
+            modifier = 2
         else:
             modifier = 0
         if i == self.p-1 and self.free_end:
@@ -351,8 +356,7 @@ class CoordinateSystem(object):
             self.n_end = self.n_start + self.nn - modifier
             Ai = self.D[self.n_start:self.n_end]
             Ai0 = Ai[:-1]
-        Aj = self.D[j*self.nn:(j+1)*self.nn]
-        return (Ai0, Ai, Aj)
+        return (Ai0, Ai)
 
     def _calculate_Dn(self, i, Ai0, Ai=None):
         def f(An):
@@ -425,17 +429,17 @@ class CoordinateSystem(object):
             deltasLE=[zL_ip/c_ip, zL_ip/c_ip])
         self.delta_P = c_ip*(xi_parent['u']-xi_parent['l']) + ip.offset - \
             dp.offset
-        print('delta', self.delta_P)
+        # print('delta', self.delta_P)
         # Claculate orientation for children
         s_j = calculate_spar_direction(
             psi_spar, A_ip, A_ic, zT_ip, c_ic, N1=N1, N2=N2, deltaz_goal=zT_ic,
             deltaL_baseline=zL_ip, deltaL_goal=zL_ic)
         self.spar_directions = s_j
-        print('spar_directions', self.spar_directions)
+        # print('spar_directions', self.spar_directions)
 
         self.spar_x = psi_spar*c_ic - self.delta_P*s_j[0]
         self.spar_y = xi_upper_children*c_ic + ic.offset - self.delta_P*s_j[1]
-        print(self.spar_x, self.spar_y)
+        # print(self.spar_x, self.spar_y)
 
     @classmethod
     def cylindrical(cls, D, chord=1, color='k', configuration=0):
@@ -875,6 +879,6 @@ class CoordinateSystem(object):
             dependent += (self.p-1)
         # for structurally consistent
         dependent += np.count_nonzero(self.dependent)
-        print('Trues', np.count_nonzero(self.dependent))
+        # print('Trues', np.count_nonzero(self.dependent))
         independent = total - dependent
         return len(input) == independent, len(input), independent

@@ -63,8 +63,12 @@ def dxi_u(psi, Au, delta_xi, N1=0.5, N2=1, indexes=None, zetaL=0):
         dS2 = (i-n-N2)/(1-psi)
         diff += Au[i]*C_i*S_i*(dS1+dS2)
 
-    if psi[-1] == 1 and N2 == 1:
-        diff[-1] = - zetaL - Au[-1] + delta_xi
+    try:
+        if psi[-1] == 1 and N2 == 1:
+            diff[-1] = - zetaL - Au[-1] + delta_xi
+    except:
+        if psi == 1 and N2 == 1:
+            diff = - zetaL - Au[-1] + delta_xi
     return diff
 
 

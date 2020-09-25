@@ -79,3 +79,21 @@ g_upper.D = [0, 0, 0, 0]
 g_lower.g_independent = g_upper
 # g_lower.D = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06]
 g_lower.D = [0, 0, 0, 0, 0, 0]
+g_upper.calculate_x1(g_upper.s)
+g_lower.calculate_x1(g_lower.s)
+print('D0', g_upper.cst[0].D, g_lower.cst[0].D)
+print('D1', g_upper.cst[1].D, g_lower.cst[1].D)
+print('D2', g_lower.cst[2].D)
+
+# print('chords', a.bl.g.chord, a.bu.g.chord)
+index_u = np.where(g_upper.s == psi_spars[0])[0][0]
+index_l = np.where(g_lower.s == psi_spars[0])[0][0]
+plt.figure()
+plt.plot(g_upper.x1_grid, g_upper.x3(g_upper.x1_grid), 'b',
+         label='Upper', lw=3)
+plt.plot(g_lower.x1_grid, g_lower.x3(g_lower.x1_grid), 'b',
+         label='Upper', lw=3)
+
+plt.plot([g_upper.x1_grid[index_u], g_lower.x1_grid[index_l]], [g_upper.x3(
+    np.array([g_upper.x1_grid[index_u]])), g_lower.x3(np.array([g_lower.x1_grid[index_l]]))], 'b', lw=3)
+plt.show()
