@@ -204,14 +204,12 @@ def calculate_spar_direction(psi_baseline, Au_baseline, Au_goal, deltaz_baseline
                                       deltaz_baseline, deltaz_goal, N1=N1,
                                       N2=N2, deltaL_C=deltaL_baseline,
                                       deltaL_L=deltaL_goal)
-    print('c_baseline', c_baseline)
     # Calculate psi at goal arifoil
     psi_goal = calculate_psi_goal(psi_baseline, Au_baseline, Au_goal,
                                   deltaz_baseline, c_baseline, c_goal, N1=N1,
                                   N2=N2, deltaz_goal=deltaz_goal,
                                   deltaL_baseline=deltaL_baseline,
                                   deltaL_goal=deltaL_goal)
-    print('psi_goal', psi_goal)
     # non-normalized direction
     s = np.zeros(2)
     t = np.zeros(2)
@@ -221,7 +219,6 @@ def calculate_spar_direction(psi_baseline, Au_baseline, Au_goal, deltaz_baseline
                             deltaz_baseline/c_baseline, N1=N1, N2=N2,
                             deltaL_xi=deltaL_baseline)
     sbeta = np.sqrt(1-cbeta**2)
-    print('beta', cbeta, sbeta)
     t[0] = 1
     t[1] = dxi_u(psi_goal, Au_goal, deltaz_goal/c_goal, N1=N1, N2=N2,
                  zetaL=deltaL_goal/c_goal)

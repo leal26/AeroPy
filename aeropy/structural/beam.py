@@ -415,10 +415,16 @@ class coupled_beams():
 
     def parameterized_solver(self, format_input=None, x0=None, constraints=()):
 
-        sol = minimize(self.formatted_residual, x0, method='SLSQP', bounds=len(x0)
-                       * [[-.04, .04]], constraints=constraints, args=(format_input))
-        self.bu.g.D, self.bl.g.D = format_input(
+        sol = minimize(self.formatted_residual, x0, method='SLSQP',  constraints=constraints, args=(format_input),
+                       options={'ftol': 1e-06, 'iprint': 3, 'disp': True, 'eps': 1.4901161193847656e-08})
+        # bounds=len(x0)
+        #                * [[-.04, .04]],
+        Du, Dl = format_input(
             sol.x, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
+        self.bu.g.D = Du
+        if sum(self.bl.g.dependent) != 0:
+            self.bl.g.g_independent = self.bu.g
+        self.bl.g.D = Dl
         # self.bu.g.internal_variables(self.bu.length, origin=self.bu.origin)
         # self.bl.g.internal_variables(self.bl.length, origin=self.bl.origin)
         self.calculate_x()
@@ -428,6 +434,7 @@ class coupled_beams():
         print('sol', self.bu.g.D, self.bl.g.D)
 
     def formatted_residual(self, x0, format_input):
+        # print('x0', x0)
         [Au, Al] = format_input(x0, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
         self.bu.l.concentrated_load = self.bu.l.external_load.copy()
         self.bl.l.concentrated_load = self.bl.l.external_load.copy()
@@ -435,14 +442,26 @@ class coupled_beams():
         self.bl.l.concentrated_s = self.bl.l.external_s.copy()
         self.calculate_x()
         self.calculate_force()
-        R = self.bu._residual(Au) + self.bl._residual(Al)
+        R = self.bu._residual(Au)
+        if sum(self.bl.g.dependent) != 0:
+            self.bl.g.g_independent = self.bu.g
+        R += self.bl._residual(Al)
         if self.spars_s is not None:
             self.calculate_resultants()
-        R = self.bu._residual(Au) + self.bl._residual(Al)
+        Ru = self.bu._residual(Au)
+        if sum(self.bl.g.dependent) != 0:
+            self.bl.g.g_independent = self.bu.g
+        Rl = self.bl._residual(Al)
+        R = np.sqrt(Ru**2 + Rl**2)
         # print('directions', self.bl.g.spar_directions)
         # print('psi', self.bl.g.spar_psi)
         # print('xi', self.bl.g.spar_xi)
-        print('R', self.bu.R, self.bl.R)
+        # print('D', self.bu.g.D, self.bl.g.D)
+        # print('Du', self.bu.g.cst[0].D, self.bu.g.cst[1].D)
+        # print('Dl', self.bl.g.cst[0].D, self.bl.g.cst[1].D, self.bl.g.cst[2].D)
+        # print('R', R - np.sqrt(0.004566740157052263**2 + 0.003608477552921366**2), self.bu.R -
+        #       0.004566740157052263, self.bl.R - 0.003608477552921366)
+        print('R', R)
         # BREAK
         return R
 

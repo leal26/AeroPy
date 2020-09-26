@@ -57,27 +57,27 @@ def format_input(input, gu=None, gu_p=None, gl=None, gl_p=None):
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
-psi_spars = [0.2]
+psi_spars = [0.2, 0.7]
 m = len(psi_spars)
 
-g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0.],
-                                chord=[psi_spars[0], 1-psi_spars[0]],
-                                color=['b', 'r'], N1=[1., 1.], N2=[1., 1.],
+g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
+                                chord=[.2, .5, .3],
+                                color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
                                 offset=.05, continuity='C2', free_end=True,
                                 root_fixed=True)
 g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
-                                chord=[psi_spars[0], 0.7, 0.1],
+                                chord=[.2, 0.5, 0.3],
                                 color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
                                 offset=-.05, continuity='C2', free_end=True,
-                                root_fixed=False, dependent=[True, False, False])
+                                root_fixed=False, dependent=[True, True, False])
 
-g_upper.calculate_s(N=[11, 9])
-g_lower.calculate_s(N=[11, 8, 6])
+g_upper.calculate_s(N=[20, 20, 10])
+g_lower.calculate_s(N=[20, 20, 10])
 
-# g_upper.D = [0.01, 0.02, 0.03, 0.04]
-g_upper.D = [0, 0, 0, 0]
+g_upper.D = [-0.001, -0.00, 0.00, 0.00, 0.00, 0.00]
+# g_upper.D = [0, 0, 0, 0]
 g_lower.g_independent = g_upper
-g_lower.D = [0.01, 0.02, 0.03, 0.04, 0.05, .06]
+g_lower.D = [0.00, 0.00, 0.00]
 # g_lower.D = [0., 0, 0, 0, 0, 0]
 g_upper.calculate_x1(g_upper.s)
 g_lower.calculate_x1(g_lower.s)
@@ -86,14 +86,17 @@ print('D1', g_upper.cst[1].D, g_lower.cst[1].D)
 print('D2', g_lower.cst[2].D)
 
 # print('chords', a.bl.g.chord, a.bu.g.chord)
-index_u = np.where(g_upper.s == psi_spars[0])[0][0]
-index_l = np.where(g_lower.s == psi_spars[0])[0][0]
+
 plt.figure()
 plt.plot(g_upper.x1_grid, g_upper.x3(g_upper.x1_grid), 'b',
          label='Upper', lw=3)
 plt.plot(g_lower.x1_grid, g_lower.x3(g_lower.x1_grid), 'b',
          label='Upper', lw=3)
+for i in range(len(psi_spars)):
+    index_u = np.where(g_upper.s == psi_spars[i])[0][0]
+    index_l = np.where(g_lower.s == psi_spars[i])[0][0]
+    plt.plot([g_upper.x1_grid[index_u], g_lower.x1_grid[index_l]], [g_upper.x3(
+        np.array([g_upper.x1_grid[index_u]])), g_lower.x3(np.array([g_lower.x1_grid[index_l]]))], 'b', lw=3)
 
-plt.plot([g_upper.x1_grid[index_u], g_lower.x1_grid[index_l]], [g_upper.x3(
-    np.array([g_upper.x1_grid[index_u]])), g_lower.x3(np.array([g_lower.x1_grid[index_l]]))], 'b', lw=3)
+plt.gca().set_aspect('equal', adjustable='box')
 plt.show()
