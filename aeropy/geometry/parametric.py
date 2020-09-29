@@ -308,7 +308,7 @@ class CoordinateSystem(object):
                     ddj = self.n*self.cst[j].D[-3] - (self.N1[j]+self.n)*self.cst[j].D[-2]
 
                     self.A1[i] = (self.cst[i].chord/self.cst[j].chord *
-                                  ddj-self.A0[i]*(self.n+1))/self.n
+                                  ddj+self.A0[i]*(self.n+1))/self.n
                 elif self.continuity == 'C1':
                     raise(NotImplementedError)
 
@@ -324,7 +324,7 @@ class CoordinateSystem(object):
             self.cst[i].zetaL = self.zetaL[i]
             self.cst[i].offset_x = offset_x
             # print('outside 1', self.cst[i].D)
-            An = self._calculate_Dn(i, Ai0)
+            An = self._calculate_Dn(i, Ai0, Ai)
             if self.continuity == 'C2':
                 Di = [self.A0[i], self.A1[i]] + list(Ai0) + [An, self.zetaT[i]]
             elif self.continuity == 'C1':
@@ -354,7 +354,7 @@ class CoordinateSystem(object):
                 self.n_end += 1
         self.n_start = self.n_end
         if self.dependent[i]:
-            modifier = 2
+            modifier = 1
         else:
             modifier = 0
         if i == self.p-1 and self.free_end:
@@ -390,7 +390,7 @@ class CoordinateSystem(object):
             return d*dA/(1+(d)**2)**(1/2)
 
         if self.dependent[i]:
-            chord_target = self.cst[i].chord
+            # chord_target = self.cst[i].chord
             # print(i)
             # r = np.linspace(-5, 5, 1000)
             # rf = []
@@ -399,8 +399,8 @@ class CoordinateSystem(object):
             # plt.figure()
             # plt.plot(r, rf)
             # plt.show()
-            An = optimize.fsolve(f, self.cst[i].D[-2], fprime=fprime)[0]
-
+            # An = optimize.fsolve(f, self.cst[i].D[-2], fprime=fprime)[0]
+            An = Ai[-1]
             # length_current = self.cst[i].arclength(self.cst[i].chord)
             # print('inside 1', self.cst[i].D, chord_target, self.cst[i].chord)
         elif i == self.p-1 and self.free_end:
@@ -929,7 +929,7 @@ class CoordinateSystem(object):
         if self.continuity == 'C2':
             dependent += (self.p-1)
         # for structurally consistent
-        dependent += 2*np.count_nonzero(self.dependent)
+        dependent += 1*np.count_nonzero(self.dependent)
         # print('Trues', np.count_nonzero(self.dependent))
         independent = total - dependent
         return len(input) == independent, len(input), independent

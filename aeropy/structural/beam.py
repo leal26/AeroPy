@@ -414,9 +414,11 @@ class coupled_beams():
             raise(NotImplementedError)
 
     def parameterized_solver(self, format_input=None, x0=None, constraints=()):
-
-        sol = minimize(self.formatted_residual, x0, method='SLSQP',  constraints=constraints, args=(format_input),
-                       options={'ftol': 1e-06, 'iprint': 3, 'disp': True, 'eps': 1.4901161193847656e-08})
+        # sol = minimize(self.formatted_residual, x0, method='SLSQP',  constraints=constraints, args=(format_input),
+        #                options={'ftol': 1e-06, 'iprint': 3, 'disp': True, 'eps': 1.4901161193847656e-08})
+        sol = minimize(self.formatted_residual, x0,  method='SLSQP', constraints=constraints, args=(format_input),
+                       options={'iprint': 3, 'disp': True}, bounds=len(x0) * [[-.04, .04]])
+        # 'L-BFGS-B'
         # bounds=len(x0)
         #                * [[-.04, .04]],
         Du, Dl = format_input(

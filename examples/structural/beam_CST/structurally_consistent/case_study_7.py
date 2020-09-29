@@ -15,6 +15,26 @@ from aeropy.geometry.airfoil import CST
 from aeropy.CST_2D import calculate_c_baseline, calculate_psi_goal, calculate_spar_direction, S
 
 
+def constraint_f(input):
+    Au, Al = format_input(input, gu=a.bu.g, gu_p=a.bu.g_p, gl=a.bl.g, gl_p=a.bl.g_p)
+    a.bu.g.D = Au
+    a.bl.g.g_independent = a.bu.g
+    a.bl.g.D = Al
+    # length_diff = []
+    # for i in range(a.bl.g.p):
+    #     if a.bl.g.dependent[i]:
+    #         current_length = a.bl.g.cst[i].arclength(a.bl.g.cst[i].chord)
+    #         target_length = a.bl.g.cst[i].length
+    #         length_diff.append(target_length-current_length)
+    # offset_x = self.cst[j].offset_x + self.cst[j].chord
+    a.bl.g.cst[0].chord = a.bl.g.spar_x[0]
+    current_length = a.bl.g.cst[0].arclength(a.bl.g.cst[0].chord)
+    target_length = a.bl.g.cst[0].length
+    length_diff = target_length-current_length
+    print('C', target_length, current_length)
+    return np.array([length_diff])
+
+
 def format_u(input, g=None, g_p=None):
     return list(input)
 
@@ -33,12 +53,12 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 psi_spars = [0.2]
 m = len(psi_spars)
 
-g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0.],
+g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
                                 chord=[psi_spars[0], 1-psi_spars[0]],
                                 color=['b', 'r'], N1=[1., 1.], N2=[1., 1.],
                                 offset=.05, continuity='C2', free_end=True,
                                 root_fixed=True)
-g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
+g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
                                 chord=[psi_spars[0], 0.7, 0.1],
                                 color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
                                 offset=-.05, continuity='C2', free_end=True,
@@ -48,14 +68,15 @@ g_upper.calculate_s(N=[11, 9])
 g_lower.calculate_s(N=[11, 8, 6])
 p_upper = properties()
 p_lower = properties()
-l_upper = loads(concentrated_load=[[0, 0]], load_s=[1])
-l_lower = loads(concentrated_load=[[0, 0]], load_s=[1-0.1])
+l_upper = loads(concentrated_load=[[-np.sqrt(2)/2, -np.sqrt(2)/2]], load_s=[1])
+l_lower = loads(concentrated_load=[[np.sqrt(2)/2, np.sqrt(2)/2]], load_s=[1-0.1])
+
 
 a = coupled_beams(g_upper, g_lower, p_upper, p_lower, l_upper, l_lower, None,
                   None, ignore_ends=True, spars_s=psi_spars)
 
 a.calculate_x()
-# constraints = ({'type': 'eq', 'fun': constraint_f})
+constraints = ({'type': 'eq', 'fun': constraint_f})
 # a.formatted_residual(format_input=format_input, x0=[
 #                      0.00200144, 0.00350643, 0.00255035, 0.00226923] + [-0.00219846, - 0.00313221, - 0.00193564, - 0.00191324])
 # a.formatted_residual(format_input=format_input, x0=[
@@ -65,7 +86,7 @@ a.calculate_x()
 _, _, n_u = g_upper._check_input([])
 _, _, n_l = g_lower._check_input([])
 
-a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l))
+a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l), constraints=constraints)
 print(a.bu.g.D, a.bl.g.D)
 print('upper', a.bu.g.D)
 print('upper 1', a.bu.g.cst[0].D)
