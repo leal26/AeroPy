@@ -12,7 +12,7 @@ from aeropy.geometry.parametric import CoordinateSystem
 
 def cst(x, A0, A1, A2, A3, A4):
     b.g.D = [A0, A1, A2, A3, A4, -A0]
-    b.g.internal_variables(b.length)
+    b.g.internal_variables(b.g.length)
     y = b.g.x3(x)
     return y
 
@@ -30,7 +30,7 @@ g_p = CoordinateSystem.CST(D=[0, 0, 0, 0, 0, 0],
                            chord=chord, color='k', N1=1, N2=1, deltaz=0, tol=1e-5, offset=-0.05)
 g = CoordinateSystem.CST(D=[0, 0, 0, 0, 0, 0],
                          chord=chord, color='k', N1=1, N2=1, deltaz=0, tol=1e-5, offset=-0.05)
-
+g.offset_s = 0
 s = g.calculate_s(201, 1)
 p = properties()
 l = loads()
@@ -40,7 +40,7 @@ popt, pcov = curve_fit(cst, x, y, p0=g.D[0:-1])
 print('Solution: ', popt)
 print('Error: ', np.sqrt(np.diag(pcov)))
 
-b.length = b.g.arclength(b.g.chord)[0]
+b.length = b.g.arclength(b.g.chord)
 print('length', b.length, b.g.arclength(b.g.chord))
 print('s', b.s)
 b.g.calculate_x1(b.s)

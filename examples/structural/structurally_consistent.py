@@ -69,15 +69,15 @@ g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
                                 chord=[psi_spars[0], 0.7, 0.1],
                                 color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
                                 offset=-.05, continuity='C2', free_end=True,
-                                root_fixed=False, dependent=[True, False, False])
-
+                                root_fixed=True, dependent=[True, False, False])
+print('order', g_lower.n, g_lower.cst[0].D)
 g_upper.calculate_s(N=[11, 9])
 g_lower.calculate_s(N=[11, 8, 6])
 
 # g_upper.D = [0.01, 0.02, 0.03, 0.04]
 g_upper.D = [0, 0, 0, 0]
 g_lower.g_independent = g_upper
-g_lower.D = [0.01, 0.02, 0.03, 0.04, 0.05, .06]
+g_lower.D = [0.01, 0.02, 0.03, 0.04, 0.05]
 # g_lower.D = [0., 0, 0, 0, 0, 0]
 g_upper.calculate_x1(g_upper.s)
 g_lower.calculate_x1(g_lower.s)

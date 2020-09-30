@@ -31,7 +31,7 @@ def constraint_f(input):
     current_length = a.bl.g.cst[0].arclength(a.bl.g.cst[0].chord)
     target_length = a.bl.g.cst[0].length
     length_diff = target_length-current_length
-    print('C', target_length, current_length)
+    print('C', target_length, current_length, a.bl.g.spar_x[0], a.bl.g.delta_P)
     return np.array([length_diff])
 
 
@@ -86,7 +86,22 @@ constraints = ({'type': 'eq', 'fun': constraint_f})
 _, _, n_u = g_upper._check_input([])
 _, _, n_l = g_lower._check_input([])
 
-a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l), constraints=constraints)
+Du = [-0.0003181628701135355, -0.00010456389143243095, 0.0001055610176677134,
+      0.00031816693313939067, 0.002130018243803624, 0.0017023056995970312]
+Dl = [0.0004397262495609969, 0.00022637077688929995, 1.397180190592703e-05, -0.00019761779295283623, -
+      0.00161607199242832, -0.001289298714716886, -0.0009704188068808049, 7.713376263188075e-07, 2.6771486682555207e-06]
+a.formatted_residual(format_input=format_input, x0=Du + Dl)
+# a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l), constraints=constraints)
+# a.bu.g.D =
+# a.bl.g.g_independent = a.bu.g
+# a.bl.g.D = [0.0004397262495609969, 0.00022637077688929995, 1.397180190592703e-05, -0.00019761779295283623, -
+#             0.00161607199242832, -0.001289298714716886, -0.0009704188068808049, 7.713376263188075e-07, 2.6771486682555207e-06]
+
+# a.bu.g.calculate_x1(a.bu.g.s)
+# a.bl.g.calculate_x1(a.bl.g.s)
+# a.bu.y = a.bu.g.x3(a.bu.x)
+# a.bl.y = a.bl.g.x3(a.bl.x)
+
 print(a.bu.g.D, a.bl.g.D)
 print('upper', a.bu.g.D)
 print('upper 1', a.bu.g.cst[0].D)
@@ -129,6 +144,8 @@ plt.scatter(upper[0, :], upper[1, :], c='.5', label='Abaqus', edgecolors='k',
             zorder=10, marker="^")
 plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10,
             marker="^")
+print('spars', a.bl.g.spar_x, a.bl.g.spar_y)
+plt.scatter([a.bl.g.spar_x], [a.bl.g.spar_y], c='g', label='Lower spar', zorder=20, s=40)
 # x = [a.bu.g.chord*a.bl.g.spar_psi_upper[0], a.bl.g.chord*a.bl.g.spar_psi[0]]
 # y = [a.bu.g.chord*a.bl.g.spar_xi_upper[0], a.bl.g.chord*a.bl.g.spar_xi[0]]
 # dx = x[1]-x[0]

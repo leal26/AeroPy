@@ -295,11 +295,14 @@ class CoordinateSystem(object):
 
             if i == 0:
                 offset_x = 0
-                self.A0[i] = self.D[0]
                 self.A1[i] = self.D[1]
                 self.cst[i].chord = self.spar_x[self.spar_i]
                 self.zetaT[i] = (self.spar_y[self.spar_i]-self.offset)/self.cst[i].chord
                 self.zetaL[i] = 0
+                if self.root_fixed:
+                    self.A0[i] = - self.zetaT[i]
+                else:
+                    self.A0[i] = self.D[0]
             elif self.N1[i] == 1. and self.N2[i] == 1:
                 offset_x = self.cst[j].offset_x + self.cst[j].chord
                 self.cst[i].chord = self.spar_x[self.spar_i] - offset_x
@@ -350,7 +353,7 @@ class CoordinateSystem(object):
                 self.n_end = 1
             else:
                 self.n_end = 0
-            if self.dependent[i]:
+            if self.dependent[i] and not self.root_fixed:
                 self.n_end += 1
         self.n_start = self.n_end
         if self.dependent[i]:
@@ -366,7 +369,7 @@ class CoordinateSystem(object):
             self.n_end = self.n_start + self.nn - modifier
             Ai = self.D[self.n_start:self.n_end]
             Ai0 = Ai[:-1]
-
+        print(i, self.n_start, self.n_end, Ai)
         return (Ai0, Ai)
 
     def _calculate_Dn(self, i, Ai0, Ai=None):
@@ -412,6 +415,7 @@ class CoordinateSystem(object):
             rho_p = (1/chordp)*(self.n*Pi[-2] - (self.N1[i]+self.n)*Pi[-1])/den_p
             An = (-den_c*self.cst[i].chord*rho_p + Ai0[-1]*self.n)/(self.n+1)
         else:
+
             An = Ai[-1]
         return An
 
