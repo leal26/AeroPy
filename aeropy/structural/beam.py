@@ -234,12 +234,12 @@ class beam_chen():
         for i in range(len(self.x)):
             rhs = self.g.rho[i] - self.g_p.rho[i]
             lhs = self.M[i]/self.p.young/self.p.inertia
-
             self.r[i] = abs(lhs - rhs)
         if self.ignore_ends:
             self.R = abs(trapz(self.r[1:-1], self.s[1:-1]))
         else:
             self.R = abs(trapz(self.r[:], self.s[:]))
+        # print('r', self.r)
         if np.isnan(self.R):
             print('ignore_ends', self.ignore_ends)
             print('r', self.r)
@@ -454,7 +454,8 @@ class coupled_beams():
         if sum(self.bl.g.dependent) != 0:
             self.bl.g.g_independent = self.bu.g
         Rl = self.bl._residual(Al)
-        R = np.sqrt(Ru**2 + Rl**2)
+        R = .5*np.sqrt(Ru**2 + Rl**2)
+        # R = Ru + Rl
         # print('directions', self.bl.g.spar_directions)
         # print('psi', self.bl.g.spar_psi)
         # print('xi', self.bl.g.spar_xi)
@@ -463,7 +464,7 @@ class coupled_beams():
         # print('Dl', self.bl.g.cst[0].D, self.bl.g.cst[1].D, self.bl.g.cst[2].D)
         # print('R', R - np.sqrt(0.004566740157052263**2 + 0.003608477552921366**2), self.bu.R -
         #       0.004566740157052263, self.bl.R - 0.003608477552921366)
-        print('R', R)
+        print('R', R, Rl, Ru)
         # BREAK
         return R
 

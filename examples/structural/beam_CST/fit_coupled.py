@@ -62,6 +62,7 @@ bu = beam_chen(gu, p, l, su)
 
 
 popt, pcov = curve_fit(cst_upper, xu, yu, p0=np.zeros(n_u))
+bu.g.D = popt
 print('Solution upper: ', popt)
 bu.g.calculate_x1(bu.g.s)
 
@@ -92,6 +93,7 @@ bl = beam_chen(gl, p, l, su)
 
 
 popt, pcov = curve_fit(cst_lower, xl, yl, p0=np.zeros(n_l))
+bl.g.D = popt
 print('Solution lower: ', popt)
 bl.g.calculate_x1(bl.g.s)
 
@@ -99,20 +101,22 @@ print('lower 1', bl.g.cst[0].D)
 print('lower 2', bl.g.cst[1].D)
 print('lower 3', bl.g.cst[2].D)
 print('spars', bl.g.spar_x, bl.g.spar_y)
-x_fit = bu.g.x1_grid
+x_fit = xu
 y_fit = []
 for xi in x_fit:
     y_fit.append(bu.g.x3(np.array([xi]))[0])
 plt.plot(xu, yu, 'b', label='Raw')
 plt.plot(x_fit, y_fit, 'r--', label='Fit')
 
-x_fit = bl.g.x1_grid
+x_fit = xl
 y_fit = []
 for xi in x_fit:
     y_fit.append(bl.g.x3(np.array([xi]))[0])
 plt.plot(xl, yl, 'b', label='Raw')
 plt.plot(x_fit, y_fit, 'r--', label='Fit')
-
+y_fit = []
+for xi in x_fit:
+    y_fit.append(bl.g.x3(np.array([xi]), 'x1')[0])
 
 b = bu
 rho_p = b.g_p.radius_curvature(b.g_p.x1_grid, output_only=True)

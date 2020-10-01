@@ -295,7 +295,7 @@ class CoordinateSystem(object):
 
             if i == 0:
                 offset_x = 0
-                self.A1[i] = self.D[1]
+                self.A1[i] = self.D[0]
                 self.cst[i].chord = self.spar_x[self.spar_i]
                 self.zetaT[i] = (self.spar_y[self.spar_i]-self.offset)/self.cst[i].chord
                 self.zetaL[i] = 0
@@ -369,7 +369,7 @@ class CoordinateSystem(object):
             self.n_end = self.n_start + self.nn - modifier
             Ai = self.D[self.n_start:self.n_end]
             Ai0 = Ai[:-1]
-        print(i, self.n_start, self.n_end, Ai)
+        # print(i, self.n_start, self.n_end, Ai)
         return (Ai0, Ai)
 
     def _calculate_Dn(self, i, Ai0, Ai=None):
