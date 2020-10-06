@@ -8,52 +8,104 @@ class generation:
     projectName = "projectNameNotSet"
     generationName = "generationNameNotSet"
 
-    class
+    def __init__(
+        self,
+        projectName,
+        generationName):
+        self.projectName = projectName
+        self.generationName = generationName
+
+        if os.path.isdir(self.generationDir()):
+        pass
+        # print("The directory of the foil generation is ok!")
+
+        else:
+            # print("The directory of the foil generation does not exist")
+            try:
+                os.makedirs(self.generationDir())
+            except OSError:
+                print(
+                    "Error "
+                )
+        )
+
+
+    def generationDir(self):
+        return os.getcwd() + "/airfoilGens/" + self.generationName + "/"
+
+    def relGenerationDir(self):
+        return "airfoilGens/" + self.generationName + '/'
+
+
+
 
 
 class rawFoil(generation):
-    projectName = "projectNameNotSet"
-    generationName = "generationNameNotSet"
-    rawFoilName = "rawFoilNameNotSet"
+    rawFoilName="rawFoilNameNotSet"
 
+    def __init__(
+        self,
+        rawFoilName):
+        self.rawFoilName=rawFoilName
+
+        if os.path.isdir(self.rawFoilDir()):
+        pass
+        # print("The directory of the raw Foil is ok!")
+
+        else:
+            # print("The directory of the raw foil does not exist")
+            try:
+                os.makedirs(self.rawFoilDir())
+            except OSError:
+                print(
+                    "Error "
+                )
+        )
+
+
+    def rawFoilDir(self):
+        return os.getcwd() + "/airfoilGens/" + self.generationName + "/" + self.rawFoilName + "/"
+
+    def relRawFoilDir(self):
+        return "airfoilGens/" + self.generationName + '/' + self.rawFoilName + "/"
+
+    def loadFoil(self, foilToLoad):
+    copy2(
+        os.getcwd() +
+        '/foilsToLoad/' +
+        foilToLoad,
+        self.flapFoilPath())
 
 class hingedFoil(rawFoil):
-    projectName = "projectNameNotSet"
-    generationName = "generationNameNotSet"
-    rawFoilName = "rawFoilNameNotSet"
     hingedFoilName = "hingedFoilNameNotSet"
 
     def __init__(
         self,
-        inputProjectName,
-        inputGenerationName,
-        inputRawFoilName,
-        inputHingedFoilName):
-    self.projectName = inputFlapFoilName
-    self.generationName = inputGenerationName
-    self.rawFoilName = inputRawFoilName
-    self.hingedFoilName = inputHingedFoilName
+        hingedFoilName):
+        self.hingedFoilName = hingedFoilName
 
-    if os.path.isdir(self.hingedFoilDir()):
-        pass
-        # print("The directory of the hinged Foil is ok!")
+        if os.path.isdir(self.hingedFoilDir()):
+            pass
+            # print("The directory of the hinged Foil is ok!")
 
-    else:
-        # print("The directory of the hinged foil does not exist")
-        try:
-            os.makedirs(self.hingedFoilDir())
-        except OSError:
-            print(
-                "Error "
-            )
-    )
+        else:
+            # print("The directory of the hinged foil does not exist")
+            try:
+                os.makedirs(self.hingedFoilDir())
+            except OSError:
+                print(
+                    "Error "
+                )
+
+        def hingedFoilDir(self):
+        return os.getcwd() + "/airfoilGens/" + self.generationName + "/" + self.rawFoilName + "/" + self.hingedFoilName + "/"
+
+        def relHingedFoilDir(self):
+        return "airfoilGens/" + self.generationName + '/' + self.rawFoilName + "/" + self.hingedFoilName + "/"
+        )
+
 class flapFoil(hingedFoil):
-    projectName="projectNameNotSet"
-    generationName="generationNameNotSet"
-    rawFoilName="rawFoilNameNotSet"
-    hingedFoilName="hingedFoilNameNotSet"
     flapFoilName="flapFoilNameNotSet"
-    treeLvl=4
 
 
     # Sets the relative path of the flapped Foil
@@ -65,16 +117,8 @@ class flapFoil(hingedFoil):
     # Constructor for class flapFoil
     def __init__(
             self,
-            inputProjectName,
-            inputGenerationName,
-            inputRawFoilName,
-            inputHingedFoilName,
-            inputFlapFoilName):
-        self.flapFoilName=inputFlapFoilName
-        self.hingedFoilName=inputHingedFoilName
-        self.rawFoilName=inputRawFoilName
-        self.generationName=inputGenerationName
-        self.projectName=inputProjectName
+            flapFoilName):
+        self.flapFoilName=flapFoilName
 
         if os.path.isdir(self.flapFoilDir()):
             pass
@@ -91,26 +135,16 @@ class flapFoil(hingedFoil):
                     "Error creating directory %s failed" %
                     self.flapFoilDir())
 
-        # print("Created flapFoil %s.%s.%s.%s.%s" %(self.projectName,
-        # self.generationName, self.rawFoilName, self.hingedFoilName,
-        # self.flapFoilName))
 
     def flapFoilDir(self):
-        return os.getcwd() + "/airfoilGens/" + self.generationName + \
-            '/' + self.rawFoilName + '/' + self.hingedFoilName
-
-    def flapFoilPath(self):
         return self.flapFoilDir() + '/' + self.flapFoilName
 
-    def relFlapFoilPath(self):
+    def relFlapFoilDir(self):
         return "airfoilGens/" + self.generationName + '/' + self.rawFoilName + \
             '/' + self.hingedFoilName + '/' + self.flapFoilName
 
-    def relFlapFoilDir(self):
-        return "airfoilGens/" + self.generationName + '/' + \
-            self.rawFoilName + '/' + self.hingedFoilName + '/'
 
-    def analyzeFoil(self, inputAlpha, inputReynolds, inputIteration):
+    def analyzeFlapFoil(self, inputAlpha, inputReynolds, inputIteration):
         if isinstance(
                 inputReynolds,
                 list) or isinstance(
@@ -134,20 +168,6 @@ class flapFoil(hingedFoil):
                 NACA=False,
                 delete=False,
                 dir=self.relFlapFoilDir())
-
-    def loadFoil(self, inputFoilToLoad):
-        copy2(
-            os.getcwd() +
-            '/foilsToLoad/' +
-            inputFoilToLoad,
-            self.flapFoilPath())
-
-
-
-
-
-
-
 
 
 
@@ -190,9 +210,6 @@ def getdir(self):
     def relFlapFoilDir(self):
         return "airfoilGens/" + self.generationName + '/' + \
             self.rawFoilName + '/' + self.hingedFoilName + '/'
-
-
-    
 
 if __name__ == "__main__":
     main()
