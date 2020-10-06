@@ -102,9 +102,9 @@ def call(airfoil, alfas=None, output='Cp', Reynolds=0, Mach=0,  # noqa C901
     #Create the directory if it does not already exist (only needet
     # naca airfoil is generated directly form XFOIL, if foil is loaded
     # from file into xfoil, directory must exist)
-
-    if not os.path.isdir(dir):
-        os.makedirs(dir)
+    if dir != "":
+        if not os.path.isdir(dir):
+            os.makedirs(dir)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #                               Functions

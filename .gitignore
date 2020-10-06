@@ -229,3 +229,4 @@ __pycache__
 examples/2D_fitting/airfoils
 panair_files
 sBOOM
+/test/
