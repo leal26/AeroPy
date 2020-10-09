@@ -53,24 +53,23 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 psi_spars = [0.2]
 m = len(psi_spars)
 
-g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0.],
+g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
                                 chord=[psi_spars[0], 1-psi_spars[0]],
                                 color=['b', 'r'], N1=[1., 1.], N2=[1., 1.],
                                 offset=.05, continuity='C2', free_end=True,
                                 root_fixed=True)
-g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
+g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
                                 chord=[psi_spars[0], 0.7, 0.1],
                                 color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
                                 offset=-.05, continuity='C2', free_end=True,
-                                root_fixed=True, dependent=[True, False, False],
-                                length_preserving=True)
+                                root_fixed=True, dependent=[True, False, False])
 
 g_upper.calculate_s(N=[11, 9])
 g_lower.calculate_s(N=[11, 8, 6])
 p_upper = properties()
 p_lower = properties()
-l_upper = loads(concentrated_load=[[-np.sqrt(2)/2, -np.sqrt(2)/2]], load_s=[1])
-l_lower = loads(concentrated_load=[[np.sqrt(2)/2, np.sqrt(2)/2]], load_s=[1-0.1])
+l_upper = loads(concentrated_load=[[-100*np.sqrt(2)/2, -100*np.sqrt(2)/2]], load_s=[1])
+l_lower = loads(concentrated_load=[[100*np.sqrt(2)/2, 100*np.sqrt(2)/2]], load_s=[1-0.1])
 
 
 a = coupled_beams(g_upper, g_lower, p_upper, p_lower, l_upper, l_lower, None,
@@ -87,17 +86,32 @@ constraints = ({'type': 'eq', 'fun': constraint_f})
 _, _, n_u = g_upper._check_input([])
 _, _, n_l = g_lower._check_input([])
 
-# Du = [6.15460393e-05, 2.11765046e-04, 3.60480211e-04, 5.08573998e-04,
-#       2.11616879e-03, 1.69337891e-03]
-# Dl = [-8.76477411e-05, -2.37694753e-04, -3.86058461e-04, -1.61021055e-03,
-#       -1.29029487e-03, -9.66398617e-04, -6.92314561e-07,  5.36105657e-07]
+# Du = [0.0085628,  0.01159214, 0.01473726, 0.0176863, 0.06739102, 0.0548096]
+# Dl = [0.00510162,  0.00260818, -0.00040994, -0.01709903, -0.01339733,
+#       -0.01016216, 0.0001029,   0.00010405]
 # Du = [-0.0004251407028303019, 0.0005830925145902994, 0.0002494348554951289,
 #       0.0004251759025308469, 0.0021149888635737, 0.0016923557171365678]
 # Dl = [-0.00031124509431450497, -0.0005866790789420483, -0.0006513744520462747, -0.0016040872875008427, -
 #       0.0013324195475520374, -0.0009263075595432437, -8.113216580214986e-05, -4.477960680268073e-05]
+
+# From first optimization
+# Du = [0.005106822402260146, -0.03999999995584527, -0.02152503190685487, 0.039999999973760754]
+# Dl = [0.03999999997155959, 0.018413073609706433, -
+#       0.03999999996898261, -0.039920860971468186, 0.013198354429015582]
 # a.formatted_residual(format_input=format_input, x0=Du + Dl)
 # constraint_f(input=Du + Dl)
-a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l))
+a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u + n_l))
+print('upper', a.bu.g.D)
+print('upper 1', a.bu.g.cst[0].D)
+print('upper 2', a.bu.g.cst[1].D)
+print('lower', a.bl.g.D)
+print('lower 1', a.bl.g.cst[0].D)
+print('lower 2', a.bl.g.cst[1].D)
+print('lower 3', a.bl.g.cst[2].D)
+# a.bl.g.length_preserving = True
+# D0 = np.array(list(a.bu.g.D) + list(a.bl.g.D))
+# a.formatted_residual(format_input=format_input, x0=D0)
+# a.parameterized_solver(format_input=format_input, x0=D0, constraints=constraints)
 # a.parameterized_solver(format_input=format_input, x0=np.array(Du+Dl))
 # a.bu.g.D =
 # a.bl.g.g_independent = a.bu.g
@@ -145,8 +159,8 @@ plt.plot([xu_p, xl_p], [a.bu.g_p.x3(xu_p), a.bl.g_p.x3(xl_p)], 'b', lw=3)
 xu_c = np.array([a.bu.g.x1_grid[index]])
 xl_c = np.array([a.bl.g.x1_grid[index]])
 plt.plot([xu_c, xl_c], [a.bu.g.x3(xu_c), a.bl.g.x3(xl_c)], '.5', lw=3)
-upper = np.loadtxt('case_study_7_upper.csv', delimiter=',')
-lower = np.loadtxt('case_study_7_lower.csv', delimiter=',')
+upper = np.loadtxt('case_study_7b_upper.csv', delimiter=',')
+lower = np.loadtxt('case_study_7b_lower.csv', delimiter=',')
 plt.scatter(upper[0, :], upper[1, :], c='.5', label='Abaqus', edgecolors='k',
             zorder=10, marker="^")
 plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10,

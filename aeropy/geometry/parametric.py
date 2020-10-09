@@ -59,10 +59,13 @@ class CoordinateSystem(object):
 
         if self.name == 'pCST':
             for i in range(self.p):
-                self.cst[i].x1_grid = values[self.cst[i].indexes]
+                if i != 0 or not self.rigid_LE:
+                    self.cst[i].x1_grid = values[self.cst[i].indexes]
         self._x1_grid = values
 
-    def _x1(self, x1, diff=None):
+    def _x1(self, x1, diff=None, offset=True):
+        if offset:
+            x1 = x1 - self.offset_x
         if diff is None:
             return x1
         elif diff == 'x1':
@@ -78,7 +81,7 @@ class CoordinateSystem(object):
         elif diff == 'theta3':
             return(self.a[2, :, 0])
         elif diff == 'theta1':
-            output = 1/np.sqrt(1 + self.x3(x1, 'x1')**2)
+            output = 1/np.sqrt(1 + self.x3(x1, 'x1', False)**2)
             output[np.isnan(output)] = 0
             return output
             # return np.ones(len(x1))
@@ -90,17 +93,26 @@ class CoordinateSystem(object):
             # a2 = np.einsum('ij,ij->i',dr, ddr)
             # return np.multiply(a1, a2)*self.x1(x1, 'theta1')
             # return np.zeros(len(x1))
-            return -self.x1(x1, 'theta1')**4*self.x3(x1, 'x1')*self.x3(x1, 'x11')
+            return -self.x1(x1, 'theta1', False)**4*self.x3(x1, 'x1', False)*self.x3(x1, 'x11', False)
         elif diff == 'theta31' or diff == 'theta13':
-            return(-self.x3(x1, 'theta11'))
+            return(-self.x3(x1, 'theta11', False))
             # return(np.zeros(len(x1)))
         else:
             return(np.zeros(len(x1)))
 
     def _x1_pCST(self, x1, diff=None):
         output = np.zeros(len(x1))
-        for i in range(self.p):
-            output[self.cst[i].indexes] = self.cst[i].x1(x1[self.cst[i].indexes], diff=diff)
+        if len(x1) == 1:
+            c_min = 0
+            for i in range(self.p):
+                c_max = c_min + self.cst[i].chord
+                if (x1[0] >= (c_min-self.tol)) & (x1[0] <= (c_max+self.tol)):
+                    output[0] = self.cst[i].x1(x1, diff=diff)
+                    break
+                c_min = c_max
+        else:
+            for i in range(self.p):
+                output[self.cst[i].indexes] = self.cst[i].x1(x1[self.cst[i].indexes], diff=diff)
         return output
 
     def x2(self, x1, x2_value=0, diff=None):
@@ -134,10 +146,12 @@ class CoordinateSystem(object):
     @classmethod
     def pCST(cls, D, chord=np.array([.5, .5]), color='b', N1=[1, 1.], N2=[1.0, 1.0],
              tol=1e-6, offset=0, offset_x=0, continuity='C2', free_end=False,
-             root_fixed=False, dependent=None):
+             root_fixed=False, dependent=None, length_preserving=False,
+             rigid_LE=False):
         c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2,
                 tol=tol, offset=offset, offset_x=offset_x, continuity=continuity,
-                free_end=free_end, root_fixed=root_fixed)
+                free_end=free_end, root_fixed=root_fixed,
+                length_preserving=length_preserving, rigid_LE=rigid_LE)
         c.x1 = c._x1_pCST
         c.x3 = c._x3_pCST
         c.name = 'pCST'
@@ -153,7 +167,7 @@ class CoordinateSystem(object):
         elif continuity == 'C1':
             c.nn = (len(D)-1)/c.p
         if (c.nn % 1) != 0:
-            raise ValueError('Incorrect number of inputs D')
+            raise ValueError('Incorrect number of inputs D. Got nn=%f' % c.nn)
         else:
             c.nn = int(c.nn)
             if continuity == 'C1':
@@ -221,14 +235,15 @@ class CoordinateSystem(object):
         self.spar_i = 0
 
         for i in range(self.p):
-            if self.dependent[i]:
-                if not hasattr(self, 'g_independent'):
-                    raise Exception('No geometry defined as reference for dependent')
-                self._calculate_spar(i)
-                self._update_dependent(i)
-            else:
-                self._update_independent(i)
-            self.cst[i].offset_s = offset_s
+            if i != 0 or not self.rigid_LE:
+                if self.dependent[i]:
+                    if not hasattr(self, 'g_independent'):
+                        raise Exception('No geometry defined as reference for dependent')
+                    self._calculate_spar(i)
+                    self._update_dependent(i)
+                else:
+                    self._update_independent(i)
+                self.cst[i].offset_s = offset_s
             offset_s += self.cst[i].length
         self.total_chord = sum([self.cst[i].chord for i in range(self.p)])
 
@@ -289,10 +304,11 @@ class CoordinateSystem(object):
         Ai0, Ai = self._select_D(i)
 
         error = 999
-        while error > 1e-6:
+        k = 0
+        while error > 1e-8:
             prev = np.array([self.cst[i].chord, self.cst[i].zetaT,
                              self.cst[i].zetaL, self.cst[i].D[0]])
-
+            # print('p', i, k, prev)
             if i == 0:
                 offset_x = 0
                 self.A1[i] = self.D[0]
@@ -334,17 +350,23 @@ class CoordinateSystem(object):
                 raise(NotImplementedError)
 
             self.cst[i].D = Di
-            # print('before', self.cst[i].chord)
+            # print('before', i, self.cst[i].chord)
             # print('outside 2', self.cst[i].D)
             self.cst[i].internal_variables(self.cst[i].length)
-            # print('after', self.cst[i].chord)
+            # print('after', i, self.cst[i].chord)
             if i == 0:
                 error = 0
             else:
+                # current = np.array([chord0, self.zetaT[i],
+                #                     self.zetaL[i], self.A0[i]])
                 current = np.array([self.cst[i].chord, self.cst[i].zetaT,
                                     self.cst[i].zetaL, self.cst[i].D[0]])
                 error = np.linalg.norm(current-prev)
+
+                # print('c', i, k, current)
+                # print('error', i, k, error)
                 prev = current
+            k = k + 1
         self.spar_i += 1
 
     def _select_D(self, i):
@@ -355,9 +377,14 @@ class CoordinateSystem(object):
                 self.n_end = 0
             if self.dependent[i] and not self.root_fixed:
                 self.n_end += 1
+        if i == 1 and self.rigid_LE:
+            self.n_end = 0
         self.n_start = self.n_end
         if self.dependent[i]:
-            modifier = 1
+            if self.length_preserving:
+                modifier = 2
+            else:
+                modifier = 1
         else:
             modifier = 0
         if i == self.p-1 and self.free_end:
@@ -369,7 +396,7 @@ class CoordinateSystem(object):
             self.n_end = self.n_start + self.nn - modifier
             Ai = self.D[self.n_start:self.n_end]
             Ai0 = Ai[:-1]
-        # print(i, self.n_start, self.n_end, Ai)
+        print(i, self.n_start, self.n_end, Ai)
         return (Ai0, Ai)
 
     def _calculate_Dn(self, i, Ai0, Ai=None):
@@ -393,17 +420,20 @@ class CoordinateSystem(object):
             return d*dA/(1+(d)**2)**(1/2)
 
         if self.dependent[i]:
-            # chord_target = self.cst[i].chord
-            # print(i)
-            # r = np.linspace(-5, 5, 1000)
-            # rf = []
-            # for j in range(len(r)):
-            #     rf.append(f([r[j]]))
-            # plt.figure()
-            # plt.plot(r, rf)
-            # plt.show()
-            # An = optimize.fsolve(f, self.cst[i].D[-2], fprime=fprime)[0]
-            An = Ai[-1]
+            if self.length_preserving:
+                # print(i)
+                chord_target = self.cst[i].chord
+                # r = np.linspace(-5, 5, 100)
+                # rf = []
+                # for j in range(len(r)):
+                #     rf.append(f([r[j]]))
+                # plt.figure()
+                # plt.plot(r, rf)
+                # plt.show()
+
+                An = optimize.fsolve(f, self.cst[i].D[-2], fprime=fprime)[0]
+            else:
+                An = Ai[-1]
             # length_current = self.cst[i].arclength(self.cst[i].chord)
             # print('inside 1', self.cst[i].D, chord_target, self.cst[i].chord)
         elif i == self.p-1 and self.free_end:
@@ -419,7 +449,7 @@ class CoordinateSystem(object):
             An = Ai[-1]
         return An
 
-    def _calculate_spar(self, i):
+    def _calculate_spar(self, i, debug=False):
         # Bernstein Polynomial order
         # dependent child
         dc = self.cst[i]
@@ -448,7 +478,11 @@ class CoordinateSystem(object):
         c_ic = ic.chord
         zT_ic = ic.D[-1]*c_ic
         zL_ic = ic.zetaL*c_ic
-        psi_spar = np.array([1])
+        if debug:
+            psi_spar = np.array([0.199984/c_ic])
+            print('x/psi', psi_spar*c_ic, psi_spar)
+        else:
+            psi_spar = np.array([1])
         if i == 0:
             offset_x = 0
         else:
@@ -468,7 +502,7 @@ class CoordinateSystem(object):
 
         self.spar_psi_upper = psi_spar
         self.spar_xi_upper = np.array(xi_upper_children) + ic.offset/c_ic
-
+        # print('A', A_dp, A_ip)
         xi_parent = CST(psi_spar, 1., deltasz=[
             zT_ip/c_ip, -zT_dp/c_dp], Al=A_dp, Au=A_ip, N1=N1, N2=N2,
             deltasLE=[zL_ip/c_ip, zL_ip/c_ip])
@@ -481,7 +515,9 @@ class CoordinateSystem(object):
             psi_spar, A_ip, A_ic, zT_ip, c_ic, N1=N1, N2=N2, deltaz_goal=zT_ic,
             deltaL_baseline=zL_ip, deltaL_goal=zL_ic)
         self.spar_directions = s_j
-        # print('spar_directions', self.spar_directions)
+        print('spar_directions', self.spar_psi_upper*c_ic, self.spar_directions,
+              self.g_independent.x3(np.array([self.spar_psi_upper*c_ic]), 'theta1'),
+              self.g_independent.x1(np.array([self.spar_psi_upper*c_ic]), 'theta1'))
         spar_x = psi_spar*c_ic - self.delta_P*s_j[0] + offset_x
         spar_y = xi_upper_children*c_ic + ic.offset - self.delta_P*s_j[1]
         if i == 0:
@@ -554,10 +590,10 @@ class CoordinateSystem(object):
                 dd[-1] = (1/self.chord)*(2*n*A[-2] - 2*(self.N1+n)*A[-1])
             return dd
         elif diff == 'theta1':
-            return self.x3(x1, 'x1')*self.x1(x1, 'theta1')
+            return self.x3(x1, 'x1', False)*self.x1(x1, 'theta1', False)
         elif diff == 'theta11':
-            return self.x3(x1, 'x11')*self.x1(x1, 'theta1')**2 + \
-                self.x3(x1, 'x1')*self.x1(x1, 'theta11')
+            return self.x3(x1, 'x11', False)*self.x1(x1, 'theta1', False)**2 + \
+                self.x3(x1, 'x1', False)*self.x1(x1, 'theta11', False)
         elif diff == 'theta3':
             return(np.zeros(len(x1)))
 
@@ -596,12 +632,12 @@ class CoordinateSystem(object):
             if type(x1) == float:
                 x1 = np.array([x1])
         if diff == 'theta1':
-            output = np.array([self.x1(x1, 'x1'),
-                               self.x3(x1, 'x1')]).T
-            output = np.einsum('ij,i->ij', output, self.x1(x1, 'theta1'))
+            output = np.array([self.x1(x1, 'x1', offset=False),
+                               self.x3(x1, 'x1', offset=True)]).T
+            output = np.einsum('ij,i->ij', output, self.x1(x1, 'theta1', offset=True))
         else:
-            output = np.array([self.x1(x1, diff),
-                               self.x3(x1, diff)]).T
+            output = np.array([self.x1(x1, diff, offset=False),
+                               self.x3(x1, diff, offset=True)]).T
             self.position = output
         return (output)
 
@@ -758,9 +794,17 @@ class CoordinateSystem(object):
 
         if self.name == 'pCST':
             self.s = length_target
+            rigid_n = 0
             for i in range(self.p):
-                self.cst[i].s = length_target[self.cst[i].indexes]
-                self.cst[i].calculate_x1(length_target[self.cst[i].indexes] - self.cst[i].offset_s)
+                if i == 0 and self.rigid_LE:
+                    rigid_n = len(self.cst[0].x1_grid)
+                else:
+                    indexes = [self.cst[i].indexes[j] -
+                               rigid_n for j in range(len(self.cst[i].indexes))]
+                    print(i, self.rigid_LE)
+                    self.cst[i].s = length_target[indexes]
+                    self.cst[i].calculate_x1(
+                        length_target[indexes] - self.cst[i].offset_s)
             x1_grid = []
             for i in range(self.p):
                 x1_grid += list(self.cst[i].x1_grid[:])
@@ -816,7 +860,8 @@ class CoordinateSystem(object):
                 self.s = np.array([])
                 self.indexes = []
                 for i in range(self.p):
-                    self.s = np.append(self.s, self.cst[i].calculate_s(N[i]))
+                    if i != 0 or not self.rigid_LE:
+                        self.s = np.append(self.s, self.cst[i].calculate_s(N[i]))
                     self.cst[i].indexes = list(range(Nj, Nj + N[i]))
                     self.indexes += list(range(Nj, Nj + N[i]))
                     Nj += N[i]
@@ -928,12 +973,19 @@ class CoordinateSystem(object):
         dependent += 1
         if self.free_end:
             dependent += 1
-        if self.root_fixed:
-            dependent += 1
+        if self.rigid_LE:
+            dependent += self.n + 2
+        else:
+            if self.root_fixed:
+                dependent += 1
         if self.continuity == 'C2':
             dependent += (self.p-1)
         # for structurally consistent
-        dependent += 1*np.count_nonzero(self.dependent)
+
+        if self.length_preserving:
+            dependent += 2*np.count_nonzero(self.dependent)
+        else:
+            dependent += 1*np.count_nonzero(self.dependent)
         # print('Trues', np.count_nonzero(self.dependent))
         independent = total - dependent
         return len(input) == independent, len(input), independent

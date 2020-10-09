@@ -50,27 +50,35 @@ def format_input(input, gu=None, gu_p=None, gl=None, gl_p=None):
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
-psi_spars = [0.2]
+psi_spars = [0.2, 0.6, 0.9]
+chords = []
+for i in range(len(psi_spars)):
+    if i == 0:
+        chords.append(psi_spars[i])
+    else:
+        chords.append(psi_spars[i] - psi_spars[i-1])
+chords.append(1-psi_spars[-1])
+
 m = len(psi_spars)
 
-g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0.],
-                                chord=[psi_spars[0], 1-psi_spars[0]],
-                                color=['b', 'r'], N1=[1., 1.], N2=[1., 1.],
+g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                chord=chords, color=['b', 'r', 'g', 'm'],
+                                N1=len(chords)*[1.], N2=len(chords)*[1.],
                                 offset=.05, continuity='C2', free_end=True,
                                 root_fixed=True)
-g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
-                                chord=[psi_spars[0], 0.7, 0.1],
-                                color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
+g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                chord=chords, color=['b', 'r', 'g', 'm'],
+                                N1=len(chords)*[1.], N2=len(chords)*[1.],
                                 offset=-.05, continuity='C2', free_end=True,
-                                root_fixed=True, dependent=[True, False, False],
-                                length_preserving=True)
+                                root_fixed=True,
+                                dependent=[True, True, True, False])
 
-g_upper.calculate_s(N=[11, 9])
-g_lower.calculate_s(N=[11, 8, 6])
+g_upper.calculate_s(N=[11, 9, 9, 5])
+g_lower.calculate_s(N=[11, 9, 9, 5])
 p_upper = properties()
 p_lower = properties()
-l_upper = loads(concentrated_load=[[-np.sqrt(2)/2, -np.sqrt(2)/2]], load_s=[1])
-l_lower = loads(concentrated_load=[[np.sqrt(2)/2, np.sqrt(2)/2]], load_s=[1-0.1])
+l_upper = loads(concentrated_load=[[-100*np.sqrt(2)/2, -100*np.sqrt(2)/2]], load_s=[1])
+l_lower = loads(concentrated_load=[[100*np.sqrt(2)/2, 100*np.sqrt(2)/2]], load_s=[1-0.1])
 
 
 a = coupled_beams(g_upper, g_lower, p_upper, p_lower, l_upper, l_lower, None,
@@ -145,8 +153,8 @@ plt.plot([xu_p, xl_p], [a.bu.g_p.x3(xu_p), a.bl.g_p.x3(xl_p)], 'b', lw=3)
 xu_c = np.array([a.bu.g.x1_grid[index]])
 xl_c = np.array([a.bl.g.x1_grid[index]])
 plt.plot([xu_c, xl_c], [a.bu.g.x3(xu_c), a.bl.g.x3(xl_c)], '.5', lw=3)
-upper = np.loadtxt('case_study_7_upper.csv', delimiter=',')
-lower = np.loadtxt('case_study_7_lower.csv', delimiter=',')
+upper = np.loadtxt('case_study_8_upper.csv', delimiter=',')
+lower = np.loadtxt('case_study_8_lower.csv', delimiter=',')
 plt.scatter(upper[0, :], upper[1, :], c='.5', label='Abaqus', edgecolors='k',
             zorder=10, marker="^")
 plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10,

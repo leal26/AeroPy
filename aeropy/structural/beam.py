@@ -317,8 +317,10 @@ class beam_chen():
         self.g.calculate_x1(self.s)
 
     def calculate_resultants(self):
-        def M_f(s, Ry):
-            self.l.concentrated_load = self.l.external_load.copy() + [[0, Ry], ]
+        def M_f(s, *Rys):
+            self.l.concentrated_load = self.l.external_load.copy()
+            for Ry in Rys:
+                self.l.concentrated_load += [[0, Ry], ]
             self.calculate_M()
             if self.ignore_ends:
                 return self.M[1:-1]
@@ -332,11 +334,13 @@ class beam_chen():
         if self.ignore_ends:
             M = M[1:-1]
             s = s[1:-1]
-        popt, pcov = curve_fit(M_f, s, M, p0=[0])
+        popt, pcov = curve_fit(M_f, s, M, p0=[0]*len(self.l.concentrated_s))
 
-        self.Rx = 0  # -2.614  # sbeta*R
-        self.Ry = popt[0]  # -3.634  # cbeta*R
-        self.l.concentrated_load = self.l.external_load.copy() + [[self.Rx, self.Ry], ]
+        self.l.concentrated_load = self.l.external_load.copy()
+        for Ry in popt:
+            self.Rx = 0  # -2.614  # sbeta*R
+            self.Ry = Ry  # -3.634  # cbeta*R
+            self.l.concentrated_load += [[self.Rx, self.Ry], ]
 
 
 class airfoil():
@@ -375,7 +379,7 @@ class airfoil():
             print('R', self.bu.R, self.bl.R, Au)
             return R
 
-        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-.2, .2]])
+        sol = minimize(formatted_residual, x0, method='SLSQP')
         self.bu.g.D, self.bl.g.D = format_input(
             sol.x, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
         # self.bu.g.internal_variables(self.bu.length, origin=self.bu.origin)
@@ -493,8 +497,10 @@ class coupled_beams():
         # print('loads', self.bu.l.concentrated_load, self.bl.l.concentrated_load)
 
     def calculate_resultants(self):
-        def M_f(s, Ry):
-            self.bl.l.concentrated_load = self.bl.l.external_load.copy() + [[0, Ry], ]
+        def M_f(s, *Rys):
+            self.bl.l.concentrated_load = self.bl.l.external_load.copy()
+            for Ry in Rys:
+                self.bl.l.concentrated_load += [[0, Ry], ]
             self.bl.calculate_M()
             if self.bl.ignore_ends:
                 return self.bl.M[1:-1]
@@ -507,16 +513,21 @@ class coupled_beams():
         self.bu.l.concentrated_s = self.bu.l.external_s.copy() + self.spars_s
         self.bl.l.concentrated_s = self.bl.l.external_s.copy() + self.spars_s
 
-        for i in range(len(self.spars_s)):
-            if self.spars_k is None:
-                if self.bl.ignore_ends:
-                    M = M[1:-1]
-                    s = s[1:-1]
-                popt, pcov = curve_fit(M_f, s, M, p0=[0])
+        self.Rx = []
+        self.Ry = []
+        if self.spars_k is None:
+            if self.bl.ignore_ends:
+                M = M[1:-1]
+                s = s[1:-1]
+            popt, pcov = curve_fit(M_f, s, M, p0=[0]*len(self.spars_s))
 
-                self.Rx = 0  # -2.614  # sbeta*R
-                self.Ry = popt[0]  # -3.634  # cbeta*R
+            self.Rx += len(popt)*[0]  # -2.614  # sbeta*R
+            self.Ry += list(popt)  # -3.634  # cbeta*R
+        else:
+            if len(self.spars_s) != 1:
+                raise(NotImplementedError)
             else:
+                i = 0
                 # Current length for child
                 index_u = np.where(np.around(self.bu.s, decimals=7) ==
                                    self.spars_s[0])[0][0]
@@ -545,10 +556,14 @@ class coupled_beams():
 
                 magnitude = self.spars_k[i]*(ds-ds0)
 
-                self.Rx = magnitude*dx/ds
-                self.Ry = magnitude*dy/ds
-            self.bl.l.concentrated_load = self.bl.l.external_load.copy() + [[self.Rx, self.Ry], ]
-            self.bu.l.concentrated_load = self.bu.l.external_load.copy() + [[-self.Rx, -self.Ry], ]
+                self.Rx = [magnitude*dx/ds]
+                self.Ry = [magnitude*dy/ds]
+
+        self.bl.l.concentrated_load = self.bl.l.external_load.copy()
+        self.bu.l.concentrated_load = self.bu.l.external_load.copy()
+        for i in range(len(self.spars_s)):
+            self.bl.l.concentrated_load += [[self.Rx[i], self.Ry[i]], ]
+            self.bu.l.concentrated_load += [[-self.Rx[i], -self.Ry[i]], ]
 
 
 def derivative(f, a, method='central', h=0.01):
