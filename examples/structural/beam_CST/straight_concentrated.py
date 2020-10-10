@@ -20,9 +20,7 @@ s = np.linspace(0, 1, 10)
 
 b = beam_chen(g, p, l, s, ignore_ends=True)
 b.parameterized_solver(format_input, x0=g.D[:-1])
-# b.g.calculate_x1(b.s)
-b.calculate_resultants()
-print(b.Rx, b.Ry)
+
 print('Dm/ds', np.gradient(b.p.inertia*b.p.young*(b.g.rho-b.g_p.rho), b.s))
 # b._residual([0.005714289063490557, 0.004285875208812112,
 #              0.002857270578861466, -0.005714289063490557])

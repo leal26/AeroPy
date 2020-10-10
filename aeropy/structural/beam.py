@@ -129,13 +129,19 @@ class beam_chen():
         self.calculate_resultant = calculate_resultant
 
     def calculate_M(self):
-        self.M = np.zeros(len(self.x))
-        # print('x', self.x)
-        # print('s', self.s)
-        # print('y', self.y)
+        self.M = np.zeros(len(self.s))
+        print(len(self.x), len(self.s) + len(self.g.cst[0].x1_grid), len(self.y))
         self.repeat = False
-        for i in range(len(self.M)):
-            self.M[i] = self._M(self.x[i], self.s[i], self.y[i])
+        print('x', self.x[:len(self.g.cst[0].x1_grid)])
+        print('y', self.y[:len(self.g.cst[0].x1_grid)])
+        if self.g.rigid_LE:
+            for i in range(len(self.M)):
+                j = i + len(self.g.cst[0].x1_grid)
+                print(i, j, self.x[j], self.s[i], self.y[j])
+                self.M[i] = self._M(self.x[j], self.s[i], self.y[j])
+        else:
+            for i in range(len(self.M)):
+                self.M[i] = self._M(self.x[i], self.s[i], self.y[i])
 
     def _M(self, x, s, y=None):
         M_i = 0
@@ -163,8 +169,9 @@ class beam_chen():
                     # print(self.l.concentrated_s[i])
                     # print(self.s[18])
                     # print(type(self.s), type(self.l.concentrated_s))
+
                     index = np.where(np.around(self.s, decimals=7) ==
-                                     self.l.concentrated_s[i])[0][0]
+                                     np.around(self.l.concentrated_s[i], decimals=7))[0][0]
                     if s < self.l.concentrated_s[i]:
                         M_i -= self.l.concentrated_load[i][0]*(self.y[index]-y)
                         M_i += self.l.concentrated_load[i][1]*(self.x[index]-x)
@@ -290,6 +297,7 @@ class beam_chen():
             self.g.internal_variables(self.g.length, origin=self.origin)
         self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
+        print('X INSIDE', self.x)
         self.y = self.g.x3(self.x)
         if self.l.follower:
             self.g.calculate_angles()

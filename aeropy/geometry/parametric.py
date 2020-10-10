@@ -396,7 +396,7 @@ class CoordinateSystem(object):
             self.n_end = self.n_start + self.nn - modifier
             Ai = self.D[self.n_start:self.n_end]
             Ai0 = Ai[:-1]
-        print(i, self.n_start, self.n_end, Ai)
+        # print(i, self.n_start, self.n_end, Ai)
         return (Ai0, Ai)
 
     def _calculate_Dn(self, i, Ai0, Ai=None):
@@ -538,7 +538,7 @@ class CoordinateSystem(object):
         c.name = 'cylindrical'
         return c
 
-    def _x3_poly(self, x1, diff=None, D=None):
+    def _x3_poly(self, x1, diff=None, D=None, offset=None):
         """ z2 (checked)"""
         if D is None:
             D = self.D
@@ -797,11 +797,13 @@ class CoordinateSystem(object):
             rigid_n = 0
             for i in range(self.p):
                 if i == 0 and self.rigid_LE:
-                    rigid_n = len(self.cst[0].x1_grid)
+                    rigid_n = len(self.cst[i].indexes)
+                    self.cst[i].x1_grid = np.linspace(0, self.cst[i].chord,
+                                                      rigid_n)
                 else:
                     indexes = [self.cst[i].indexes[j] -
                                rigid_n for j in range(len(self.cst[i].indexes))]
-                    print(i, self.rigid_LE)
+                    print('length_target', length_target[indexes])
                     self.cst[i].s = length_target[indexes]
                     self.cst[i].calculate_x1(
                         length_target[indexes] - self.cst[i].offset_s)

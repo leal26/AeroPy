@@ -17,13 +17,16 @@ from aeropy.CST_2D import calculate_c_baseline, calculate_psi_goal, calculate_sp
 warnings.filterwarnings("ignore")
 # g = CoordinateSystem.pCST(D=[.2, .3, .3, .4, .4, 1., -.4], chord=[.2, .8], color=['b', 'r'],
 #                           N1=[1., 1], N2=[1, 1], continuity='C1', free_end=True)
-g = CoordinateSystem.pCST(D=[0.2, 0.1, 0., 0., 0., 0., 0., 0.], chord=[.2, .7, .1], color=['b', 'r', 'g'],
+g = CoordinateSystem.pCST(D=[3.06132404e-01, 3.31838944e-01, 2.44074856e-01,
+                             2.30082260e-01, 4.98187521e-02, 8.59903075e-02,
+                             4.89862447e-02, 1.22835553e-04, -7.05141464e-02,
+                             -1.95302773e-02,  2.71512524e-01], chord=[.2, .7, .1], color=['b', 'r', 'g'],
                           N1=[.5, 1, 1], N2=[1, 1, 1], continuity='C2', free_end=True, root_fixed=True,
                           rigid_LE=True)
-g.cst[0].x1_grid = np.linspace(0, g.cst[0].chord, 21)
-g.calculate_s([21, 11, 5])
+
+g.calculate_s([21, 11, 11])
 # g.D = [0, 0, 0, 0, 0, 0]
-g.D = [0.01, 0.02, 0.03]
+# g.D = [0.01, 0.02, 0.03]
 g.calculate_x1(g.s)
 print('x', g.x1_grid)
 
