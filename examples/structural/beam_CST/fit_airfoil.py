@@ -14,7 +14,7 @@ def cst(x, *A):
     g = CoordinateSystem.pCST(D=A,
                               chord=[psi_spars[0], .7, .1],
                               color=['b', 'r', 'g'], N1=[.5, 1., 1.], N2=[1., 1., 1.],
-                              offset=-.0, continuity='C2',
+                              offset=-.0, continuity='C1',
                               root_fixed=True)
     y = []
     for xi in x:
@@ -32,7 +32,7 @@ y = raw_airfoil[:, 1]
 
 psi_spars = [0.2]
 
-n_dv = 11
+n_dv = 13
 
 popt, pcov = curve_fit(cst, x, y, p0=np.zeros(n_dv), maxfev=10000)
 print('Solution: ', popt)
@@ -41,7 +41,7 @@ print('Error: ', np.sqrt(np.diag(pcov)))
 g = CoordinateSystem.pCST(D=popt,
                           chord=[psi_spars[0], .7, .1],
                           color=['b', 'r', 'g'], N1=[.5, 1., 1.], N2=[1., 1., 1.],
-                          offset=-.0, continuity='C2',
+                          offset=-.0, continuity='C1',
                           root_fixed=True)
 s = g.calculate_s([51, 51, 51], 1)
 p = properties()

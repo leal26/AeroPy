@@ -114,7 +114,6 @@ class beam_chen():
         self.ignore_ends = ignore_ends
         self.rotated = rotated
         self.length_preserving = length_preserving
-
         if self.ignore_ends:
             self.integral_ends()
         self.g_p = copy.deepcopy(geometry)
@@ -125,19 +124,14 @@ class beam_chen():
 
         if self.rotated:
             self.g_p.calculate_angles()
-
         self.calculate_resultant = calculate_resultant
 
     def calculate_M(self):
         self.M = np.zeros(len(self.s))
-        print(len(self.x), len(self.s) + len(self.g.cst[0].x1_grid), len(self.y))
         self.repeat = False
-        print('x', self.x[:len(self.g.cst[0].x1_grid)])
-        print('y', self.y[:len(self.g.cst[0].x1_grid)])
         if self.g.rigid_LE:
             for i in range(len(self.M)):
                 j = i + len(self.g.cst[0].x1_grid)
-                print(i, j, self.x[j], self.s[i], self.y[j])
                 self.M[i] = self._M(self.x[j], self.s[i], self.y[j])
         else:
             for i in range(len(self.M)):
@@ -145,6 +139,7 @@ class beam_chen():
 
     def _M(self, x, s, y=None):
         M_i = 0
+
         if self.l.concentrated_load is not None:
             if self.l.follower and self.rotated:
                 for i in range(len(self.l.concentrated_s)):
@@ -160,8 +155,8 @@ class beam_chen():
                     f2 = c*self.g.sin[index] - s*self.g.cos[index]
                     f1 = (c-self.g.sin[index]*f2)/self.g.cos[index]
 
-                    M_i += self.l.concentrated_magnitude[i]*f1*(self.y[index]-y)
-                    M_i += self.l.concentrated_magnitude[i]*f2*(self.x[index]-x)
+                    M_i += self.l.concentrated_magnitude[i]*f1*(self.y[index]-y-y0)
+                    M_i += self.l.concentrated_magnitude[i]*f2*(self.x[index]-x-x0)
             else:
                 for i in range(len(self.l.concentrated_s)):
                     # print(s, self.s)
@@ -172,7 +167,11 @@ class beam_chen():
 
                     index = np.where(np.around(self.s, decimals=7) ==
                                      np.around(self.l.concentrated_s[i], decimals=7))[0][0]
+                    if self.g.rigid_LE:
+                        index += len(self.g.cst[0].x1_grid)
                     if s < self.l.concentrated_s[i]:
+                        # print(self.x[index], x, self.x[index]-x-x0)
+                        # print(self.y[index], y, self.y[index]-y-y0)
                         M_i -= self.l.concentrated_load[i][0]*(self.y[index]-y)
                         M_i += self.l.concentrated_load[i][1]*(self.x[index]-x)
 
@@ -185,11 +184,11 @@ class beam_chen():
                 i_end = len(self.s)
             if not self.l.follower:
                 M_i -= trapz(self.l.distributed_load(self.s[index:i_end])
-                             * (self.x[index:i_end]-x), self.s[index:i_end])
+                             * (self.x[index:i_end]-x-x0), self.s[index:i_end])
             else:
                 w = self.l.distributed_load(self.s[index:i_end])
-                M_x = w*self.g.cos[index:i_end]*(self.x[index:i_end]-x)
-                M_y = w*self.g.sin[index:i_end]*(self.y[index:i_end]-y)
+                M_x = w*self.g.cos[index:i_end]*(self.x[index:i_end]-x-x0)
+                M_y = w*self.g.sin[index:i_end]*(self.y[index:i_end]-y-y0)
                 M_i -= trapz(M_x + M_y, self.s[index:i_end])
         # Point torques
         for j in range(len(self.l.torque)):
@@ -217,6 +216,8 @@ class beam_chen():
         return c*trapz(self.M[:index+1], self.x[:index+1])
 
     def calculate_x(self):
+        if not hasattr(self, 'x'):
+            self.x = np.zeros(len(self.s))
         for i in range(len(self.s)):
             self.x[i] = self._x(self.s[i])
 
@@ -237,16 +238,19 @@ class beam_chen():
             self.y[i] = y_i
 
     def calculate_residual(self):
-        self.r = np.zeros(len(self.x))
-        for i in range(len(self.x)):
-            rhs = self.g.rho[i] - self.g_p.rho[i]
+        self.r = np.zeros(len(self.s))
+        for i in range(len(self.M)):
             lhs = self.M[i]/self.p.young/self.p.inertia
+            if self.g.rigid_LE:
+                j = i + len(self.g.cst[0].x1_grid)
+                rhs = self.g.rho[j] - self.g_p.rho[j]
+            else:
+                rhs = self.g.rho[i] - self.g_p.rho[i]
             self.r[i] = abs(lhs - rhs)
         if self.ignore_ends:
             self.R = abs(trapz(self.r[1:-1], self.s[1:-1]))
         else:
             self.R = abs(trapz(self.r[:], self.s[:]))
-        # print('r', self.r)
         if np.isnan(self.R):
             print('ignore_ends', self.ignore_ends)
             print('r', self.r)
@@ -297,7 +301,7 @@ class beam_chen():
             self.g.internal_variables(self.g.length, origin=self.origin)
         self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
         self.x = self.g.x1_grid
-        print('X INSIDE', self.x)
+
         self.y = self.g.x3(self.x)
         if self.l.follower:
             self.g.calculate_angles()

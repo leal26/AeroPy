@@ -515,9 +515,9 @@ class CoordinateSystem(object):
             psi_spar, A_ip, A_ic, zT_ip, c_ic, N1=N1, N2=N2, deltaz_goal=zT_ic,
             deltaL_baseline=zL_ip, deltaL_goal=zL_ic)
         self.spar_directions = s_j
-        print('spar_directions', self.spar_psi_upper*c_ic, self.spar_directions,
-              self.g_independent.x3(np.array([self.spar_psi_upper*c_ic]), 'theta1'),
-              self.g_independent.x1(np.array([self.spar_psi_upper*c_ic]), 'theta1'))
+        # print('spar_directions', self.spar_psi_upper*c_ic, self.spar_directions,
+        #       self.g_independent.x3(np.array([self.spar_psi_upper*c_ic]), 'theta1'),
+        #       self.g_independent.x1(np.array([self.spar_psi_upper*c_ic]), 'theta1'))
         spar_x = psi_spar*c_ic - self.delta_P*s_j[0] + offset_x
         spar_y = xi_upper_children*c_ic + ic.offset - self.delta_P*s_j[1]
         if i == 0:
@@ -803,7 +803,6 @@ class CoordinateSystem(object):
                 else:
                     indexes = [self.cst[i].indexes[j] -
                                rigid_n for j in range(len(self.cst[i].indexes))]
-                    print('length_target', length_target[indexes])
                     self.cst[i].s = length_target[indexes]
                     self.cst[i].calculate_x1(
                         length_target[indexes] - self.cst[i].offset_s)
