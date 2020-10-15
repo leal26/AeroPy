@@ -18,16 +18,20 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 abaqus = np.loadtxt('case_study_C1.csv', delimiter=',')
 
-D_C2 = [3.06132404e-01, 3.31838944e-01, 2.44074856e-01, 2.30082260e-01,
-        4.98187521e-02, 8.59903075e-02, 4.89862447e-02, 1.22835553e-04,
-        -7.05141464e-02, -1.95302773e-02,  2.71512524e-01]
-D_C1 = [0.29762799,  0.35921497,  0.19499349,  0.24955415,  0.08463728,
-        0.06419637, 0.07328639,  0.05503015, -0.00949894,  0.00465329,
-        -0.06723211, -0.02316353, 0.27363928]
-g = CoordinateSystem.pCST(D=D_C1,
+D_n4 = [0.288197, 0.37918722, 0.21903394, 0.25925831, 0.24259769, 0.27278782,
+        0.06528661, 0.07283469, 0.06692653, 0.0559131, -0.01268226, -0.00134043,
+        -0.08743061, -0.0013288]
+
+D_n3 = [3.06132404e-01, 3.31838944e-01, 2.44074856e-01, 2.30082260e-01,
+        2.71512524e-01, 4.98187521e-02, 8.59903075e-02, 4.89862447e-02,
+        1.22835553e-04, -7.05141464e-02, -1.95302773e-02]
+
+D_n2 = [0.3208729, 0.28457915, 0.2431048, 0.27140013, 0.06470603, 0.06222951,
+        -0.02810757, -0.04412038]
+g = CoordinateSystem.pCST(D=D_n4,
                           chord=[.2, .7, .1], color=['b', 'r', 'g'],
-                          N1=[.5, 1, 1], N2=[1, 1, 1], continuity='C1',
-                          free_end=True, root_fixed=True, rigid_LE=True)
+                          N1=[.5, 1, 1], N2=[1, 1, 1], continuity='C2',
+                          free_end=True, rigid_LE=True)
 
 p = properties()
 l = loads(concentrated_load=[[0, -1]], load_s=[g.cst[0].length + g.cst[1].length])
@@ -40,7 +44,9 @@ b = beam_chen(g, p, l, s=None, ignore_ends=False)
 # b.calculate_M()
 _, _, n_u = g._check_input([])
 b.parameterized_solver(format_input, x0=np.zeros(n_u))
-
+print('D1', b.g.cst[0].D)
+print('D2', b.g.cst[1].D)
+print('D3', b.g.cst[2].D)
 print('loads', b.l.concentrated_load)
 
 plt.figure()

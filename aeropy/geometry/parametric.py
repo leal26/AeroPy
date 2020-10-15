@@ -42,8 +42,8 @@ class CoordinateSystem(object):
             if self.n == 1 and (isinstance(values, float) or isinstance(values, np.float64)):
                 self._D = values
             else:
-                if len(values) != self.n:
-                    self._D = np.zeros(self.n)
+                if len(values) != self.nn:
+                    self._D = np.zeros(self.nn)
                     self._D[:len(values)] = values
                 else:
                     self._D = values
@@ -132,9 +132,9 @@ class CoordinateSystem(object):
     @classmethod
     def CST(cls, D, chord, color, N1=.5, N2=1.0, deltaz=0, tol=1e-6, offset=0,
             deltazLE=0, offset_x=0, origin=0):
-        c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2,
+        c = cls(D, chord=chord, color=color, n=len(D)-1, N1=N1, N2=N2,
                 deltaz=deltaz, tol=tol, offset=offset, deltazLE=deltazLE,
-                offset_x=offset_x, origin=origin)
+                offset_x=offset_x, origin=origin, nn=len(D))
         c.x1 = c._x1
         c.x3 = c._x3_CST
         c.name = 'CST'
@@ -148,7 +148,7 @@ class CoordinateSystem(object):
              tol=1e-6, offset=0, offset_x=0, continuity='C2', free_end=False,
              root_fixed=False, dependent=None, length_preserving=False,
              rigid_LE=False):
-        c = cls(D, chord=chord, color=color, n=len(D), N1=N1, N2=N2,
+        c = cls(D, chord=chord, color=color, n=len(D)-1, nn=len(D), N1=N1, N2=N2,
                 tol=tol, offset=offset, offset_x=offset_x, continuity=continuity,
                 free_end=free_end, root_fixed=root_fixed,
                 length_preserving=length_preserving, rigid_LE=rigid_LE)
@@ -162,18 +162,20 @@ class CoordinateSystem(object):
             c.dependent = dependent
 
         # For conevinence n is order of CST and nn is number of shape coeff (n+1)
-        if continuity == 'C2':
-            c.nn = (len(D)-2)/c.p
-        elif continuity == 'C1':
-            c.nn = (len(D)-1)/c.p
-        if (c.nn % 1) != 0:
-            raise ValueError('Incorrect number of inputs D. Got nn=%f' % c.nn)
+        if c.root_fixed:
+            if continuity == 'C2':
+                c.n = (len(D)-1)/c.p
+            elif continuity == 'C1':
+                c.n = len(D)/c.p - 1
         else:
-            c.nn = int(c.nn)
-            if continuity == 'C1':
-                c.n = c.nn - 1
-            else:
-                c.n = c.nn
+            if continuity == 'C2':
+                c.n = (len(D)-2)/c.p
+            elif continuity == 'C1':
+                c.n = (len(D)-1)/c.p - 1
+        if (c.n % 1) != 0:
+            raise ValueError('Incorrect number of inputs D. Got nn=%f' % c.n)
+        c.n = int(c.n)
+        c.nn = c.n + 1
 
         c.cst = []
         c.cst_p = []
@@ -184,18 +186,24 @@ class CoordinateSystem(object):
         offset_s = 0
         offset_x = 0
         for i in range(c.p):
+            if i > 0 and not c.root_fixed:
+                mod = 1
+            else:
+                mod = 0
             j = i - 1
             # From shape coefficients 1 to n
             if continuity == 'C2':
-                Ai = D[1+i*c.nn:1+(i+1)*c.nn]
+                n_start = 1+i*c.n + mod
             elif continuity == 'C1':
-                Ai = D[i*c.nn:(i+1)*c.nn]
+                n_start = i*c.n + mod
+            n_end = n_start + c.n
+            Ai = D[n_start:n_end]
             if i == 0:
                 c.A0.append(D[0])
                 if c.root_fixed and c.N1[i] == 1:
                     c.zetaT.append(-D[0])
                 else:
-                    c.zetaT.append(D[-1])
+                    c.zetaT.append(D[n_end])
                 c.zetaL.append(0)
             else:
                 if N1[i] == 1. and N2[i] == 1.:
@@ -281,11 +289,15 @@ class CoordinateSystem(object):
                 raise(NotImplementedError)
 
             An = self._calculate_Dn(i, Ai0, Ai)
-            if self.continuity == 'C2':
-                Di = [self.A0[i]] + list(Ai0) + [An, self.zetaT[i]]
-            elif self.continuity == 'C1':
+
+            if i == 1 and self.continuity == 'C2' and self.rigid_LE:
                 Di = list(Ai0) + [An, self.zetaT[i]]
-            # print(Di)
+            else:
+                if self.continuity == 'C2':
+                    Di = [self.A0[i]] + list(Ai0) + [An, self.zetaT[i]]
+                elif self.continuity == 'C1':
+                    Di = list(Ai0) + [An, self.zetaT[i]]
+
             self.cst[i].D = Di
             self.cst[i].zetaT = self.zetaT[i]
             self.cst[i].zetaL = self.zetaL[i]
@@ -377,6 +389,7 @@ class CoordinateSystem(object):
                 self.n_end = 0
             if self.dependent[i] and not self.root_fixed:
                 self.n_end += 1
+
         if i == 1 and self.rigid_LE:
             self.n_end = 0
         self.n_start = self.n_end
@@ -387,16 +400,26 @@ class CoordinateSystem(object):
                 modifier = 1
         else:
             modifier = 0
+        # if i != 0 and self.continuity == 'C1':
+        #     modifier -= 1
+        if self.rigid_LE and i == 1:
+            modifier -= 1
         if i == self.p-1 and self.free_end:
-            self.n_end = self.n_start + self.nn - 1
+            if self.continuity == 'C1':
+                self.n_end = self.n_start + self.nn - 1
+            else:
+                self.n_end = self.n_start + self.n - 1
             Ai0 = self.D[self.n_start:self.n_end]
             Ai = self.D[self.n_start:self.n_end]
 
         else:
-            self.n_end = self.n_start + self.nn - modifier
+            if self.continuity == 'C1':
+                self.n_end = self.n_start + self.nn - modifier
+            else:
+                self.n_end = self.n_start + self.n - modifier
             Ai = self.D[self.n_start:self.n_end]
             Ai0 = Ai[:-1]
-        # print(i, self.n_start, self.n_end, Ai)
+        # print('update', i, self.n_start, self.n_end, Ai)
         return (Ai0, Ai)
 
     def _calculate_Dn(self, i, Ai0, Ai=None):
@@ -515,9 +538,9 @@ class CoordinateSystem(object):
             psi_spar, A_ip, A_ic, zT_ip, c_ic, N1=N1, N2=N2, deltaz_goal=zT_ic,
             deltaL_baseline=zL_ip, deltaL_goal=zL_ic)
         self.spar_directions = s_j
-        # print('spar_directions', self.spar_psi_upper*c_ic, self.spar_directions,
-        #       self.g_independent.x3(np.array([self.spar_psi_upper*c_ic]), 'theta1'),
-        #       self.g_independent.x1(np.array([self.spar_psi_upper*c_ic]), 'theta1'))
+        print('spar_directions', self.spar_psi_upper*c_ic, self.spar_directions,
+              self.g_independent.x3(np.array([self.spar_psi_upper*c_ic]), 'theta1'),
+              self.g_independent.x1(np.array([self.spar_psi_upper*c_ic]), 'theta1'))
         spar_x = psi_spar*c_ic - self.delta_P*s_j[0] + offset_x
         spar_y = xi_upper_children*c_ic + ic.offset - self.delta_P*s_j[1]
         if i == 0:
@@ -803,6 +826,7 @@ class CoordinateSystem(object):
                 else:
                     indexes = [self.cst[i].indexes[j] -
                                rigid_n for j in range(len(self.cst[i].indexes))]
+
                     self.cst[i].s = length_target[indexes]
                     self.cst[i].calculate_x1(
                         length_target[indexes] - self.cst[i].offset_s)
@@ -894,8 +918,8 @@ class CoordinateSystem(object):
         else:
             if r is None:
                 r = self.r(self.x1_grid)
-            print('x_p', r[:, 0])
-            print('y_p', r[:, 1])
+            print('x', r[:, 0])
+            print('y', r[:, 1])
             if color is None:
                 color = self.color
 
@@ -975,13 +999,12 @@ class CoordinateSystem(object):
         if self.free_end:
             dependent += 1
         if self.rigid_LE:
-            dependent += self.n + 2
+            dependent += self.n + 1
         else:
             if self.root_fixed:
                 dependent += 1
         if self.continuity == 'C2':
             dependent += (self.p-1)
-        # for structurally consistent
 
         if self.length_preserving:
             dependent += 2*np.count_nonzero(self.dependent)

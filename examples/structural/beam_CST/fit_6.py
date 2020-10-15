@@ -28,12 +28,15 @@ x = abaqus[:, 0]
 y = abaqus[:, 1]
 
 psi_spars = [0.2]
-g_p = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
+n = 2
+p = 3
+i = n*p+1
+g_p = CoordinateSystem.pCST(D=i*[0.],
                             chord=[psi_spars[0], .7, .1],
                             color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
                             offset=-.05, continuity='C2', free_end=True,
                             root_fixed=True)
-g = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
+g = CoordinateSystem.pCST(D=i*[0.],
                           chord=[psi_spars[0], .7, .1],
                           color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
                           offset=-.05, continuity='C2', free_end=True,

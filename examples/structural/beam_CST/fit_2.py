@@ -10,8 +10,8 @@ from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
 
-def cst(x, A0, A1, A2, A3, A4, A5):
-    b.g.D = [A0, A1, A2, A3, A4, A5]
+def cst(x, *A):
+    b.g.D = A
     # b.g.internal_variables(b.g.length)
     y = []
     for xi in x:
@@ -29,12 +29,15 @@ abaqus = abaqus[abaqus[:, 0].argsort()]
 x = abaqus[:, 0]
 y = abaqus[:, 1]
 psi_spars = [0.2]
-g_p = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
+n = 2
+p = 3
+i = n*p+1
+g_p = CoordinateSystem.pCST(D=i*[0.],
                             chord=[psi_spars[0], .7, .1],
                             color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
                             offset=.0, continuity='C2', free_end=True,
                             root_fixed=True)
-g = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
+g = CoordinateSystem.pCST(D=i*[0.],
                           chord=[psi_spars[0], .7, .1],
                           color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
                           offset=.0, continuity='C2', free_end=True,

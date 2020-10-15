@@ -310,6 +310,7 @@ class beam_chen():
             self.calculate_resultants()
         self.calculate_M()
         self.calculate_residual()
+        print('R', self.R)
         return self.R
 
     def integral_ends(self):

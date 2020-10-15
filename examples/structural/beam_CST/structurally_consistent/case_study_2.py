@@ -31,7 +31,10 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 abaqus = np.loadtxt('case_study_2.csv', delimiter=',')
 
 constraints = ({'type': 'eq', 'fun': constraint_f})
-g = CoordinateSystem.pCST(D=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0], chord=[.2, .4, .4], color=['b', 'g', 'r'],
+n = 2
+p = 3
+i = (n+1)*p
+g = CoordinateSystem.pCST(D=i*[0], chord=[.2, .4, .4], color=['b', 'g', 'r'],
                           N1=[1, 1, 1], N2=[1, 1, 1], continuity='C1', free_end=True,
                           root_fixed=True)
 
@@ -40,14 +43,14 @@ l = loads(concentrated_load=[[0, -40]], load_s=[1], torque=[5], torque_s=[0.6])
 g.calculate_s(N=[5, 9, 9])
 b = beam_chen(g, p, l, s=None, calculate_resultant=True)
 b.spars_s = [0.2]
-# b.parameterized_solver(format_input, x0=[0, 0, 0, 0, 0, 0, 0, 0], constraints=constraints)
-b.g.D = [2.3667520183461132e-07, 0.011413199268466722, 0.022841016335144255, 0.07336877500069414,
-         0.06464943617957472, 0.05578540569596733, 0.03693876321850288, 0.02798090460688548]
-b.g.calculate_x1(b.g.s)
-b.x = b.g.x1_grid
-b.y = b.g.x3(b.g.x1_grid)
-b.g.radius_curvature(b.g.x1_grid)
-b.calculate_resultants()
+b.parameterized_solver(format_input, x0=[0, 0, 0, 0, 0, 0, 0, 0], constraints=constraints)
+# b.g.D = [2.3667520183461132e-07, 0.011413199268466722, 0.022841016335144255, 0.07336877500069414,
+#          0.06464943617957472, 0.05578540569596733, 0.03693876321850288, 0.02798090460688548]
+# b.g.calculate_x1(b.g.s)
+# b.x = b.g.x1_grid
+# b.y = b.g.x3(b.g.x1_grid)
+# b.g.radius_curvature(b.g.x1_grid)
+# b.calculate_resultants()
 
 # Checking stuff
 # print('check1', +b.g.cst[0].D[2] + b.g.cst[1].D[0] + b.g.cst[1].zetaT)

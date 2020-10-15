@@ -31,7 +31,11 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 abaqus = np.loadtxt('case_study_1.csv', delimiter=',')
 
 constraints = ({'type': 'eq', 'fun': constraint_f})
-g = CoordinateSystem.pCST(D=[0, 0, 0, 0, 0, 0], chord=[.5, .5], color=['b', 'g'],
+
+n = 2
+p = 2
+i = n*p+1
+g = CoordinateSystem.pCST(D=i*[0], chord=[.5, .5], color=['b', 'g'],
                           N1=[1, 1], N2=[1, 1], continuity='C2', free_end=True,
                           root_fixed=True)
 

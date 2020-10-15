@@ -60,12 +60,19 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 psi_spars = [0.2]
 m = len(psi_spars)
 
-g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0.],
+n = 2
+p = 2
+i = n*p+1
+g_upper = CoordinateSystem.pCST(D=i*[0.],
                                 chord=[psi_spars[0], 1-psi_spars[0]],
                                 color=['b', 'r'], N1=[1., 1.], N2=[1., 1.],
                                 offset=.05, continuity='C2', free_end=True,
                                 root_fixed=True)
-g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
+
+n = 2
+p = 3
+i = n*p+1
+g_lower = CoordinateSystem.pCST(D=i*[0.],
                                 chord=[psi_spars[0], 0.7, 0.1],
                                 color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
                                 offset=-.05, continuity='C2', free_end=True,
