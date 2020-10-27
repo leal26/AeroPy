@@ -43,27 +43,27 @@ D_n2 = [0.3208729, 0.28457915, 0.2431048, 0.27140013, 0.06470603, 0.06222951,
 Db_n3 = [0.30645304, 0.33092568, 0.2454664,  0.23047635, 0.27141484, 0.04881688,
          0.09722178, 0.02404006]
 
-g_p = CoordinateSystem.pCST(D=Db_n3,
-                            chord=[.2, .8], color=['b', 'r'],
-                            N1=[.5, 1], N2=[1, 1], continuity='C2',
-                            free_end=True, rigid_LE=True)
-g = CoordinateSystem.pCST(D=Db_n3,
-                          chord=[.2, .8], color=['b', 'r'],
-                          N1=[.5, 1], N2=[1, 1], continuity='C2',
-                          free_end=True, rigid_LE=True)
-
-# g_p = CoordinateSystem.pCST(D=D_n2,
-#                             chord=[.2, .7, .1], color=['b', 'r', 'g'],
-#                             N1=[.5, 1, 1], N2=[1, 1, 1], continuity='C2',
+# g_p = CoordinateSystem.pCST(D=Db_n3,
+#                             chord=[.2, .8], color=['b', 'r'],
+#                             N1=[.5, 1], N2=[1, 1], continuity='C2',
 #                             free_end=True, rigid_LE=True)
-# g = CoordinateSystem.pCST(D=D_n2,
-#                           chord=[.2, .7, .1], color=['b', 'r', 'g'],
-#                           N1=[.5, 1, 1], N2=[1, 1, 1], continuity='C2',
+# g = CoordinateSystem.pCST(D=Db_n3,
+#                           chord=[.2, .8], color=['b', 'r'],
+#                           N1=[.5, 1], N2=[1, 1], continuity='C2',
 #                           free_end=True, rigid_LE=True)
+
+g_p = CoordinateSystem.pCST(D=D_n2,
+                            chord=[.2, .7, .1], color=['b', 'r', 'g'],
+                            N1=[.5, 1, 1], N2=[1, 1, 1], continuity='C2',
+                            free_end=True, rigid_LE=True)
+g = CoordinateSystem.pCST(D=D_n2,
+                          chord=[.2, .7, .1], color=['b', 'r', 'g'],
+                          N1=[.5, 1, 1], N2=[1, 1, 1], continuity='C2',
+                          free_end=True, rigid_LE=True)
 _, _, n_u = g._check_input([])
 g.offset_s = 0
-s = g.calculate_s([51, 51], 1)
-# s = g.calculate_s([51, 51, 51], 1)
+# s = g.calculate_s([51, 51], 1)
+s = g.calculate_s([51, 51, 51], 1)
 p = properties()
 l = loads()
 b = beam_chen(g, p, l, s)
@@ -83,7 +83,7 @@ plt.legend()
 
 print(b.g.cst[0].D)
 print(b.g.cst[1].D)
-popt, pcov = curve_fit(cst, x[:], y[:], p0=[0.11055139, 0.05173331, 0.09983107], maxfev=10000)
+popt, pcov = curve_fit(cst, x[:], y[:], p0=[0.0*i for i in range(n_u)], maxfev=10000)
 # b.g.D = [0.10688066710180918, 0.04881687846018838, 0.0972217791492235]
 # print('last')
 # b.g.D = popt

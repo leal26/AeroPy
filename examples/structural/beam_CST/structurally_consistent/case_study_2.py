@@ -37,13 +37,17 @@ i = (n+1)*p
 g = CoordinateSystem.pCST(D=i*[0], chord=[.2, .4, .4], color=['b', 'g', 'r'],
                           N1=[1, 1, 1], N2=[1, 1, 1], continuity='C1', free_end=True,
                           root_fixed=True)
+print('i', i)
+print('D1', g.cst[0].D)
+print('D2', g.cst[1].D)
+print('D3', g.cst[2].D)
 
 p = properties()
 l = loads(concentrated_load=[[0, -40]], load_s=[1], torque=[5], torque_s=[0.6])
 g.calculate_s(N=[5, 9, 9])
 b = beam_chen(g, p, l, s=None, calculate_resultant=True)
 b.spars_s = [0.2]
-b.parameterized_solver(format_input, x0=[0, 0, 0, 0, 0, 0, 0, 0], constraints=constraints)
+b.parameterized_solver(format_input, x0=(i-1)*[0], constraints=constraints)
 # b.g.D = [2.3667520183461132e-07, 0.011413199268466722, 0.022841016335144255, 0.07336877500069414,
 #          0.06464943617957472, 0.05578540569596733, 0.03693876321850288, 0.02798090460688548]
 # b.g.calculate_x1(b.g.s)

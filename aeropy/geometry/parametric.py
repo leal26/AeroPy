@@ -44,6 +44,7 @@ class CoordinateSystem(object):
             else:
                 if len(values) != self.nn:
                     self._D = np.zeros(self.nn)
+                    print('setter', self.nn, values)
                     self._D[:len(values)] = values
                 else:
                     self._D = values
@@ -145,7 +146,7 @@ class CoordinateSystem(object):
 
     @classmethod
     def pCST(cls, D, chord=np.array([.5, .5]), color='b', N1=[1, 1.], N2=[1.0, 1.0],
-             tol=1e-6, offset=0, offset_x=0, continuity='C2', free_end=False,
+             tol=1e-4, offset=0, offset_x=0, continuity='C2', free_end=False,
              root_fixed=False, dependent=None, length_preserving=False,
              rigid_LE=False):
         c = cls(D, chord=chord, color=color, n=len(D)-1, nn=len(D), N1=N1, N2=N2,
@@ -194,9 +195,11 @@ class CoordinateSystem(object):
             # From shape coefficients 1 to n
             if continuity == 'C2':
                 n_start = 1+i*c.n + mod
+                n_end = n_start + c.n
             elif continuity == 'C1':
                 n_start = i*c.n + mod
-            n_end = n_start + c.n
+                n_end = n_start + c.nn
+
             Ai = D[n_start:n_end]
             if i == 0:
                 c.A0.append(D[0])
@@ -214,6 +217,7 @@ class CoordinateSystem(object):
                     elif continuity == 'C1':
                         c.A0.append(Ai[0])
                     c.zetaL.append(chord[j]/chord[i]*c.zetaT[j])
+                    # print('init', i, c.cst[j].D[-2], c.zetaT[j], c.A0[-1], c.zetaL[i], c.zetaL[j])
                     c.zetaT.append(-c.cst[j].D[-2] + c.zetaT[j] -
                                    c.A0[-1] + c.zetaL[i] - c.zetaL[j])
                 else:
@@ -270,7 +274,7 @@ class CoordinateSystem(object):
                 if self.root_fixed and self.N1[i] == 1:
                     self.zetaT[i] = -self.D[0]
                 else:
-                    self.zetaT[i] = self.D[-1]
+                    self.zetaT[i] = self.D[self.n+1]
                 self.zetaL[i] = 0
             elif self.N1[i] == 1. and self.N2[i] == 1.:
                 offset_x = self.cst[j].offset_x + self.cst[j].chord
@@ -287,6 +291,8 @@ class CoordinateSystem(object):
                     self.A0[i] = Ai[0]
 
                 self.zetaL[i] = self.cst[j].chord/self.cst[i].chord*self.zetaT[j]
+                # print('update', i, self.cst[j].D[-2], self.zetaT[j],
+                #       self.A0[i], self.zetaL[i], self.zetaL[j])
                 self.zetaT[i] = -self.cst[j].D[-2] + self.zetaT[j] - self.A0[i] + \
                     self.zetaL[i] - self.zetaL[j]
             else:
@@ -391,12 +397,17 @@ class CoordinateSystem(object):
                 self.n_end = 1
             else:
                 self.n_end = 0
+
             if self.dependent[i] and not self.root_fixed:
                 self.n_end += 1
 
         if i == 1 and self.rigid_LE:
             self.n_end = 0
         self.n_start = self.n_end
+
+        if not self.root_fixed and i == 1:
+            self.n_start += 1
+
         if self.dependent[i]:
             if self.length_preserving:
                 modifier = 2
@@ -404,10 +415,7 @@ class CoordinateSystem(object):
                 modifier = 1
         else:
             modifier = 0
-        # if i != 0 and self.continuity == 'C1':
-        #     modifier -= 1
-        if self.rigid_LE and i == 1:
-            modifier -= 1
+
         if i == self.p-1 and self.free_end:
             if self.continuity == 'C1':
                 self.n_end = self.n_start + self.nn - 1 - modifier
@@ -423,7 +431,7 @@ class CoordinateSystem(object):
                 self.n_end = self.n_start + self.n - modifier
             Ai = self.D[self.n_start:self.n_end]
             Ai0 = Ai[:-1]
-        print('update', i, self.n_start, self.n_end, Ai)
+        # print('update', i, self.n_start, self.n_end, Ai, Ai0)
         return (Ai0, Ai)
 
     def _calculate_Dn(self, i, Ai0, Ai=None):

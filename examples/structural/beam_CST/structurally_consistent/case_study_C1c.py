@@ -16,34 +16,27 @@ def format_input(input, g=None, g_p=None):
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-abaqus = np.loadtxt('case_study_C1.csv', delimiter=',')
+abaqus = np.loadtxt('case_study_C1c.csv', delimiter=',')
 
-D_n4 = [0.288197, 0.37918722, 0.21903394, 0.25925831, 0.24259769, 0.27278782,
-        0.06528661, 0.07283469, 0.06692653, 0.0559131, -0.01268226, -0.00134043,
-        -0.08743061, -0.0013288]
-
-D_n3 = [3.06132404e-01, 3.31838944e-01, 2.44074856e-01, 2.30082260e-01,
-        2.71512524e-01, 4.98187521e-02, 8.59903075e-02, 4.89862447e-02,
-        1.22835553e-04, -7.05141464e-02, -1.95302773e-02]
-
-D_n2 = [0.3208729, 0.28457915, 0.2431048, 0.27140013, 0.06470603, 0.06222951,
-        -0.02810757, -0.04412038]
-
-# Db_n3 = [0.30645304, 0.33092568, 0.2454664, 0.23047635, 0.27141484, 0.04881688,
-#          0.09722178, 0.02404006]
-
-# g = CoordinateSystem.pCST(D=Db_n3,
-#                           chord=[.2, .8], color=['b', 'r', 'g'],
-#                           N1=[.5, 1], N2=[1, 1], continuity='C2',
-#                           free_end=True, rigid_LE=True)
-
-g = CoordinateSystem.pCST(D=D_n2,
-                          chord=[.2, .7, .1], color=['b', 'r', 'g'],
-                          N1=[.5, 1, 1], N2=[1, 1, 1], continuity='C2',
-                          free_end=True, rigid_LE=True)
+n = 2
+p = 3
+i = n*p+2
+D1 = [0]*(n+2)
+m = i - 2*n - 2
+D2 = list(np.linspace(0.1, 0.1*m, m))
+D3 = [-0.2]*(n)
+D = D1 + D2 + D3
+# D = [0.0160733147016186, -0.002225084058028139, -
+#      0.0020682982405123436, 0.18571910365412023, -0.27159496929212074]
+x0 = D1 + D2 + D3[:-1]
+print('x0', x0)
+g = CoordinateSystem.pCST(D=D,
+                          chord=[.2, .5, .3], color=['b', 'r', 'g'],
+                          N1=[1., 1, 1], N2=[1, 1, 1], continuity='C2',
+                          free_end=True)
 
 p = properties()
-l = loads(concentrated_load=[[0, -1]], load_s=[g.cst[0].length + g.cst[1].length])
+l = loads(concentrated_load=[[0, -1]], load_s=[g.cst[0].length + g.cst[1].length + g.cst[2].length])
 g.calculate_s(N=[21, 21, 21])
 b = beam_chen(g, p, l, s=None, ignore_ends=False)
 b.g.calculate_x1(b.g.s)
@@ -57,11 +50,18 @@ print('D2', b.g.cst[1].D)
 print('D3', b.g.cst[2].D)
 # b.parameterized_solver(format_input, x0=np.array([0.11055139, 0.05173331, 0.09983107]))
 # b.parameterized_solver(format_input, x0=np.array(
-#     [0.10688066710180918, 0.04881687846018838, 0.0972217791492235]))
-b.parameterized_solver(format_input, x0=np.array(
-    [0.08817500333333335, 0.06470603, 0.06222951, -0.02810757]))
-# b.parameterized_solver(format_input, x0=np.zeros(n_u))
-# b._residual([0.08817500333333335, 0.06470603, 0.06222951, -0.02810757])
+#     [0.10688066710180918, 04r3et5r.04881687846018838, 0.0972217791492235]))
+# b.parameterized_solver(format_input, x0=np.array(
+#     [0.08817500333333335, 0.06470603, 0.06222951, -0.02810757]))
+# b.parameterized_solver(format_input, x0=x0)
+# x0 = [0.0016609031927165981, 0.0014583095210324206, 0.0014721447209376166, -
+#          0.0015928952913609152, 0.10242922551427547, 0.20275245669550482, -0.20183072908959696]
+# x0 = [0.0016609031927165981, 0.0014583095210324206, 0.0014721447209376166,
+#          0.10242922551427547, 0.20275245669550482, -0.20183072908959696]
+# x0 = [0.0160733147016186, -0.002225084058028139, -0.0020682982405123436, 0.18571910365412023]
+# b._residual(x0)
+
+b.parameterized_solver(format_input, x0=np.zeros(n_u))
 print('Residual', b.R)
 print('r', b.r, len(b.r))
 print('s', b.g.s, len(b.g.s))
@@ -82,14 +82,14 @@ print('D3', b.g.cst[2].D)
 # print('loads', b.l.concentrated_load)
 
 plt.figure()
-print('x', np.shape(b.g.x1_grid[21:]))
+print('x', np.shape(b.g.x1_grid[:]))
 print('M', np.shape(b.M[:]))
 print('rho', np.shape(b.g.rho))
-plt.plot(b.g.x1_grid[21:], b.M[:], 'b', label='From forces')
+plt.plot(b.g.x1_grid[:], b.M[:], 'b', label='From forces')
 
 M = (b.p.young*b.p.inertia)*(b.g.rho - b.g_p.rho)
 plt.plot(b.g.x1_grid, M, 'r', label='From CST')
-plt.plot(b.g.x1_grid[21:], (b.p.young*b.p.inertia)*b.r, 'g', label='residual')
+plt.plot(b.g.x1_grid[:], (b.p.young*b.p.inertia)*b.r, 'g', label='residual')
 plt.legend()
 
 plt.figure()
@@ -97,7 +97,7 @@ plt.plot(b.g_p.x1_grid, b.g_p.x3(b.g_p.x1_grid), 'b',
          label='Upper Parent', lw=3)
 plt.plot(b.g.x1_grid, b.g.x3(b.g.x1_grid), c='.5',
          label='Upper Child', lw=3)
-plt.scatter(abaqus[0, :], abaqus[1, :], c='.5',
+plt.scatter(abaqus[:, 0], abaqus[:, 1], c='.5',
             label='FEA', edgecolors='k', zorder=10, marker="^")
 
 plt.figure()
