@@ -56,7 +56,7 @@ b.parameterized_solver(format_input, x0=[0, 0, 0, 0], constraints=constraints)
 # print('zetaL', b.g.cst[0].zetaL, b.g.cst[1].zetaL, b.g.zetaL)
 # print('A0', b.g.A0)
 print('loads', b.l.concentrated_load)
-# print('D', b.g.cst[0].D, b.g.cst[1].D)
+print('D', b.g.cst[0].D, b.g.cst[1].D)
 plt.figure()
 plt.plot(b.g.x1_grid[1:], b.M[1:], 'b', label='From forces')
 

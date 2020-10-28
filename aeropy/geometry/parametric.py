@@ -295,6 +295,8 @@ class CoordinateSystem(object):
                 #       self.A0[i], self.zetaL[i], self.zetaL[j])
                 self.zetaT[i] = -self.cst[j].D[-2] + self.zetaT[j] - self.A0[i] + \
                     self.zetaL[i] - self.zetaL[j]
+                print('chord', self.cst[i].chord, self.cst[j].chord *
+                      self.zetaT[j], self.cst[i].chord*self.zetaL[i], self.D)  # self.D,
             else:
                 raise(NotImplementedError)
 
@@ -312,14 +314,21 @@ class CoordinateSystem(object):
             self.cst[i].zetaT = self.zetaT[i]
             self.cst[i].zetaL = self.zetaL[i]
             self.cst[i].offset_x = offset_x
+            # self.calculate_x1(self.s)
+            # x = self.x1_grid
+            #
+            # y = self.x3(x)
+            # plt.plot(x, y, label=(self.cst[0].chord, self.cst[1].chord))
+            # print('befor', i, self.cst[i].chord)
             self.cst[i].internal_variables(self.cst[i].length)
-            if i == 0:
-                error = 0
-            else:
-                current = np.array([self.cst[i].chord, self.cst[i].zetaT,
-                                    self.cst[i].zetaL, self.cst[i].D[0]])
-                error = np.linalg.norm(current-prev)
-                prev = current
+            # print('after', i, self.cst[i].chord)
+            # if i == 0:
+            #     error = 0
+            # else:
+            current = np.array([self.cst[i].chord, self.cst[i].zetaT,
+                                self.cst[i].zetaL, self.cst[i].D[0]])
+            error = np.linalg.norm(current-prev)
+            prev = current
 
     def _update_dependent(self, i):
         j = i - 1
@@ -993,7 +1002,7 @@ class CoordinateSystem(object):
         self.chord = 1
 
         nondimensional_length = self.arclength(chord=1., origin=origin/self.chord)
-
+        print('length', target_length, nondimensional_length)
         self.chord = target_length/nondimensional_length
         self.deltaz = self.zetaT*self.chord
         self.deltazLE = self.zetaL*self.chord

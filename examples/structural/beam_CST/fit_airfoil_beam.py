@@ -22,8 +22,8 @@ def cst(x, *A):
 
 chord = 1
 
-abaqus = np.loadtxt('case_study_C1b.csv', delimiter=',')
-abaqus = abaqus.T
+abaqus = np.loadtxt('case_study_C1d.csv', delimiter=',')
+# abaqus = abaqus.T
 abaqus = abaqus[abaqus[:, 0].argsort()]
 x = abaqus[:, 0]
 y = abaqus[:, 1]
@@ -43,6 +43,14 @@ D_n2 = [0.3208729, 0.28457915, 0.2431048, 0.27140013, 0.06470603, 0.06222951,
 Db_n3 = [0.30645304, 0.33092568, 0.2454664,  0.23047635, 0.27141484, 0.04881688,
          0.09722178, 0.02404006]
 
+n = 2
+p = 2
+i = n*p+2
+D1 = [0]*(n+1)
+m = i - n - 2
+D2 = list(np.linspace(0.2, 0.2*m, m))
+D_n2 = D1 + D2
+x0 = D1 + D2[:-1]
 # g_p = CoordinateSystem.pCST(D=Db_n3,
 #                             chord=[.2, .8], color=['b', 'r'],
 #                             N1=[.5, 1], N2=[1, 1], continuity='C2',
@@ -53,17 +61,17 @@ Db_n3 = [0.30645304, 0.33092568, 0.2454664,  0.23047635, 0.27141484, 0.04881688,
 #                           free_end=True, rigid_LE=True)
 
 g_p = CoordinateSystem.pCST(D=D_n2,
-                            chord=[.2, .7, .1], color=['b', 'r', 'g'],
-                            N1=[.5, 1, 1], N2=[1, 1, 1], continuity='C2',
-                            free_end=True, rigid_LE=True)
+                            chord=[.2, .8], color=['b', 'r', 'g'],
+                            N1=[1, 1], N2=[1, 1], continuity='C2',
+                            free_end=True, root_fixed=True)
 g = CoordinateSystem.pCST(D=D_n2,
-                          chord=[.2, .7, .1], color=['b', 'r', 'g'],
-                          N1=[.5, 1, 1], N2=[1, 1, 1], continuity='C2',
-                          free_end=True, rigid_LE=True)
+                          chord=[.2, .8], color=['b', 'r', 'g'],
+                          N1=[1, 1], N2=[1, 1], continuity='C2',
+                          free_end=True, root_fixed=True)
 _, _, n_u = g._check_input([])
 g.offset_s = 0
 # s = g.calculate_s([51, 51], 1)
-s = g.calculate_s([51, 51, 51], 1)
+s = g.calculate_s([51, 51], 1)
 p = properties()
 l = loads()
 b = beam_chen(g, p, l, s)
@@ -83,12 +91,15 @@ plt.legend()
 
 print(b.g.cst[0].D)
 print(b.g.cst[1].D)
-popt, pcov = curve_fit(cst, x[:], y[:], p0=[0.0*i for i in range(n_u)], maxfev=10000)
+
+# popt, pcov = curve_fit(cst, x[:], y[:], p0=x0, maxfev=10000)
+popt = [-9.60718252e-04, 9.60718252e-04,  -9.60718252e-04,  2.01194462e-01]
 # b.g.D = [0.10688066710180918, 0.04881687846018838, 0.0972217791492235]
 # print('last')
-# b.g.D = popt
+b.g.D = popt
+
 print('Solution: ', popt)
-print('Error: ', np.sqrt(np.diag(pcov)))
+# print('Error: ', np.sqrt(np.diag(pcov)))
 print('D1', b.g.cst[0].D)
 print('D2', b.g.cst[1].D)
 # print('D3', b.g.cst[2].D)

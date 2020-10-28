@@ -6,6 +6,7 @@ from findiff import FinDiff
 import numpy as np
 from scipy.integrate import quad, trapz
 from scipy.optimize import minimize, curve_fit
+import matplotlib.pyplot as plt
 
 
 class euler_bernoulle_curvilinear():
@@ -284,7 +285,12 @@ class beam_chen():
             A = format_input(A, self.g, self.g_p)
             return self._residual(A)
 
-        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=len(x0)*[[-1, 1]],
+        bounds = []
+        margin = 0.02
+        for xi in x0:
+            bounds.append([xi-margin, xi+margin])
+
+        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=bounds,
                        constraints=constraints)
         self.g.D = format_input(sol.x, self.g, self.g_p)
         if self.length_preserving and self.g.name != 'pCST':
@@ -303,6 +309,7 @@ class beam_chen():
         self.x = self.g.x1_grid
 
         self.y = self.g.x3(self.x)
+
         if self.l.follower:
             self.g.calculate_angles()
         self.g.radius_curvature(self.g.x1_grid)
