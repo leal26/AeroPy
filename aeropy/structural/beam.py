@@ -107,7 +107,7 @@ class beam_chen():
         self.g = copy.deepcopy(geometry)
         self.p = properties
         self.l = load
-        if self.g.name == 'pCST':
+        if s is None:
             self.s = self.g.s
         else:
             self.s = s
@@ -130,7 +130,7 @@ class beam_chen():
     def calculate_M(self):
         self.M = np.zeros(len(self.s))
         self.repeat = False
-        if self.g.rigid_LE:
+        if self.g.name == 'pCST' and self.g.rigid_LE:
             for i in range(len(self.M)):
                 j = i + len(self.g.cst[0].x1_grid)
                 self.M[i] = self._M(self.x[j], self.s[i], self.y[j])
@@ -160,19 +160,12 @@ class beam_chen():
                     M_i += self.l.concentrated_magnitude[i]*f2*(self.x[index]-x-x0)
             else:
                 for i in range(len(self.l.concentrated_s)):
-                    # print(s, self.s)
-                    # print(self.l.concentrated_s)
-                    # print(self.l.concentrated_s[i])
-                    # print(self.s[18])
-                    # print(type(self.s), type(self.l.concentrated_s))
-
-                    index = np.where(np.around(self.s, decimals=7) ==
-                                     np.around(self.l.concentrated_s[i], decimals=7))[0][0]
+                    decimals = int(math.floor(math.log10(abs(self.g.tol))))
+                    index = np.where(np.around(self.s, decimals=decimals) ==
+                                     np.around(self.l.concentrated_s[i], decimals=decimals))[0][0]
                     if self.g.rigid_LE:
                         index += len(self.g.cst[0].x1_grid)
-                    if s < self.l.concentrated_s[i]:
-                        # print(self.x[index], x, self.x[index]-x-x0)
-                        # print(self.y[index], y, self.y[index]-y-y0)
+                    if s <= self.l.concentrated_s[i] + self.g.tol:
                         M_i -= self.l.concentrated_load[i][0]*(self.y[index]-y)
                         M_i += self.l.concentrated_load[i][1]*(self.x[index]-x)
 
@@ -286,7 +279,7 @@ class beam_chen():
             return self._residual(A)
 
         bounds = []
-        margin = 0.02
+        margin = 0.8
         for xi in x0:
             bounds.append([xi-margin, xi+margin])
 
@@ -296,7 +289,7 @@ class beam_chen():
         if self.length_preserving and self.g.name != 'pCST':
             self.g.internal_variables(self.g.length, origin=self.origin)
         # self.g.calculate_x1(self.s)
-        self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
+        self.g.calculate_x1(self.s)
         self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)
         print('sol', self.g.D, sol.fun)
@@ -305,7 +298,8 @@ class beam_chen():
         self.g.D = A
         if self.length_preserving and self.g.name != 'pCST':
             self.g.internal_variables(self.g.length, origin=self.origin)
-        self.g.calculate_x1(self.s, origin=self.origin, length_rigid=self.s[0])
+
+        self.g.calculate_x1(self.s)
         self.x = self.g.x1_grid
 
         self.y = self.g.x3(self.x)
@@ -438,8 +432,6 @@ class coupled_beams():
             raise(NotImplementedError)
 
     def parameterized_solver(self, format_input=None, x0=None, constraints=()):
-        # sol = minimize(self.formatted_residual, x0, method='SLSQP',  constraints=constraints, args=(format_input),
-        #                options={'ftol': 1e-06, 'iprint': 3, 'disp': True, 'eps': 1.4901161193847656e-08})
         sol = minimize(self.formatted_residual, x0,  method='SLSQP', constraints=constraints, args=(format_input),
                        options={'iprint': 3, 'disp': True}, bounds=len(x0) * [[-.04, .04]])
         # 'L-BFGS-B'
@@ -460,7 +452,6 @@ class coupled_beams():
         print('sol', self.bu.g.D, self.bl.g.D)
 
     def formatted_residual(self, x0, format_input):
-        # print('x0', x0)
         [Au, Al] = format_input(x0, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
         self.bu.l.concentrated_load = self.bu.l.external_load.copy()
         self.bl.l.concentrated_load = self.bl.l.external_load.copy()
@@ -479,15 +470,7 @@ class coupled_beams():
             self.bl.g.g_independent = self.bu.g
         Rl = self.bl._residual(Al)
         R = .5*np.sqrt(Ru**2 + Rl**2)
-        # R = Ru + Rl
-        # print('directions', self.bl.g.spar_directions)
-        # print('psi', self.bl.g.spar_psi)
-        # print('xi', self.bl.g.spar_xi)
-        # print('D', self.bu.g.D, self.bl.g.D)
-        # print('Du', self.bu.g.cst[0].D, self.bu.g.cst[1].D)
-        # print('Dl', self.bl.g.cst[0].D, self.bl.g.cst[1].D, self.bl.g.cst[2].D)
-        # print('R', R - np.sqrt(0.004566740157052263**2 + 0.003608477552921366**2), self.bu.R -
-        #       0.004566740157052263, self.bl.R - 0.003608477552921366)
+
         print('R', R, Rl, Ru)
         # BREAK
         return R
@@ -503,7 +486,7 @@ class coupled_beams():
 
             y_u = self.bu.g.x3(np.array([x_u]))[0]
             y_l = self.bl.g.x3(np.array([x_l]))[0]
-            # print('AH', x_u, x_l, y_u, y_l, self.bu.l.concentrated_s)
+
             dx = x_u - x_l
             dy = y_u - y_l
             ds = np.sqrt(dx**2 + dy**2)
@@ -514,7 +497,6 @@ class coupled_beams():
             self.bl.l.concentrated_load = [[Fx, Fy], ]
             self.bu.l.external_load = self.bu.l.concentrated_load.copy()
             self.bl.l.external_load = self.bl.l.concentrated_load.copy()
-        # print('loads', self.bu.l.concentrated_load, self.bl.l.concentrated_load)
 
     def calculate_resultants(self):
         def M_f(s, *Rys):
@@ -558,7 +540,7 @@ class coupled_beams():
 
                 y_u = self.bu.g.x3(np.array([x_u]))[0]
                 y_l = self.bl.g.x3(np.array([x_l]))[0]
-                # print('AH', x_u, x_l, y_u, y_l, self.bu.l.concentrated_s)
+
                 dx = x_u - x_l
                 dy = y_u - y_l
                 ds = np.sqrt(dx**2 + dy**2)
@@ -569,7 +551,7 @@ class coupled_beams():
 
                 y_u = self.bu.g_p.x3(np.array([x_u]))[0]
                 y_l = self.bl.g_p.x3(np.array([x_l]))[0]
-                # print('AH', x_u, x_l, y_u, y_l, self.bu.l.concentrated_s)
+
                 dx = x_u - x_l
                 dy = y_u - y_l
                 ds0 = np.sqrt(dx**2 + dy**2)

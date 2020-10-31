@@ -10,8 +10,8 @@ from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
 
-def cst(x, A0, A1, A2, A3, A4):
-    b.g.D = [A0, A1, A2, A3, A4, -A0]
+def cst(x, *A):
+    b.g.D = A + [-A[0]]
     b.g.internal_variables(b.g.length)
     y = b.g.x3(x)
     return y

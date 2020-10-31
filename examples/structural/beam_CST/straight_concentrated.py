@@ -57,4 +57,14 @@ plt.plot(b.x, b.y, '.5', label='Child: %.3f N' % -l.concentrated_load[0][1],
          lw=3, zorder=0)
 
 plt.legend()
+
+plt.figure()
+plt.plot(b.g.x1_grid, b.g.rho)
+
+plt.figure()
+plt.plot(b.g.x1_grid[1:], b.M[1:], 'b', label='From forces')
+M = (b.p.young*b.p.inertia)*(b.g.rho - b.g_p.rho)
+plt.plot(b.g.x1_grid[1:], M[1:], 'r', label='From CST')
+plt.legend()
+plt.show()
 plt.show()

@@ -7,7 +7,7 @@ from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
 
-def format_input(input):
+def format_input(input, g=None, g_p=None):
     # COnsidering BC for zero derivative at the root
     return list(input) + [-input[0]]
 
@@ -35,7 +35,7 @@ load_keys = list(experiment.keys())
 x = np.linspace(0, chord_parent, 10)
 s = np.zeros(len(x))
 for i in range(len(x)):
-    s[i] = g0.arclength(x[i])[0]
+    s[i] = g0.arclength(x[i])
 
 g = CoordinateSystem.CST(D=[-0.27928065, - 0.29209946, - 0.30491828, - 0.3177371,
                             0.27928065], chord=chord_parent, color='b', deltaz=0.27928065*chord_parent, N1=1.0, N2=1.0)
@@ -62,5 +62,12 @@ for i in range(len(load_keys)):
         gg.calculate_x1(s)
         gg.plot(label='Experiment: %.3f N' %
                 load_keys[i], color=colors[i], scatter=True, marker="D")
+plt.legend()
+plt.show()
+
+plt.figure()
+plt.plot(b.g.x1_grid[1:], b.M[1:], 'b', label='From forces')
+M = (b.p.young*b.p.inertia)*(b.g.rho - b.g_p.rho)
+plt.plot(b.g.x1_grid[1:], M[1:], 'r', label='From CST')
 plt.legend()
 plt.show()
