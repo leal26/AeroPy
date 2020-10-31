@@ -160,7 +160,7 @@ class beam_chen():
                     M_i += self.l.concentrated_magnitude[i]*f2*(self.x[index]-x-x0)
             else:
                 for i in range(len(self.l.concentrated_s)):
-                    decimals = int(math.floor(math.log10(abs(self.g.tol))))
+                    decimals = abs(int(math.floor(math.log10(abs(self.g.tol)))))
                     index = np.where(np.around(self.s, decimals=decimals) ==
                                      np.around(self.l.concentrated_s[i], decimals=decimals))[0][0]
                     if self.g.rigid_LE:
