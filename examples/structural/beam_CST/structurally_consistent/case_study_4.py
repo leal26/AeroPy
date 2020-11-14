@@ -71,7 +71,7 @@ a.calculate_x()
 _, _, n_u = g_upper._check_input([])
 _, _, n_l = g_lower._check_input([])
 a.parameterized_solver(format_input=format_input, x0=list(
-    g_upper.D[:n_u]) + list(g_lower.D[:n_l]))
+    g_upper.D[:n_u]) + list(g_lower.D[:n_l]), solver='lm')
 # input = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10]
 # [Au, Al] = format_input(input, a.bu.g, a.bu.g_p, a.bl.g, a.bl.g_p)
 # a.calculate_x()

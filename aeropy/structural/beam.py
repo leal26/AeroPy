@@ -5,7 +5,7 @@ import copy
 from findiff import FinDiff
 import numpy as np
 from scipy.integrate import quad, trapz
-from scipy.optimize import minimize, curve_fit
+from scipy.optimize import minimize, curve_fit, differential_evolution, least_squares
 import matplotlib.pyplot as plt
 
 
@@ -273,18 +273,28 @@ class beam_chen():
             y_before = np.copy(self.y)
             print(error)
 
-    def parameterized_solver(self, format_input=None, x0=None, constraints=(),):
+    def parameterized_solver(self, format_input=None, x0=None, constraints=(),
+                             solver='gradient'):
         def formatted_residual(A):
             A = format_input(A, self.g, self.g_p)
             return self._residual(A)
 
+        def formatted_residual_lm(A):
+            A = format_input(A, self.g, self.g_p)
+            self._residual(A)
+            return self.r
         bounds = []
-        margin = 0.8
+        margin = 0.4
         for xi in x0:
             bounds.append([xi-margin, xi+margin])
 
-        sol = minimize(formatted_residual, x0, method='SLSQP', bounds=bounds,
-                       constraints=constraints)
+        if solver == 'gradient':
+            sol = minimize(formatted_residual, x0, bounds=bounds,
+                           constraints=constraints, method='SLSQP')
+        elif solver == 'genetic':
+            sol = differential_evolution(formatted_residual, bounds, disp=True)
+        elif solver == 'lm':
+            sol = least_squares(formatted_residual_lm, x0, method='lm')
         self.g.D = format_input(sol.x, self.g, self.g_p)
         if self.length_preserving and self.g.name != 'pCST':
             self.g.internal_variables(self.g.length, origin=self.origin)
@@ -296,6 +306,7 @@ class beam_chen():
 
     def _residual(self, A):
         self.g.D = A
+
         if self.length_preserving and self.g.name != 'pCST':
             self.g.internal_variables(self.g.length, origin=self.origin)
 
@@ -431,9 +442,25 @@ class coupled_beams():
         else:
             raise(NotImplementedError)
 
-    def parameterized_solver(self, format_input=None, x0=None, constraints=()):
-        sol = minimize(self.formatted_residual, x0,  method='SLSQP', constraints=constraints, args=(format_input),
-                       options={'iprint': 3, 'disp': True}, bounds=len(x0) * [[-.04, .04]])
+    def parameterized_solver(self, format_input=None, x0=None, constraints=(),
+                             solver='gradient'):
+        def formatted_residual_lm(x0):
+            sol = self.formatted_residual(x0, format_input)
+            return np.append(self.bu.r, self.bl.r)
+        bounds = []
+        margin = 0.4
+        for xi in x0:
+            bounds.append([xi-margin, xi+margin])
+        if solver == 'gradient':
+            sol = minimize(self.formatted_residual, x0, method='SLSQP',
+                           constraints=constraints, args=(format_input),
+                           options={'iprint': 3, 'disp': True},
+                           bounds=bounds)
+        elif solver == 'genetic':
+            sol = differential_evolution(self.formatted_residual, bounds,
+                                         disp=True, args=(format_input))
+        elif solver == 'lm':
+            sol = least_squares(formatted_residual_lm, x0, method='lm')
         # 'L-BFGS-B'
         # bounds=len(x0)
         #                * [[-.04, .04]],

@@ -152,10 +152,13 @@ class CoordinateSystem(object):
              tol=1e-4, offset=0, offset_x=0, continuity='C2', free_end=False,
              root_fixed=False, dependent=None, length_preserving=False,
              rigid_LE=False):
+        if rigid_LE and root_fixed:
+            raise Exception('root_fixed is ignored if rigid_LE=True')
         c = cls(D, chord=chord, color=color, n=len(D)-1, nn=len(D), N1=N1, N2=N2,
                 tol=tol, offset=offset, offset_x=offset_x, continuity=continuity,
                 free_end=free_end, root_fixed=root_fixed,
                 length_preserving=length_preserving, rigid_LE=rigid_LE)
+
         c.x1 = c._x1_pCST
         c.x3 = c._x3_pCST
         c.name = 'pCST'
@@ -266,6 +269,7 @@ class CoordinateSystem(object):
         Ai0, Ai = self._select_D(i)
         error = 999
         offset_x = 0
+        counter = 0
         while error > 1e-6:
             prev = np.array([self.cst[i].chord, self.cst[i].zetaT,
                              self.cst[i].zetaL, self.cst[i].D[0]])
@@ -302,15 +306,16 @@ class CoordinateSystem(object):
             if i == 1 and self.continuity == 'C2' and self.rigid_LE:
                 Di = list(Ai0) + [An, self.zetaT[i]]
             else:
-                if self.continuity == 'C2':
+                if self.continuity == 'C2' and not (i == 1 and self.rigid_LE):
                     Di = [self.A0[i]] + list(Ai0) + [An, self.zetaT[i]]
-                elif self.continuity == 'C1':
+                else:
                     Di = list(Ai0) + [An, self.zetaT[i]]
-
+            # print('Di', counter, Di)
             self.cst[i].D = Di
             self.cst[i].zetaT = self.zetaT[i]
             self.cst[i].zetaL = self.zetaL[i]
             self.cst[i].offset_x = offset_x
+            # print(i, self.cst[i].chord, Ai, Di)
             # self.calculate_x1(self.s)
             # x = self.x1_grid
             #
@@ -324,6 +329,7 @@ class CoordinateSystem(object):
                                 self.cst[i].zetaL, self.cst[i].D[0]])
             error = np.linalg.norm(current-prev)
             prev = current
+            counter += 1
 
     def _update_dependent(self, i):
         j = i - 1
@@ -402,7 +408,7 @@ class CoordinateSystem(object):
             self.n_end = 0
         self.n_start = self.n_end
 
-        if not self.root_fixed and i == 1:
+        if not self.rigid_LE and not self.root_fixed and i == 1:
             self.n_start += 1
 
         if self.dependent[i]:
@@ -412,6 +418,8 @@ class CoordinateSystem(object):
                 modifier = 1
         else:
             modifier = 0
+        if i == 1 and self.rigid_LE:
+            modifier -= 1
 
         if i == self.p-1 and self.free_end:
             if self.continuity == 'C1':
@@ -428,6 +436,7 @@ class CoordinateSystem(object):
                 self.n_end = self.n_start + self.n - modifier
             Ai = self.D[self.n_start:self.n_end]
             Ai0 = Ai[:-1]
+        # print('n', self.n_start, self.n_end, Ai)
         return (Ai0, Ai)
 
     def _calculate_Dn(self, i, Ai0, Ai=None):
@@ -467,6 +476,7 @@ class CoordinateSystem(object):
         elif i == self.p-1 and self.free_end:
             Pi = self.cst_p[i].D[:-1]
             chordp = self.cst_p[i].chord
+            # print('chords', chordp, self.cst[i].chord)
             den_p = (1+(-Pi[-1] + self.cst_p[i].zetaT - self.cst_p[i].zetaL)**2)**(1.5)
             den_c = (1+(-self.cst[i].D[-2] + self.cst[i].zetaT -
                         self.cst[i].zetaL)**2)**(1.5)

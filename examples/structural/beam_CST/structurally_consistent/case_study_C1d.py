@@ -21,12 +21,12 @@ abaqus = np.loadtxt('case_study_C1d.csv', delimiter=',')
 n = 2
 p = 2
 i = n*p+2
-D1 = [0]*(n+1)
+D1 = [0]*(n+2)
 m = i - n - 2
 D2 = list(np.linspace(0.2, 0.2*m, m))
 x0 = D1 + D2[:-1]
 g = CoordinateSystem.pCST(D=D1+D2, chord=[.2, .8], color=['b', 'r'],
-                          N1=[1, 1], N2=[1, 1], continuity='C2', free_end=True, root_fixed=True)
+                          N1=[1, 1], N2=[1, 1], continuity='C2', free_end=True, root_fixed=False)
 
 p = properties()
 l = loads(concentrated_load=[[0, -1]], load_s=[g.cst[0].length + g.cst[1].length])
@@ -46,7 +46,7 @@ print('D2', b.g.cst[1].D)
 #     [0.10688066710180918, 04r3et5r.04881687846018838, 0.0972217791492235]))
 # b.parameterized_solver(format_input, x0=np.array(
 #     [0.08817500333333335, 0.06470603, 0.06222951, -0.02810757]))
-# b.parameterized_solver(format_input, x0=x0)
+b.parameterized_solver(format_input, x0=x0, solver='lm')
 # x0 = [0.0016609031927165981, 0.0014583095210324206, 0.0014721447209376166, -
 #          0.0015928952913609152, 0.10242922551427547, 0.20275245669550482, -0.20183072908959696]
 # x0 = [0.0016609031927165981, 0.0014583095210324206, 0.0014721447209376166,
@@ -55,7 +55,7 @@ print('D2', b.g.cst[1].D)
 # b._residual(x0)
 plt.figure()
 # try:
-b.parameterized_solver(format_input, x0=x0)
+# b.parameterized_solver(format_input, x0=x0, solver='lm')
 # except:
 #     plt.legend()
 #     plt.ylim([-1, 1])

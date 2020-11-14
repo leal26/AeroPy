@@ -21,7 +21,7 @@ abaqus = np.loadtxt('case_study_C1c.csv', delimiter=',')
 n = 2
 p = 3
 i = n*p+2
-D1 = [0]*(n+2)
+D1 = [0]*(n+1)
 m = i - 2*n - 2
 D2 = list(np.linspace(0.1, 0.1*m, m))
 D3 = [-0.2]*(n)
@@ -33,7 +33,7 @@ print('x0', x0)
 g = CoordinateSystem.pCST(D=D,
                           chord=[.2, .5, .3], color=['b', 'r', 'g'],
                           N1=[1., 1, 1], N2=[1, 1, 1], continuity='C2',
-                          free_end=True)
+                          free_end=True, root_fixed=True)
 
 p = properties()
 l = loads(concentrated_load=[[0, -1]], load_s=[g.cst[0].length + g.cst[1].length + g.cst[2].length])
@@ -61,7 +61,7 @@ print('D3', b.g.cst[2].D)
 # x0 = [0.0160733147016186, -0.002225084058028139, -0.0020682982405123436, 0.18571910365412023]
 # b._residual(x0)
 
-b.parameterized_solver(format_input, x0=np.zeros(n_u))
+b.parameterized_solver(format_input, x0=np.zeros(n_u), solver='lm')
 print('Residual', b.R)
 print('r', b.r, len(b.r))
 print('s', b.g.s, len(b.g.s))

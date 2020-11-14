@@ -23,8 +23,11 @@ p = properties()
 l = loads(concentrated_load=[[0, -1]], load_s=[g.s[-1]])
 
 b = beam_chen(g, p, l, s=None, ignore_ends=True)
-b.parameterized_solver(format_input, x0=b.g.D[:-1])
-b._residual(b.g.D)
+# b.parameterized_solver(format_input, x0=b.g.D[:-1])
+x0 = list(np.array(b.g.D[:-1]) + np.array([0.00571429, 0.005,
+                                           0.00428571, 0.00357143, 0.00285714]))
+b.parameterized_solver(format_input, x0=x0)
+# b._residual(x0)
 
 # data = np.array([b.x, b.y]).T
 # np.savetxt('input_A7.csv', data, delimiter=',')
@@ -46,5 +49,10 @@ plt.figure()
 plt.plot(b.g.x1_grid[1:], b.M[1:], 'b', label='From forces')
 M = (b.p.young*b.p.inertia)*(b.g.rho - b.g_p.rho)
 plt.plot(b.g.x1_grid[1:], M[1:], 'r', label='From CST')
+plt.legend()
+
+plt.figure()
+plt.plot(b.g.x1_grid[1:], b.g.x3(b.g.x1_grid, diff='x11')[1:], 'b', label='x11')
+plt.plot(b.g.x1_grid[1:], b.g.rho[1:], '-r', label='rho')
 plt.legend()
 plt.show()

@@ -1,0 +1,67 @@
+from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import pickle
+
+from aeropy.geometry.airfoil import CST, rotate
+from aeropy.structural.beam import beam_chen
+from aeropy.structural.stable_solution import properties, loads
+from aeropy.geometry.parametric import CoordinateSystem
+
+
+def cst(x, *A):
+    g = CoordinateSystem.pCST(D=A,
+                              chord=[.4*chord, .6*chord],
+                              color=['b', 'r'], N1=[1., 1.], N2=[1., 1.],
+                              offset=-.0, continuity='C2', root_fixed=True)
+    y = []
+    for xi in x:
+        y.append(g.x3(np.array([xi]))[0])
+    return y
+
+
+plt.figure()
+
+raw_airfoil = np.loadtxt('input_ghuku.csv', delimiter=',')
+
+raw_airfoil = raw_airfoil[raw_airfoil[:, 0].argsort()]
+x = raw_airfoil[:, 0]
+y = raw_airfoil[:, 1]
+
+chord = 0.4385
+
+n = 2
+p = 2
+i = n*p+1
+popt, pcov = curve_fit(cst, x, y, p0=np.zeros(i), maxfev=10000)
+print('Solution: ', popt)
+print('Error: ', np.sqrt(np.diag(pcov)))
+
+g = CoordinateSystem.pCST(D=popt,
+                          chord=[.4*chord, .6*chord],
+                          color=['b', 'r'], N1=[1., 1.], N2=[1., 1.],
+                          offset=-.0, continuity='C2', root_fixed=True)
+s = g.calculate_s([51, 51], 1)
+p = properties()
+l = loads()
+b = beam_chen(g, p, l, s)
+print('D1', g.cst[0].D)
+print('D2', g.cst[1].D)
+# print('D3', g.cst[2].D)
+# b.length = b.g.arclength(b.g.chord)
+# print('length', b.length, b.g.arclength(b.g.chord))
+# print('s', b.s)
+b.g.calculate_x1(b.g.s)
+
+x_fit = x
+y_fit = []
+ddy_fit = []
+for xi in x_fit:
+    y_fit.append(b.g.x3(np.array([xi]))[0])
+    ddy_fit.append(b.g.x3(np.array([xi]), diff='x11')[0])
+plt.scatter(x, y, c='b', label='Raw')
+plt.scatter(x_fit, y_fit, c='r', label='Fit')
+plt.plot(x_fit[1:], ddy_fit[1:], 'g', label='dd')
+plt.legend()
+plt.show()

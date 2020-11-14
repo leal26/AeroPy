@@ -16,7 +16,7 @@ def format_input(input, g=None, g_p=None):
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-abaqus = np.loadtxt('case_study_C1.csv', delimiter=',')
+abaqus = np.loadtxt('case_study_C1b.csv', delimiter=',')
 
 D_n4 = [0.288197, 0.37918722, 0.21903394, 0.25925831, 0.24259769, 0.27278782,
         0.06528661, 0.07283469, 0.06692653, 0.0559131, -0.01268226, -0.00134043,
@@ -40,10 +40,10 @@ D_n2 = [0.3208729, 0.28457915, 0.2431048, 0.27140013, 0.06470603, 0.06222951,
 g = CoordinateSystem.pCST(D=D_n2,
                           chord=[.2, .7, .1], color=['b', 'r', 'g'],
                           N1=[.5, 1, 1], N2=[1, 1, 1], continuity='C2',
-                          free_end=True, rigid_LE=True)
+                          free_end=True, rigid_LE=True, root_fixed=False)
 
 p = properties()
-l = loads(concentrated_load=[[0, -1]], load_s=[g.cst[0].length + g.cst[1].length])
+l = loads(concentrated_load=[[0, -10]], load_s=[g.cst[0].length + g.cst[1].length])
 g.calculate_s(N=[21, 21, 21])
 b = beam_chen(g, p, l, s=None, ignore_ends=False)
 b.g.calculate_x1(b.g.s)
@@ -59,9 +59,10 @@ print('D3', b.g.cst[2].D)
 # b.parameterized_solver(format_input, x0=np.array(
 #     [0.10688066710180918, 0.04881687846018838, 0.0972217791492235]))
 b.parameterized_solver(format_input, x0=np.array(
-    [0.08817500333333335, 0.06470603, 0.06222951, -0.02810757]))
+    [0.08817500333333335, 0.06470603, 0.06222951, -0.02810757]), solver='lm')
 # b.parameterized_solver(format_input, x0=np.zeros(n_u))
 # b._residual([0.08817500333333335, 0.06470603, 0.06222951, -0.02810757])
+# 0.06470603, 0.06222951, -0.02810757
 print('Residual', b.R)
 print('r', b.r, len(b.r))
 print('s', b.g.s, len(b.g.s))

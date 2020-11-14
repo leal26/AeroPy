@@ -18,8 +18,9 @@ p = properties()
 l = loads(concentrated_load=[[0, -1]], load_s=[1])
 s = np.linspace(0, 1, 10)
 
-b = beam_chen(g, p, l, s, ignore_ends=True)
+b = beam_chen(g, p, l, s, ignore_ends=False)
 b.parameterized_solver(format_input, x0=g.D[:-1])
+# b._residual([0.00571429, 0.00428571, 0.00285714, -0.00571429])
 
 print('Dm/ds', np.gradient(b.p.inertia*b.p.young*(b.g.rho-b.g_p.rho), b.s))
 # b._residual([0.005714289063490557, 0.004285875208812112,
@@ -63,6 +64,7 @@ plt.plot(b.g.x1_grid, b.g.rho)
 
 plt.figure()
 plt.plot(b.g.x1_grid[1:], b.M[1:], 'b', label='From forces')
+print((b.p.young*b.p.inertia)*(b.g.rho - b.g_p.rho))
 M = (b.p.young*b.p.inertia)*(b.g.rho - b.g_p.rho)
 plt.plot(b.g.x1_grid[1:], M[1:], 'r', label='From CST')
 plt.legend()
