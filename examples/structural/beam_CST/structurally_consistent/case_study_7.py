@@ -53,17 +53,26 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 psi_spars = [0.2]
 m = len(psi_spars)
 
-g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0.],
+
+n = 2
+p = 2
+i = n*p+1
+
+g_upper = CoordinateSystem.pCST(D=i*[0., ],
                                 chord=[psi_spars[0], 1-psi_spars[0]],
                                 color=['b', 'r'], N1=[1., 1.], N2=[1., 1.],
                                 offset=.05, continuity='C2', free_end=True,
                                 root_fixed=True)
-g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0.],
+n = 2
+p = 3
+i = n*p+1
+
+g_lower = CoordinateSystem.pCST(D=i*[0., ],
                                 chord=[psi_spars[0], 0.7, 0.1],
                                 color=['b', 'r', 'g'], N1=[1., 1., 1.], N2=[1., 1., 1.],
                                 offset=-.05, continuity='C2', free_end=True,
                                 root_fixed=True, dependent=[True, False, False],
-                                length_preserving=True)
+                                length_preserving=False)
 
 g_upper.calculate_s(N=[11, 9])
 g_lower.calculate_s(N=[11, 8, 6])
@@ -97,7 +106,7 @@ _, _, n_l = g_lower._check_input([])
 #       0.0013324195475520374, -0.0009263075595432437, -8.113216580214986e-05, -4.477960680268073e-05]
 # a.formatted_residual(format_input=format_input, x0=Du + Dl)
 # constraint_f(input=Du + Dl)
-a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l))
+a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l), solver='gradient')
 # a.parameterized_solver(format_input=format_input, x0=np.array(Du+Dl))
 # a.bu.g.D =
 # a.bl.g.g_independent = a.bu.g

@@ -268,13 +268,12 @@ class CoordinateSystem(object):
         j = i - 1
         Ai0, Ai = self._select_D(i)
         error = 999
-        offset_x = 0
-        counter = 0
         while error > 1e-6:
-            prev = np.array([self.cst[i].chord, self.cst[i].zetaT,
-                             self.cst[i].zetaL, self.cst[i].D[0]])
+            prev = np.array([self.cst[i].chord, self.cst[i].chord*self.cst[i].zetaT,
+                             self.cst[i].chord*self.cst[i].zetaL, self.cst[i].D[0]])
 
             if i == 0:
+                offset_x = 0
                 self.A0[i] = self.D[0]
                 if self.root_fixed and self.N1[i] == 1:
                     self.zetaT[i] = -self.D[0]
@@ -325,19 +324,17 @@ class CoordinateSystem(object):
             # if i == 0:
             #     error = 0
             # else:
-            current = np.array([self.cst[i].chord, self.cst[i].zetaT,
-                                self.cst[i].zetaL, self.cst[i].D[0]])
+            current = np.array([self.cst[i].chord, self.cst[i].chord*self.cst[i].zetaT,
+                                self.cst[i].chord*self.cst[i].zetaL, self.cst[i].D[0]])
             error = np.linalg.norm(current-prev)
+            print('error', error)
             prev = current
-            counter += 1
 
     def _update_dependent(self, i):
         j = i - 1
         Ai0, Ai = self._select_D(i)
-
         error = 999
-        k = 0
-        while error > 1e-8:
+        while error > 1e-10:
             prev = np.array([self.cst[i].chord, self.cst[i].zetaT,
                              self.cst[i].zetaL, self.cst[i].D[0]])
             if i == 0:
@@ -391,7 +388,6 @@ class CoordinateSystem(object):
                                     self.cst[i].zetaL, self.cst[i].D[0]])
                 error = np.linalg.norm(current-prev)
                 prev = current
-            k = k + 1
         self.spar_i += 1
 
     def _select_D(self, i):

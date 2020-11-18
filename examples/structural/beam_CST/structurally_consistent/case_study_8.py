@@ -61,12 +61,15 @@ chords.append(1-psi_spars[-1])
 
 m = len(psi_spars)
 
-g_upper = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+n = 2
+p = 4
+i = n*p+1
+g_upper = CoordinateSystem.pCST(D=i*[0., ],
                                 chord=chords, color=['b', 'r', 'g', 'm'],
                                 N1=len(chords)*[1.], N2=len(chords)*[1.],
                                 offset=.05, continuity='C2', free_end=True,
                                 root_fixed=True)
-g_lower = CoordinateSystem.pCST(D=[0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+g_lower = CoordinateSystem.pCST(D=i*[0., ],
                                 chord=chords, color=['b', 'r', 'g', 'm'],
                                 N1=len(chords)*[1.], N2=len(chords)*[1.],
                                 offset=-.05, continuity='C2', free_end=True,
@@ -105,13 +108,17 @@ _, _, n_l = g_lower._check_input([])
 #       0.0013324195475520374, -0.0009263075595432437, -8.113216580214986e-05, -4.477960680268073e-05]
 # a.formatted_residual(format_input=format_input, x0=Du + Dl)
 # constraint_f(input=Du + Dl)
-a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l))
-# a.parameterized_solver(format_input=format_input, x0=np.array(Du+Dl))
-# a.bu.g.D =
+# a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l))
+x0 = [6.25098946e-03, 6.39223659e-03, 6.49298102e-03, 1.16135430e-02,
+      1.08314286e-02, 1.30855583e-02, 1.50252454e-02, 3.15241173e-03,
+      6.09392225e-03, 6.01280457e-03, 1.42014104e-02, 3.90711975e-03,
+      2.28507716e-06]
+a.formatted_residual(x0, format_input)
+# a.bu._residual = [-8.558721176656603e-06, -2.3724887005904228e-05, -
+#             2.5703233606010767e-05, 2.570852672379578e-05]
 # a.bl.g.g_independent = a.bu.g
-# a.bl.g.D = [0.0004397262495609969, 0.00022637077688929995, 1.397180190592703e-05, -0.00019761779295283623, -
-#             0.00161607199242832, -0.001289298714716886, -0.0009704188068808049, 7.713376263188075e-07, 2.6771486682555207e-06]
-
+# a.bl.g.D = [2.564255515102856e-05, 2.5228867540283518e-05, -
+#             2.2948311882368213e-05, -1.3479399620865539e-05, 1.222180368918317e-06]
 # a.bu.g.calculate_x1(a.bu.g.s)
 # a.bl.g.calculate_x1(a.bl.g.s)
 # a.bu.y = a.bu.g.x3(a.bu.x)
@@ -125,19 +132,20 @@ print('lower', a.bl.g.D)
 print('lower 1', a.bl.g.cst[0].D)
 print('lower 2', a.bl.g.cst[1].D)
 print('lower 3', a.bl.g.cst[2].D)
+print('lower 4', a.bl.g.cst[3].D)
+print('zetaL', a.bl.g.cst[0].zetaL, a.bl.g.cst[1].zetaL, a.bl.g.cst[2].zetaL, a.bl.g.cst[3].zetaL)
 print('loads', a.bl.l.concentrated_load, a.bu.l.concentrated_load)
 plt.figure()
-plt.plot(a.bu.g.x1_grid[1:], a.bu.M[1:], 'b', label='Upper')
-plt.plot(a.bl.g.x1_grid[1:], a.bl.M[1:], 'r', label='Lower')
+plt.plot(a.bu.g.x1_grid[1:], a.bu.M[1:], 'b', label='Upper (F)')
+plt.plot(a.bl.g.x1_grid[1:], a.bl.M[1:], 'r', label='Lower (F)')
 
 Ml = (a.bl.p.young*a.bl.p.inertia)*(a.bl.g.rho - a.bl.g_p.rho)
 Mu = (a.bu.p.young*a.bu.p.inertia)*(a.bu.g.rho - a.bu.g_p.rho)
-plt.plot(a.bu.g.x1_grid[1:], Mu[1:], '--b', label='Upper')
-plt.plot(a.bl.g.x1_grid[1:], Ml[1:], '--r', label='Lower')
+plt.plot(a.bu.g.x1_grid[1:], Mu[1:], '--b', label='Upper (CST)')
+plt.plot(a.bl.g.x1_grid[1:], Ml[1:], '--r', label='Lower (CST)')
 plt.legend()
 
 # print('chords', a.bl.g.chord, a.bu.g.chord)
-index = np.where(a.bl.s == a.spars_s[0])[0][0]
 plt.figure()
 plt.plot(a.bu.g_p.x1_grid, a.bu.g_p.x3(a.bu.g_p.x1_grid), 'b',
          label='Upper Parent', lw=3)
@@ -147,12 +155,16 @@ plt.plot(a.bl.g_p.x1_grid, a.bl.g_p.x3(a.bl.g_p.x1_grid), 'b', linestyle='dashed
          label='Lower Parent', lw=3)
 plt.plot(a.bl.g.x1_grid, a.bl.g.x3(a.bl.g.x1_grid), '.5', linestyle='dashed',
          label='Lower Child: %.3f N' % -l_upper.concentrated_load[0][-1], lw=3)
-xu_p = np.array([a.bu.g_p.x1_grid[index]])
-xl_p = np.array([a.bl.g_p.x1_grid[index]])
-plt.plot([xu_p, xl_p], [a.bu.g_p.x3(xu_p), a.bl.g_p.x3(xl_p)], 'b', lw=3)
-xu_c = np.array([a.bu.g.x1_grid[index]])
-xl_c = np.array([a.bl.g.x1_grid[index]])
-plt.plot([xu_c, xl_c], [a.bu.g.x3(xu_c), a.bl.g.x3(xl_c)], '.5', lw=3)
+
+for i in range(len(a.spars_s)):
+    index = np.where(a.bl.s == a.spars_s[i])[0][0]
+    xu_p = np.array([a.bu.g_p.x1_grid[index]])
+    xl_p = np.array([a.bl.g_p.x1_grid[index]])
+    plt.plot([xu_p, xl_p], [a.bu.g_p.x3(xu_p), a.bl.g_p.x3(xl_p)], 'b', lw=3)
+    xu_c = np.array([a.bu.g.x1_grid[index]])
+    xl_c = np.array([a.bl.g.x1_grid[index]])
+    plt.plot([xu_c, xl_c], [a.bu.g.x3(xu_c), a.bl.g.x3(xl_c)], '.5', lw=3)
+
 upper = np.loadtxt('case_study_8_upper.csv', delimiter=',')
 lower = np.loadtxt('case_study_8_lower.csv', delimiter=',')
 plt.scatter(upper[0, :], upper[1, :], c='.5', label='Abaqus', edgecolors='k',
@@ -161,6 +173,7 @@ plt.scatter(lower[0, :], lower[1, :], c='.5', edgecolors='k', zorder=10,
             marker="^")
 print('spars', a.bl.g.spar_x, a.bl.g.spar_y)
 plt.scatter([a.bl.g.spar_x], [a.bl.g.spar_y], c='g', label='Lower spar', zorder=20, s=40)
+
 # x = [a.bu.g.chord*a.bl.g.spar_psi_upper[0], a.bl.g.chord*a.bl.g.spar_psi[0]]
 # y = [a.bu.g.chord*a.bl.g.spar_xi_upper[0], a.bl.g.chord*a.bl.g.spar_xi[0]]
 # dx = x[1]-x[0]

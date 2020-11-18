@@ -446,6 +446,9 @@ class coupled_beams():
                              solver='gradient'):
         def formatted_residual_lm(x0):
             sol = self.formatted_residual(x0, format_input)
+            # print(np.append(self.bu.r, self.bl.r))
+            # print(len(np.append(self.bu.r, self.bl.r)))
+            # BREAK
             return np.append(self.bu.r, self.bl.r)
         bounds = []
         margin = 0.4
@@ -476,7 +479,7 @@ class coupled_beams():
 
         self.bu.y = self.bu.g.x3(self.bu.x)
         self.bl.y = self.bl.g.x3(self.bl.x)
-        print('sol', self.bu.g.D, self.bl.g.D)
+        print('sol', sol.x)
 
     def formatted_residual(self, x0, format_input):
         [Au, Al] = format_input(x0, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
