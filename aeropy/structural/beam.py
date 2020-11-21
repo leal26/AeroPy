@@ -118,8 +118,7 @@ class beam_chen():
         if self.ignore_ends:
             self.integral_ends()
         self.g_p = copy.deepcopy(geometry)
-        # if length_preserving:
-        #     self.g_p.internal_variables(self.g.length, origin=self.origin)
+
         self.g_p.calculate_x1(self.s, origin=origin, length_rigid=self.s[0])
         self.g_p.radius_curvature(self.g_p.x1_grid)
 
@@ -251,6 +250,10 @@ class beam_chen():
             print('x', self.g.x1_grid)
             print('s', self.s)
             print('rho', self.g.rho)
+            print('D', self.g.D)
+            print('chord', self.g.chord)
+            print('zetaL', self.g.zetaL)
+            print('zetaTL', self.g.zetaT)
             self.R = 100
             # BREAK
 
@@ -322,7 +325,7 @@ class beam_chen():
             self.calculate_resultants()
         self.calculate_M()
         self.calculate_residual()
-        print('R', self.R)
+        # print('R', self.R)
         return self.R
 
     def integral_ends(self):
@@ -407,8 +410,7 @@ class airfoil():
         sol = minimize(formatted_residual, x0, method='SLSQP')
         self.bu.g.D, self.bl.g.D = format_input(
             sol.x, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
-        # self.bu.g.internal_variables(self.bu.length, origin=self.bu.origin)
-        # self.bl.g.internal_variables(self.bl.length, origin=self.bl.origin)
+
         self.calculate_x()
 
         self.bu.y = self.bu.g.x3(self.bu.x)
@@ -473,8 +475,6 @@ class coupled_beams():
         if sum(self.bl.g.dependent) != 0:
             self.bl.g.g_independent = self.bu.g
         self.bl.g.D = Dl
-        # self.bu.g.internal_variables(self.bu.length, origin=self.bu.origin)
-        # self.bl.g.internal_variables(self.bl.length, origin=self.bl.origin)
         self.calculate_x()
 
         self.bu.y = self.bu.g.x3(self.bu.x)
@@ -495,13 +495,13 @@ class coupled_beams():
         R += self.bl._residual(Al)
         if self.spars_s is not None:
             self.calculate_resultants()
-        Ru = self.bu._residual(Au)
-        if sum(self.bl.g.dependent) != 0:
-            self.bl.g.g_independent = self.bu.g
-        Rl = self.bl._residual(Al)
-        R = .5*np.sqrt(Ru**2 + Rl**2)
+        self.bu.calculate_M()
+        self.bl.calculate_M()
+        self.bu.calculate_residual()
+        self.bl.calculate_residual()
+        R = .5*np.sqrt(self.bu.R**2 + self.bl.R**2)
 
-        print('R', R, Rl, Ru)
+        print('R', R, self.bl.R, self.bu.R)
         # BREAK
         return R
 

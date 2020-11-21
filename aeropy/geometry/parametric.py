@@ -145,6 +145,7 @@ class CoordinateSystem(object):
         c.zetaT = c.deltaz/c.chord
         c.zetaL = c.deltazLE/c.chord
         c.length = c.arclength()
+        c.dependent = False
         return c
 
     @classmethod
@@ -240,6 +241,7 @@ class CoordinateSystem(object):
                                               offset_x=offset_x, offset=offset))
             c.cst_p.append(copy.deepcopy(c.cst[-1]))
             c.cst[i].offset_s = offset_s
+            c.cst[i].dependent = c.dependent[i]
             offset_s += c.cst[i].length
         c.total_chord = sum([c.cst[i].chord for i in range(c.p)])
         c.total_length = sum([c.cst[i].length for i in range(c.p)])
@@ -327,78 +329,70 @@ class CoordinateSystem(object):
             current = np.array([self.cst[i].chord, self.cst[i].chord*self.cst[i].zetaT,
                                 self.cst[i].chord*self.cst[i].zetaL, self.cst[i].D[0]])
             error = np.linalg.norm(current-prev)
-            print('error', error)
+            # print('error', error)
             prev = current
 
     def _update_dependent(self, i):
         j = i - 1
         Ai0, Ai = self._select_D(i)
-        error = 999
-        while error > 1e-10:
-            prev = np.array([self.cst[i].chord, self.cst[i].zetaT,
-                             self.cst[i].zetaL, self.cst[i].D[0]])
-            if i == 0:
-                offset_x = 0
-                self.A1[i] = self.D[0]
-                self.cst[i].chord = self.spar_x[self.spar_i]
-                self.zetaT[i] = (self.spar_y[self.spar_i]-self.offset)/self.cst[i].chord
-                self.zetaL[i] = 0
-                if self.root_fixed:
-                    self.A0[i] = - self.zetaT[i]
-                else:
-                    self.A0[i] = self.D[0]
-            elif self.N1[i] == 1. and self.N2[i] == 1:
-                offset_x = self.cst[j].offset_x + self.cst[j].chord
-                self.cst[i].chord = self.spar_x[self.spar_i] - offset_x
-                self.zetaT[i] = (self.spar_y[self.spar_i]-self.offset)/self.cst[i].chord
-                if self.continuity == 'C2':
-                    ddj = self.n*self.cst[j].D[-3] - (self.N1[j]+self.n)*self.cst[j].D[-2]
 
-                    self.A1[i] = (self.cst[i].chord/self.cst[j].chord *
-                                  ddj+self.A0[i]*(self.n+1))/self.n
-                elif self.continuity == 'C1':
-                    raise(NotImplementedError)
-
-                self.zetaL[i] = self.cst[j].chord/self.cst[i].chord*self.zetaT[j]
-                self.A0[i] = -self.cst[j].D[-2] + self.zetaT[j] - \
-                    self.zetaT[i] + self.zetaL[i] - self.zetaL[j]
+        if i == 0:
+            offset_x = 0
+            self.A1[i] = self.D[0]
+            self.cst[i].chord = self.spar_x[self.spar_i]
+            self.zetaT[i] = (self.spar_y[self.spar_i]-self.offset)/self.cst[i].chord
+            self.zetaL[i] = 0
+            if self.root_fixed:
+                self.A0[i] = - self.zetaT[i]
             else:
-                raise(NotImplementedError)
-            self.cst[i]._D[0] = self.A0[i]
-            self.cst[i]._D[1] = self.A1[i]
-            self.cst[i]._D[-1] = self.zetaT[i]
-            self.cst[i].zetaT = self.zetaT[i]
-            self.cst[i].zetaL = self.zetaL[i]
-            self.cst[i].offset_x = offset_x
+                self.A0[i] = self.D[0]
 
-            An = self._calculate_Dn(i, Ai0, Ai)
+        elif self.N1[i] == 1. and self.N2[i] == 1:
+            offset_x = self.cst[j].offset_x + self.cst[j].chord
+            self.cst[i].chord = self.spar_x[self.spar_i] - offset_x
+            self.zetaL[i] = self.cst[j].chord/self.cst[i].chord*self.zetaT[j]
+            self.zetaT[i] = (self.spar_y[self.spar_i]-self.offset)/self.cst[i].chord
+            self.A0[i] = -self.cst[j].D[-2] + self.zetaT[j] - \
+                self.zetaT[i] + self.zetaL[i] - self.zetaL[j]
+
             if self.continuity == 'C2':
-                Di = [self.A0[i], self.A1[i]] + list(Ai0) + [An, self.zetaT[i]]
+                ddj = self.n*self.cst[j].D[-3] - (self.N1[j]+self.n)*self.cst[j].D[-2]
+
+                self.A1[i] = (self.cst[i].chord/self.cst[j].chord *
+                              ddj+self.A0[i]*(self.n+1))/self.n
             elif self.continuity == 'C1':
                 raise(NotImplementedError)
+        else:
+            raise(NotImplementedError)
+        self.cst[i]._D[0] = self.A0[i]
+        self.cst[i]._D[1] = self.A1[i]
+        self.cst[i]._D[-1] = self.zetaT[i]
+        self.cst[i].zetaT = self.zetaT[i]
+        self.cst[i].zetaL = self.zetaL[i]
+        self.cst[i].offset_x = offset_x
 
-            self.cst[i].D = Di
-            self.cst[i].internal_variables(self.cst[i].length)
-            if i == 0:
-                error = 0
-            else:
-                # current = np.array([chord0, self.zetaT[i],
-                #                     self.zetaL[i], self.A0[i]])
-                current = np.array([self.cst[i].chord, self.cst[i].zetaT,
-                                    self.cst[i].zetaL, self.cst[i].D[0]])
-                error = np.linalg.norm(current-prev)
-                prev = current
+        An = self.cst[i].D[-2]
+
+        if self.continuity == 'C2':
+            Di = [self.A0[i], self.A1[i]] + list(Ai0) + [An, self.zetaT[i]]
+        elif self.continuity == 'C1':
+            raise(NotImplementedError)
+
+        self.cst[i].D = Di
+
+        self.cst[i].internal_variables(self.cst[i].length)
+
         self.spar_i += 1
 
     def _select_D(self, i):
         if i == 0:
             if self.continuity == 'C2':
-                self.n_end = 1
+                if self.dependent[i] and self.root_fixed:
+                    self.n_end = 0
+                else:
+                    self.n_end = 1
             else:
                 self.n_end = 0
-
-            if self.dependent[i] and not self.root_fixed:
-                self.n_end += 1
 
         if i == 1 and self.rigid_LE:
             self.n_end = 0
@@ -408,8 +402,8 @@ class CoordinateSystem(object):
             self.n_start += 1
 
         if self.dependent[i]:
-            if self.length_preserving:
-                modifier = 2
+            if i == 0:
+                modifier = 0
             else:
                 modifier = 1
         else:
@@ -432,44 +426,11 @@ class CoordinateSystem(object):
                 self.n_end = self.n_start + self.n - modifier
             Ai = self.D[self.n_start:self.n_end]
             Ai0 = Ai[:-1]
-        # print('n', self.n_start, self.n_end, Ai)
+        # print('n', i, self.n_start, self.n_end, Ai)
         return (Ai0, Ai)
 
     def _calculate_Dn(self, i, Ai0, Ai=None):
-        def f(An):
-            self.cst[i].D[-2] = An[0]
-            self.cst[i].chord = chord_target
-            self.cst[i].internal_variables(self.cst[i].length, origin=0)
-            # length_current = self.cst[i].arclength(self.cst[i].chord)
-            return self.cst[i].chord - chord_target
-
-        def fprime(An):
-            self.cst[i]._D[-2] = An[0]
-            return [integrate.quad(integrand, 0, chord_target, limit=500)[0]]
-
-        def integrand(x):
-            psi = x/self.cst[i].chord
-            d = self.cst[i].x3(np.array([x]), diff='x1', offset=False)
-            n = self.n
-            dA = (1+psi)*(-psi*(2+n)+(1+n))
-            return d*dA/(1+(d)**2)**(1/2)
-
-        if self.dependent[i]:
-            if self.length_preserving:
-                chord_target = self.cst[i].chord
-                # r = np.linspace(-5, 5, 100)
-                # rf = []
-                # for j in range(len(r)):
-                #     rf.append(f([r[j]]))
-                # plt.figure()
-                # plt.plot(r, rf)
-                # plt.show()
-
-                An = optimize.fsolve(f, self.cst[i].D[-2], fprime=fprime)[0]
-            else:
-                An = Ai[-1]
-            # length_current = self.cst[i].arclength(self.cst[i].chord)
-        elif i == self.p-1 and self.free_end:
+        if i == self.p-1 and self.free_end:
             Pi = self.cst_p[i].D[:-1]
             chordp = self.cst_p[i].chord
             # print('chords', chordp, self.cst[i].chord)
@@ -482,7 +443,6 @@ class CoordinateSystem(object):
             else:
                 An = (-den_c*self.cst[i].chord*rho_p + Ai0[-1]*self.n)/(self.n+1)
         else:
-
             An = Ai[-1]
         return An
 
@@ -973,16 +933,47 @@ class CoordinateSystem(object):
             self.rho = rho
 
     def internal_variables(self, target_length, origin=0):
+        def f(An):
+            self.D[-2] = An
+            length = self.arclength()
+            # print('error', An, self.length - length)
+            return self.length - length
+
+        def fprime(An):
+            self._D[-2] = An[0]
+            return [integrate.quad(integrand, 0, self.chord, limit=500)[0]]
+
+        def integrand(x):
+            psi = x/self.chord
+            d = self.x3(np.array([x]), diff='x1', offset=False)
+            n = self.n
+            dA = (1+psi)*(-psi*(2+n)+(1+n))
+            return d*dA/(1+(d)**2)**(1/2)
+
         # At first we utilize the non-dimensional trailing edge thickness
         self.zetaT = self.D[-1]
         origin = origin/self.chord
-        self.chord = 1
+        # print('dependent', self.dependent)
 
-        nondimensional_length = self.arclength(chord=1., origin=origin/self.chord)
+        if self.dependent:
+            self.D[-2] = optimize.fsolve(f, self.D[-2], fprime=fprime)[0]
 
-        self.chord = target_length/nondimensional_length
-        self.deltaz = self.zetaT*self.chord
-        self.deltazLE = self.zetaL*self.chord
+            # plt.figure()
+            # plt.scatter([self.D[-2]], [f(self.D[-2])])
+            # An = np.linspace(-1, 1)
+            # r = []
+            # for i in range(len(An)):
+            #     r.append(f(An[i]))
+            #
+            # plt.plot(An, r)
+            # plt.show()
+            self.D[-2] = optimize.fsolve(f, self.D[-2], fprime=fprime)[0]
+        else:
+            self.chord = 1
+            nondimensional_length = self.arclength(chord=1., origin=origin/self.chord)
+            self.chord = target_length/nondimensional_length
+            self.deltaz = self.zetaT*self.chord
+            self.deltazLE = self.zetaL*self.chord
 
     def calculate_angles(self):
         self.cos = self.x1(self.x1_grid, 'theta1')
@@ -1009,9 +1000,6 @@ class CoordinateSystem(object):
         if self.continuity == 'C2':
             dependent += (self.p-1)
 
-        if self.length_preserving:
-            dependent += 2*np.count_nonzero(self.dependent)
-        else:
-            dependent += 1*np.count_nonzero(self.dependent)
+        dependent += 2*np.count_nonzero(self.dependent)
         independent = total - dependent
         return len(input) == independent, len(input), independent

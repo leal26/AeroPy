@@ -76,8 +76,8 @@ g_lower = CoordinateSystem.pCST(D=i*[0., ],
                                 root_fixed=True,
                                 dependent=[True, True, True, False])
 
-g_upper.calculate_s(N=[11, 9, 9, 5])
-g_lower.calculate_s(N=[11, 9, 9, 5])
+g_upper.calculate_s(N=[11, 21, 21, 11])
+g_lower.calculate_s(N=[11, 21, 21, 11])
 p_upper = properties()
 p_lower = properties()
 l_upper = loads(concentrated_load=[[-100*np.sqrt(2)/2, -100*np.sqrt(2)/2]], load_s=[1])
@@ -97,7 +97,8 @@ constraints = ({'type': 'eq', 'fun': constraint_f})
 # g_upper.D[:-1]) + list(g_lower.D[:1]) + list(g_lower.D[2:-1]))
 _, _, n_u = g_upper._check_input([])
 _, _, n_l = g_lower._check_input([])
-
+# print('n', n_l, n_u)
+# BREAK
 # Du = [6.15460393e-05, 2.11765046e-04, 3.60480211e-04, 5.08573998e-04,
 #       2.11616879e-03, 1.69337891e-03]
 # Dl = [-8.76477411e-05, -2.37694753e-04, -3.86058461e-04, -1.61021055e-03,
@@ -108,11 +109,12 @@ _, _, n_l = g_lower._check_input([])
 #       0.0013324195475520374, -0.0009263075595432437, -8.113216580214986e-05, -4.477960680268073e-05]
 # a.formatted_residual(format_input=format_input, x0=Du + Dl)
 # constraint_f(input=Du + Dl)
-# a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l))
+# a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l), solver='lm')
 x0 = [6.25098946e-03, 6.39223659e-03, 6.49298102e-03, 1.16135430e-02,
       1.08314286e-02, 1.30855583e-02, 1.50252454e-02, 3.15241173e-03,
-      6.09392225e-03, 6.01280457e-03, 1.42014104e-02, 3.90711975e-03,
-      2.28507716e-06]
+      6.09392225e-03, 2.28507716e-06]
+x0 = [0, ]*len(x0)
+x0[-2] = 0.01
 a.formatted_residual(x0, format_input)
 # a.bu._residual = [-8.558721176656603e-06, -2.3724887005904228e-05, -
 #             2.5703233606010767e-05, 2.570852672379578e-05]
@@ -124,17 +126,21 @@ a.formatted_residual(x0, format_input)
 # a.bu.y = a.bu.g.x3(a.bu.x)
 # a.bl.y = a.bl.g.x3(a.bl.x)
 
-print(a.bu.g.D, a.bl.g.D)
 print('upper', a.bu.g.D)
 print('upper 1', a.bu.g.cst[0].D)
 print('upper 2', a.bu.g.cst[1].D)
+print('upper 3', a.bu.g.cst[2].D)
+print('upper 4', a.bu.g.cst[3].D)
 print('lower', a.bl.g.D)
 print('lower 1', a.bl.g.cst[0].D)
 print('lower 2', a.bl.g.cst[1].D)
 print('lower 3', a.bl.g.cst[2].D)
 print('lower 4', a.bl.g.cst[3].D)
-print('zetaL', a.bl.g.cst[0].zetaL, a.bl.g.cst[1].zetaL, a.bl.g.cst[2].zetaL, a.bl.g.cst[3].zetaL)
+print('zetaT', a.bl.g.cst[0].zetaT, a.bl.g.cst[1].zetaT, a.bl.g.cst[2].zetaT, a.bl.g.cst[3].zetaT)
 print('loads', a.bl.l.concentrated_load, a.bu.l.concentrated_load)
+print('lengths', a.bl.g.cst[0].length, a.bl.g.cst[1].length,
+      a.bl.g.cst[2].length, a.bl.g.cst[3].length)
+print('x', a.bl.g.x1_grid)
 plt.figure()
 plt.plot(a.bu.g.x1_grid[1:], a.bu.M[1:], 'b', label='Upper (F)')
 plt.plot(a.bl.g.x1_grid[1:], a.bl.M[1:], 'r', label='Lower (F)')
