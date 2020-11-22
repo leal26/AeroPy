@@ -61,15 +61,16 @@ chords.append(1-psi_spars[-1])
 
 m = len(psi_spars)
 
-n = 2
+n = 3
 p = 4
 i = n*p+1
-g_upper = CoordinateSystem.pCST(D=i*[0., ],
+print([0.01*ii for ii in range(i)])
+g_upper = CoordinateSystem.pCST(D=i*[0, ],
                                 chord=chords, color=['b', 'r', 'g', 'm'],
                                 N1=len(chords)*[1.], N2=len(chords)*[1.],
                                 offset=.05, continuity='C2', free_end=True,
                                 root_fixed=True)
-g_lower = CoordinateSystem.pCST(D=i*[0., ],
+g_lower = CoordinateSystem.pCST(D=i*[0, ],
                                 chord=chords, color=['b', 'r', 'g', 'm'],
                                 N1=len(chords)*[1.], N2=len(chords)*[1.],
                                 offset=-.05, continuity='C2', free_end=True,
@@ -112,9 +113,13 @@ _, _, n_l = g_lower._check_input([])
 # a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l), solver='lm')
 x0 = [6.25098946e-03, 6.39223659e-03, 6.49298102e-03, 1.16135430e-02,
       1.08314286e-02, 1.30855583e-02, 1.50252454e-02, 3.15241173e-03,
+      1.08314286e-02, 1.30855583e-02, 1.50252454e-02, 3.15241173e-03,
+      1.08314286e-02, 1.30855583e-02, 1.50252454e-02, 3.15241173e-03,
       6.09392225e-03, 2.28507716e-06]
-x0 = [0, ]*len(x0)
-x0[-2] = 0.01
+# x0 = [i*0.01 for i in range(12)] + [i*0.01 for i in range(6)]
+# x0 = [0, ]*len(x0)
+# x0[-2] = 0.01
+print('n', n_l, n_u)
 a.formatted_residual(x0, format_input)
 # a.bu._residual = [-8.558721176656603e-06, -2.3724887005904228e-05, -
 #             2.5703233606010767e-05, 2.570852672379578e-05]

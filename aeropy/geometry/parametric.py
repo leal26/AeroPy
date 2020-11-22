@@ -374,7 +374,7 @@ class CoordinateSystem(object):
         An = self.cst[i].D[-2]
 
         if self.continuity == 'C2':
-            Di = [self.A0[i], self.A1[i]] + list(Ai0) + [An, self.zetaT[i]]
+            Di = [self.A0[i], self.A1[i]] + list(Ai) + [An, self.zetaT[i]]
         elif self.continuity == 'C1':
             raise(NotImplementedError)
 
@@ -387,10 +387,7 @@ class CoordinateSystem(object):
     def _select_D(self, i):
         if i == 0:
             if self.continuity == 'C2':
-                if self.dependent[i] and self.root_fixed:
-                    self.n_end = 0
-                else:
-                    self.n_end = 1
+                self.n_end = 1
             else:
                 self.n_end = 0
 
@@ -403,9 +400,9 @@ class CoordinateSystem(object):
 
         if self.dependent[i]:
             if i == 0:
-                modifier = 0
+                modifier = 2
             else:
-                modifier = 1
+                modifier = 2
         else:
             modifier = 0
         if i == 1 and self.rigid_LE:
