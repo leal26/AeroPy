@@ -242,6 +242,7 @@ class CoordinateSystem(object):
             c.cst_p.append(copy.deepcopy(c.cst[-1]))
             c.cst[i].offset_s = offset_s
             c.cst[i].dependent = c.dependent[i]
+            c.cst[i].i = i
             offset_s += c.cst[i].length
         c.total_chord = sum([c.cst[i].chord for i in range(c.p)])
         c.total_length = sum([c.cst[i].length for i in range(c.p)])
@@ -322,6 +323,7 @@ class CoordinateSystem(object):
             #
             # y = self.x3(x)
             # plt.plot(x, y, label=(self.cst[0].chord, self.cst[1].chord))
+
             self.cst[i].internal_variables(self.cst[i].length)
             # if i == 0:
             #     error = 0
@@ -374,7 +376,7 @@ class CoordinateSystem(object):
         An = self.cst[i].D[-2]
 
         if self.continuity == 'C2':
-            Di = [self.A0[i], self.A1[i]] + list(Ai) + [An, self.zetaT[i]]
+            Di = [self.A0[i], self.A1[i]] + list(Ai) + [self.zetaT[i]]
         elif self.continuity == 'C1':
             raise(NotImplementedError)
 
@@ -399,10 +401,7 @@ class CoordinateSystem(object):
             self.n_start += 1
 
         if self.dependent[i]:
-            if i == 0:
-                modifier = 2
-            else:
-                modifier = 2
+            modifier = 1
         else:
             modifier = 0
         if i == 1 and self.rigid_LE:
@@ -719,12 +718,12 @@ class CoordinateSystem(object):
             else:
                 dr = self.x3(np.array([x1-self.tol]), 'x1')
         self.darc[index] = np.sqrt(1 + dr[0]**2)
-        return integrate.trapz(self.darc[:index+1], self.x1_grid[:index+1]-self.offset_x)
+        return integrate.simps(self.darc[:index+1], self.x1_grid[:index+1]-self.offset_x)
 
     def improper_arclength_index(self, index):
         x1 = self.x1_grid[index]
         self.darc[index] = self.bounded_dr(x1)
-        bounded_integral = integrate.trapz(self.darc[:index+1], self.x1_grid[:index+1])
+        bounded_integral = integrate.simps(self.darc[:index+1], self.x1_grid[:index+1])
         return bounded_integral + self.unbounded_integral(x1, 0)
 
     def arclength_chord(self):
@@ -736,14 +735,14 @@ class CoordinateSystem(object):
             dr = self.x3(np.array([x1]), 'x1', offset=False)
             self.darc[index] = np.sqrt(1 + dr[0]**2)
         self.darc[-1] = np.sqrt(1 + (-self.D[-2]+self.D[-1]-self.zetaL)**2)
-        return integrate.trapz(self.darc, self.x1_grid)
+        return integrate.simps(self.darc, self.x1_grid)
 
     def improper_arclength_chord(self):
         self.darc = np.zeros(len(self.x1_grid))
         for index in range(1, len(self.x1_grid)):
             x1 = self.x1_grid[index]
             self.darc[index] = self.bounded_dr(x1)
-        bounded_integral = integrate.trapz(self.darc, self.x1_grid)
+        bounded_integral = integrate.simps(self.darc, self.x1_grid)
         return bounded_integral + self.unbounded_integral(self.chord)
 
     def bounded_dr(self, x):
@@ -782,6 +781,7 @@ class CoordinateSystem(object):
             self.s = length_target
             rigid_n = 0
             for i in range(self.p):
+                print(i)
                 if i == 0 and self.rigid_LE:
                     rigid_n = len(self.cst[i].indexes)
                     self.cst[i].x1_grid = np.linspace(0, self.cst[i].chord,
@@ -801,6 +801,7 @@ class CoordinateSystem(object):
             else:
                 self.x1_grid = x1_grid
         else:
+            print('x1', self.D)
             x1 = []
             if len(length_target) == 1:
                 target = length_target[0]
@@ -930,14 +931,14 @@ class CoordinateSystem(object):
             self.rho = rho
 
     def internal_variables(self, target_length, origin=0):
-        def f(An):
-            self.D[-2] = An
+        def f(k):
+            self.D[i_start:-1] = k*An
             length = self.arclength()
-            # print('error', An, self.length - length)
+            # print('k', k, self.D[-2], self.D[-3], self.length - length)
             return self.length - length
 
-        def fprime(An):
-            self._D[-2] = An[0]
+        def fprime(k):
+            self.D[i_start:-1] = k[0]*An
             return [integrate.quad(integrand, 0, self.chord, limit=500)[0]]
 
         def integrand(x):
@@ -952,19 +953,28 @@ class CoordinateSystem(object):
         origin = origin/self.chord
         # print('dependent', self.dependent)
 
-        if self.dependent:
-            self.D[-2] = optimize.fsolve(f, self.D[-2], fprime=fprime)[0]
+        if self.i == 0:
+            i_start = 1
+        else:
+            i_start = 2
 
+        if self.dependent:
+            An = np.copy(self.D[i_start:-1])
+            print('before', An)
+            k = optimize.fsolve(f, 1, fprime=fprime)[0]
+            # self.D[-2] = k*An[1]
+            # self.D[-3] = k*An[0]
             # plt.figure()
-            # plt.scatter([self.D[-2]], [f(self.D[-2])])
-            # An = np.linspace(-1, 1)
+            # plt.scatter([k], [f(k)])
+            # ki = np.linspace(-10, 10)
             # r = []
-            # for i in range(len(An)):
-            #     r.append(f(An[i]))
+            # for i in range(len(ki)):
+            #     r.append(copy.deepcopy(f(ki[i])))
             #
-            # plt.plot(An, r)
+            # plt.plot(ki, r)
             # plt.show()
-            self.D[-2] = optimize.fsolve(f, self.D[-2], fprime=fprime)[0]
+            self.D[i_start:-1] = k*An
+            print('after', self.D[2:-1])
         else:
             self.chord = 1
             nondimensional_length = self.arclength(chord=1., origin=origin/self.chord)
@@ -997,6 +1007,6 @@ class CoordinateSystem(object):
         if self.continuity == 'C2':
             dependent += (self.p-1)
 
-        dependent += 2*np.count_nonzero(self.dependent)
+        dependent += np.count_nonzero(self.dependent)
         independent = total - dependent
         return len(input) == independent, len(input), independent

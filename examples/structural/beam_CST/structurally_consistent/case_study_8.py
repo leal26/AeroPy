@@ -61,7 +61,7 @@ chords.append(1-psi_spars[-1])
 
 m = len(psi_spars)
 
-n = 3
+n = 2
 p = 4
 i = n*p+1
 print([0.01*ii for ii in range(i)])
@@ -77,8 +77,8 @@ g_lower = CoordinateSystem.pCST(D=i*[0, ],
                                 root_fixed=True,
                                 dependent=[True, True, True, False])
 
-g_upper.calculate_s(N=[11, 21, 21, 11])
-g_lower.calculate_s(N=[11, 21, 21, 11])
+g_upper.calculate_s(N=[21, 21, 21, 11])
+g_lower.calculate_s(N=[21, 21, 21, 11])
 p_upper = properties()
 p_lower = properties()
 l_upper = loads(concentrated_load=[[-100*np.sqrt(2)/2, -100*np.sqrt(2)/2]], load_s=[1])
@@ -110,16 +110,17 @@ _, _, n_l = g_lower._check_input([])
 #       0.0013324195475520374, -0.0009263075595432437, -8.113216580214986e-05, -4.477960680268073e-05]
 # a.formatted_residual(format_input=format_input, x0=Du + Dl)
 # constraint_f(input=Du + Dl)
-# a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l), solver='lm')
-x0 = [6.25098946e-03, 6.39223659e-03, 6.49298102e-03, 1.16135430e-02,
+# a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l))
+x0 = [0, 0, 0, 0,
       1.08314286e-02, 1.30855583e-02, 1.50252454e-02, 3.15241173e-03,
-      1.08314286e-02, 1.30855583e-02, 1.50252454e-02, 3.15241173e-03,
-      1.08314286e-02, 1.30855583e-02, 1.50252454e-02, 3.15241173e-03,
+      # 1.18314286e-02, 1.40855583e-02, 1.60252454e-02, 3.25241173e-03,
+      # 1.28314286e-02, 1.32855583e-02, 1.52252454e-02, 3.12241173e-03,
+      1.38314286e-02, 1.33855583e-02, 1.53252454e-02,
       6.09392225e-03, 2.28507716e-06]
 # x0 = [i*0.01 for i in range(12)] + [i*0.01 for i in range(6)]
 # x0 = [0, ]*len(x0)
 # x0[-2] = 0.01
-print('n', n_l, n_u)
+# print('n', n_l, n_u)
 a.formatted_residual(x0, format_input)
 # a.bu._residual = [-8.558721176656603e-06, -2.3724887005904228e-05, -
 #             2.5703233606010767e-05, 2.570852672379578e-05]
@@ -196,6 +197,7 @@ plt.scatter([a.bl.g.spar_x], [a.bl.g.spar_y], c='g', label='Lower spar', zorder=
 # plt.arrow(x[0], y[0], -a.bl.g.spar_directions[0][0]*a.bl.g.delta_P[0],
 #           -a.bl.g.spar_directions[0][1]*a.bl.g.delta_P[0])
 # print(a.bl.g.delta_P[0])
+plt.axis('equal')
 plt.legend()
 # plt.gca().set_aspect('equal', adjustable='box')
 plt.show()
