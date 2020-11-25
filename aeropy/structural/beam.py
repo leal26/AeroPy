@@ -5,7 +5,7 @@ import copy
 from findiff import FinDiff
 import numpy as np
 from scipy.integrate import quad, trapz
-from scipy.optimize import minimize, curve_fit, differential_evolution, least_squares
+from scipy.optimize import minimize, curve_fit, differential_evolution, least_squares, fsolve
 import matplotlib.pyplot as plt
 
 
@@ -471,10 +471,7 @@ class coupled_beams():
         #                * [[-.04, .04]],
         Du, Dl = format_input(
             sol.x, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
-        self.bu.g.D = Du
-        if sum(self.bl.g.dependent) != 0:
-            self.bl.g.g_independent = self.bu.g
-        self.bl.g.D = Dl
+        self.update(Du, Dl)
         self.calculate_x()
 
         self.bu.y = self.bu.g.x3(self.bu.x)
@@ -488,13 +485,25 @@ class coupled_beams():
         self.bu.l.concentrated_s = self.bu.l.external_s.copy()
         self.bl.l.concentrated_s = self.bl.l.external_s.copy()
         self.calculate_x()
+        self.update(Au, Al)
+        self.calculate_x()
         self.calculate_force()
-        R = self.bu._residual(Au)
-        if sum(self.bl.g.dependent) != 0:
-            self.bl.g.g_independent = self.bu.g
-        R += self.bl._residual(Al)
-        if self.spars_s is not None:
-            self.calculate_resultants()
+
+        self.bu.x = self.bu.g.x1_grid
+        self.bl.x = self.bl.g.x1_grid
+
+        self.bu.y = self.bu.g.x3(self.bu.x)
+        self.bl.y = self.bl.g.x3(self.bl.x)
+
+        if self.bu.l.follower:
+            self.bu.g.calculate_angles()
+            self.bl.g.calculate_angles()
+
+        self.bu.g.radius_curvature(self.bu.g.x1_grid)
+        self.bl.g.radius_curvature(self.bl.g.x1_grid)
+
+        self.calculate_resultants()
+
         self.bu.calculate_M()
         self.bl.calculate_M()
         self.bu.calculate_residual()
@@ -504,6 +513,49 @@ class coupled_beams():
         print('R', R, self.bl.R, self.bu.R)
         # BREAK
         return R
+
+    def update(self, Au, Al):
+        def f(An):
+            A[A_index] = An[0]
+            # print(A)
+            self.bu.g.D = A
+            # print('upper 1', self.bu.g.cst[0].D)
+            # print('upper 2', self.bu.g.cst[1].D)
+            # print('upper 3', self.bu.g.cst[2].D)
+            # print('upper 4', self.bu.g.cst[3].D)
+            self.bl.g.g_independent = self.bu.g
+            self.bl.g.D = Al
+            # calculate distance between spars
+            if index == 0:
+                c_upper = self.bl.g.spar_x[index]
+            else:
+                c_upper = self.bl.g.spar_x[index] - self.bl.g.spar_x[index-1]
+            self.bl.g.cst[index].internal_variables(self.bl.g.cst[index].length)
+            c_lower = self.bl.g.cst[index].chord
+            # iterate until both were the same
+            # print(c_upper, c_lower, A)
+            return c_upper - c_lower
+
+        # print('Au', Au)
+        # print('Al', Al)
+        A = []
+        for index in range(self.bu.g.p):
+            if index == 0:
+                i_end = 2
+                A += Au[:i_end]
+                Au = Au[i_end:]
+            else:
+                i_end = 1
+                A += Au[:i_end]
+                Au = Au[i_end:]
+            if index != self.bu.g.p-1:
+                A += [self.bu.g.cst[index].D[-2]]
+
+        A_index = 2
+        for index in range(self.bu.g.p-1):
+            sol = fsolve(f, self.bu.g_p.cst[index].D[-2])[0]
+            f([sol])
+            A_index += 2
 
     def calculate_force(self):
         if self.coupled_forces:

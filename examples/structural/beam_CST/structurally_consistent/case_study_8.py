@@ -41,7 +41,7 @@ def format_u(input, g=None, g_p=None):
 
 def format_input(input, gu=None, gu_p=None, gl=None, gl_p=None):
     _, _, n_u = g_upper._check_input([])
-
+    n_u = n_u - np.count_nonzero(gl.dependent)
     Au = format_u(input[:n_u], gu, gu_p)
     Al = format_u(input[n_u:], gl, gl_p)
     return Au, Al
@@ -64,7 +64,7 @@ m = len(psi_spars)
 n = 2
 p = 4
 i = n*p+1
-print([0.01*ii for ii in range(i)])
+
 g_upper = CoordinateSystem.pCST(D=i*[0, ],
                                 chord=chords, color=['b', 'r', 'g', 'm'],
                                 N1=len(chords)*[1.], N2=len(chords)*[1.],
@@ -77,8 +77,8 @@ g_lower = CoordinateSystem.pCST(D=i*[0, ],
                                 root_fixed=True,
                                 dependent=[True, True, True, False])
 
-g_upper.calculate_s(N=[21, 21, 21, 11])
-g_lower.calculate_s(N=[21, 21, 21, 11])
+g_upper.calculate_s(N=[11, 11, 11, 11])
+g_lower.calculate_s(N=[11, 11, 11, 11])
 p_upper = properties()
 p_lower = properties()
 l_upper = loads(concentrated_load=[[-100*np.sqrt(2)/2, -100*np.sqrt(2)/2]], load_s=[1])
@@ -98,39 +98,20 @@ constraints = ({'type': 'eq', 'fun': constraint_f})
 # g_upper.D[:-1]) + list(g_lower.D[:1]) + list(g_lower.D[2:-1]))
 _, _, n_u = g_upper._check_input([])
 _, _, n_l = g_lower._check_input([])
-# print('n', n_l, n_u)
-# BREAK
-# Du = [6.15460393e-05, 2.11765046e-04, 3.60480211e-04, 5.08573998e-04,
-#       2.11616879e-03, 1.69337891e-03]
-# Dl = [-8.76477411e-05, -2.37694753e-04, -3.86058461e-04, -1.61021055e-03,
-#       -1.29029487e-03, -9.66398617e-04, -6.92314561e-07,  5.36105657e-07]
-# Du = [-0.0004251407028303019, 0.0005830925145902994, 0.0002494348554951289,
-#       0.0004251759025308469, 0.0021149888635737, 0.0016923557171365678]
-# Dl = [-0.00031124509431450497, -0.0005866790789420483, -0.0006513744520462747, -0.0016040872875008427, -
-#       0.0013324195475520374, -0.0009263075595432437, -8.113216580214986e-05, -4.477960680268073e-05]
-# a.formatted_residual(format_input=format_input, x0=Du + Dl)
-# constraint_f(input=Du + Dl)
-# a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l))
-x0 = [0, 0, 0, 0,
-      1.08314286e-02, 1.30855583e-02, 1.50252454e-02, 3.15241173e-03,
-      # 1.18314286e-02, 1.40855583e-02, 1.60252454e-02, 3.25241173e-03,
-      # 1.28314286e-02, 1.32855583e-02, 1.52252454e-02, 3.12241173e-03,
-      1.38314286e-02, 1.33855583e-02, 1.53252454e-02,
-      6.09392225e-03, 2.28507716e-06]
-# x0 = [i*0.01 for i in range(12)] + [i*0.01 for i in range(6)]
-# x0 = [0, ]*len(x0)
-# x0[-2] = 0.01
-# print('n', n_l, n_u)
+
+# a.parameterized_solver(format_input=format_input, x0=np.zeros(
+#     n_u+n_l - np.count_nonzero(a.bl.g.dependent)), solver='lm')
+
+# x0 = [0.01, 0.02, 0.03, 0.04, 0.05,
+#       1.38314286e-02, 1.33855583e-02, 1.53252454e-02,
+#       6.09392225e-03, 2.28507716e-06]
+x0 = [6.25098946e-02, 6.39223659e-02, 1.16135430e-01, 1.30855583e-02, 3.15241173e-03,
+      6.09392225e-03, 6.01280457e-03, 1.42014104e-02, 3.90711975e-03, 2.28507716e-06]
+# Au, Al = format_input(x0, gl=a.bl.g)
+# a.update(Au, Al)
 a.formatted_residual(x0, format_input)
-# a.bu._residual = [-8.558721176656603e-06, -2.3724887005904228e-05, -
-#             2.5703233606010767e-05, 2.570852672379578e-05]
-# a.bl.g.g_independent = a.bu.g
-# a.bl.g.D = [2.564255515102856e-05, 2.5228867540283518e-05, -
-#             2.2948311882368213e-05, -1.3479399620865539e-05, 1.222180368918317e-06]
-# a.bu.g.calculate_x1(a.bu.g.s)
-# a.bl.g.calculate_x1(a.bl.g.s)
-# a.bu.y = a.bu.g.x3(a.bu.x)
-# a.bl.y = a.bl.g.x3(a.bl.x)
+a.calculate_x()
+
 
 print('upper', a.bu.g.D)
 print('upper 1', a.bu.g.cst[0].D)
@@ -146,7 +127,7 @@ print('zetaT', a.bl.g.cst[0].zetaT, a.bl.g.cst[1].zetaT, a.bl.g.cst[2].zetaT, a.
 print('loads', a.bl.l.concentrated_load, a.bu.l.concentrated_load)
 print('lengths', a.bl.g.cst[0].length, a.bl.g.cst[1].length,
       a.bl.g.cst[2].length, a.bl.g.cst[3].length)
-print('x', a.bl.g.x1_grid)
+
 plt.figure()
 plt.plot(a.bu.g.x1_grid[1:], a.bu.M[1:], 'b', label='Upper (F)')
 plt.plot(a.bl.g.x1_grid[1:], a.bl.M[1:], 'r', label='Lower (F)')

@@ -373,7 +373,7 @@ class CoordinateSystem(object):
         self.cst[i].zetaL = self.zetaL[i]
         self.cst[i].offset_x = offset_x
 
-        An = self.cst[i].D[-2]
+        # An = self.cst[i].D[-2]
 
         if self.continuity == 'C2':
             Di = [self.A0[i], self.A1[i]] + list(Ai) + [self.zetaT[i]]
@@ -382,7 +382,7 @@ class CoordinateSystem(object):
 
         self.cst[i].D = Di
 
-        self.cst[i].internal_variables(self.cst[i].length)
+        # self.cst[i].internal_variables(self.cst[i].length)
 
         self.spar_i += 1
 
@@ -507,9 +507,9 @@ class CoordinateSystem(object):
             psi_spar, A_ip, A_ic, zT_ip, c_ic, N1=N1, N2=N2, deltaz_goal=zT_ic,
             deltaL_baseline=zL_ip, deltaL_goal=zL_ic)
         self.spar_directions = s_j
-        print('spar_directions', self.spar_psi_upper*c_ic, self.spar_directions,
-              self.g_independent.x3(np.array([self.spar_psi_upper*c_ic]), 'theta1'),
-              self.g_independent.x1(np.array([self.spar_psi_upper*c_ic]), 'theta1'))
+        # print('spar_directions', self.spar_psi_upper*c_ic, self.spar_directions,
+        #       self.g_independent.x3(np.array([self.spar_psi_upper*c_ic]), 'theta1'),
+        #       self.g_independent.x1(np.array([self.spar_psi_upper*c_ic]), 'theta1'))
         spar_x = psi_spar*c_ic - self.delta_P*s_j[0] + offset_x
         spar_y = xi_upper_children*c_ic + ic.offset - self.delta_P*s_j[1]
         if i == 0:
@@ -781,7 +781,6 @@ class CoordinateSystem(object):
             self.s = length_target
             rigid_n = 0
             for i in range(self.p):
-                print(i)
                 if i == 0 and self.rigid_LE:
                     rigid_n = len(self.cst[i].indexes)
                     self.cst[i].x1_grid = np.linspace(0, self.cst[i].chord,
@@ -801,7 +800,6 @@ class CoordinateSystem(object):
             else:
                 self.x1_grid = x1_grid
         else:
-            print('x1', self.D)
             x1 = []
             if len(length_target) == 1:
                 target = length_target[0]
@@ -931,56 +929,15 @@ class CoordinateSystem(object):
             self.rho = rho
 
     def internal_variables(self, target_length, origin=0):
-        def f(k):
-            self.D[i_start:-1] = k*An
-            length = self.arclength()
-            # print('k', k, self.D[-2], self.D[-3], self.length - length)
-            return self.length - length
-
-        def fprime(k):
-            self.D[i_start:-1] = k[0]*An
-            return [integrate.quad(integrand, 0, self.chord, limit=500)[0]]
-
-        def integrand(x):
-            psi = x/self.chord
-            d = self.x3(np.array([x]), diff='x1', offset=False)
-            n = self.n
-            dA = (1+psi)*(-psi*(2+n)+(1+n))
-            return d*dA/(1+(d)**2)**(1/2)
-
         # At first we utilize the non-dimensional trailing edge thickness
         self.zetaT = self.D[-1]
         origin = origin/self.chord
-        # print('dependent', self.dependent)
 
-        if self.i == 0:
-            i_start = 1
-        else:
-            i_start = 2
-
-        if self.dependent:
-            An = np.copy(self.D[i_start:-1])
-            print('before', An)
-            k = optimize.fsolve(f, 1, fprime=fprime)[0]
-            # self.D[-2] = k*An[1]
-            # self.D[-3] = k*An[0]
-            # plt.figure()
-            # plt.scatter([k], [f(k)])
-            # ki = np.linspace(-10, 10)
-            # r = []
-            # for i in range(len(ki)):
-            #     r.append(copy.deepcopy(f(ki[i])))
-            #
-            # plt.plot(ki, r)
-            # plt.show()
-            self.D[i_start:-1] = k*An
-            print('after', self.D[2:-1])
-        else:
-            self.chord = 1
-            nondimensional_length = self.arclength(chord=1., origin=origin/self.chord)
-            self.chord = target_length/nondimensional_length
-            self.deltaz = self.zetaT*self.chord
-            self.deltazLE = self.zetaL*self.chord
+        self.chord = 1
+        nondimensional_length = self.arclength(chord=1., origin=origin/self.chord)
+        self.chord = target_length/nondimensional_length
+        self.deltaz = self.zetaT*self.chord
+        self.deltazLE = self.zetaL*self.chord
 
     def calculate_angles(self):
         self.cos = self.x1(self.x1_grid, 'theta1')
