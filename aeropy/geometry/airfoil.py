@@ -189,6 +189,8 @@ def CST(x, c, deltasz=None, Au=None, Al=None, N1=0.5, N2=1., deltasLE=None):
             deltaLE['u'] = deltasLE[0]
             deltaLE['l'] = deltasLE[1]
         if len(Au) != len(Al):
+            print('Au', Au)
+            print('Al', Al)
             raise Exception("Au and Al need to have the same dimensions")
         elif len(deltasz) != 2:
             raise Exception(

@@ -111,6 +111,7 @@ class beam_chen():
             self.s = self.g.s
         else:
             self.s = s
+        self.s0 = np.copy(self.s)
         self.origin = origin
         self.ignore_ends = ignore_ends
         self.rotated = rotated
@@ -132,10 +133,10 @@ class beam_chen():
         if self.g.name == 'pCST' and self.g.rigid_LE:
             for i in range(len(self.M)):
                 j = i + len(self.g.cst[0].x1_grid)
-                self.M[i] = self._M(self.x[j], self.s[i], self.y[j])
+                self.M[i] = self._M(self.x[j], self.s0[i], self.y[j])
         else:
             for i in range(len(self.M)):
-                self.M[i] = self._M(self.x[i], self.s[i], self.y[i])
+                self.M[i] = self._M(self.x[i], self.s0[i], self.y[i])
 
     def _M(self, x, s, y=None):
         M_i = 0
@@ -146,13 +147,13 @@ class beam_chen():
                     index = np.where(self.s == self.l.concentrated_s[i])[0][0]
                     c = self.g_p.cos[index]*self.g.cos[index] + \
                         self.g_p.sin[index]*self.g.sin[index]
-                    s = self.g_p.sin[index]*self.g.cos[index] - \
+                    ss = self.g_p.sin[index]*self.g.cos[index] - \
                         self.g_p.cos[index]*self.g.sin[index]
                     c = self.l.concentrated_direction[i][0]*self.g_p.cos[index] + \
                         self.l.concentrated_direction[i][1]*self.g_p.sin[index]
-                    s = np.sqrt(1-c**2)
+                    ss = np.sqrt(1-c**2)
 
-                    f2 = c*self.g.sin[index] - s*self.g.cos[index]
+                    f2 = c*self.g.sin[index] - ss*self.g.cos[index]
                     f1 = (c-self.g.sin[index]*f2)/self.g.cos[index]
 
                     M_i += self.l.concentrated_magnitude[i]*f1*(self.y[index]-y-y0)
@@ -160,7 +161,7 @@ class beam_chen():
             else:
                 for i in range(len(self.l.concentrated_s)):
                     decimals = abs(int(math.floor(math.log10(abs(self.g.tol)))))
-                    index = np.where(np.around(self.s, decimals=decimals) ==
+                    index = np.where(np.around(self.s0, decimals=decimals) ==
                                      np.around(self.l.concentrated_s[i], decimals=decimals))[0][0]
                     if self.g.rigid_LE:
                         index += len(self.g.cst[0].x1_grid)
@@ -169,7 +170,7 @@ class beam_chen():
                         M_i += self.l.concentrated_load[i][1]*(self.x[index]-x)
 
         if self.l.distributed_load is not None:
-            index = np.where(np.around(self.s, decimals=7) == np.around(s, decimals=7))[0][0]
+            index = np.where(np.around(self.s0, decimals=7) == np.around(s, decimals=7))[0][0]
 
             if self.ignore_ends:
                 i_end = -1
@@ -452,6 +453,7 @@ class coupled_beams():
             # print(len(np.append(self.bu.r, self.bl.r)))
             # BREAK
             return np.append(self.bu.r, self.bl.r)
+        self.format_input = format_input
         bounds = []
         margin = 0.4
         for xi in x0:
@@ -463,7 +465,7 @@ class coupled_beams():
                            bounds=bounds)
         elif solver == 'genetic':
             sol = differential_evolution(self.formatted_residual, bounds,
-                                         disp=True, args=(format_input))
+                                         disp=True)
         elif solver == 'lm':
             sol = least_squares(formatted_residual_lm, x0, method='lm')
         # 'L-BFGS-B'
@@ -478,7 +480,9 @@ class coupled_beams():
         self.bl.y = self.bl.g.x3(self.bl.x)
         print('sol', sol.x)
 
-    def formatted_residual(self, x0, format_input):
+    def formatted_residual(self, x0, format_input=None):
+        if format_input is None:
+            format_input = self.format_input
         [Au, Al] = format_input(x0, self.bu.g, self.bu.g_p, self.bl.g, self.bl.g_p)
         self.bu.l.concentrated_load = self.bu.l.external_load.copy()
         self.bl.l.concentrated_load = self.bl.l.external_load.copy()
@@ -509,60 +513,23 @@ class coupled_beams():
         self.bu.calculate_residual()
         self.bl.calculate_residual()
         R = .5*np.sqrt(self.bu.R**2 + self.bl.R**2)
-
+        #
         print('R', R, self.bl.R, self.bu.R)
+        # R = self.bu.R
         # BREAK
         return R
 
     def update(self, Au, Al):
-        def f(An):
-            A[A_index] = An[0]
-            # print(A)
-            self.bu.g.D = A
-            # print('upper 1', self.bu.g.cst[0].D)
-            # print('upper 2', self.bu.g.cst[1].D)
-            # print('upper 3', self.bu.g.cst[2].D)
-            # print('upper 4', self.bu.g.cst[3].D)
-            self.bl.g.g_independent = self.bu.g
-            self.bl.g.D = Al
-            # calculate distance between spars
-            if index == 0:
-                c_upper = self.bl.g.spar_x[index]
-            else:
-                c_upper = self.bl.g.spar_x[index] - self.bl.g.spar_x[index-1]
-            self.bl.g.cst[index].internal_variables(self.bl.g.cst[index].length)
-            c_lower = self.bl.g.cst[index].chord
-            # iterate until both were the same
-            # print(c_upper, c_lower, A)
-            return c_upper - c_lower
-
-        # print('Au', Au)
-        # print('Al', Al)
-        A = []
-        for index in range(self.bu.g.p):
-            if index == 0:
-                i_end = 2
-                A += Au[:i_end]
-                Au = Au[i_end:]
-            else:
-                i_end = 1
-                A += Au[:i_end]
-                Au = Au[i_end:]
-            if index != self.bu.g.p-1:
-                A += [self.bu.g.cst[index].D[-2]]
-
-        A_index = 2
-        for index in range(self.bu.g.p-1):
-            sol = fsolve(f, self.bu.g_p.cst[index].D[-2])[0]
-            f([sol])
-            A_index += 2
+        self.bu.g.D = Au
+        self.bl.g.g_independent = self.bu.g
+        self.bl.g.D = Al
 
     def calculate_force(self):
         if self.coupled_forces:
-            index = np.where(np.around(self.bu.s, decimals=7) ==
+            index = np.where(np.around(self.bu.s0, decimals=7) ==
                              self.bu.l.concentrated_s[0])[0][0]
             x_u = self.bu.g.x1_grid[index]
-            index = np.where(np.around(self.bl.s, decimals=7) ==
+            index = np.where(np.around(self.bl.s0, decimals=7) ==
                              self.bl.l.concentrated_s[0])[0][0]
             x_l = self.bl.g.x1_grid[index]
 
@@ -613,10 +580,10 @@ class coupled_beams():
             else:
                 i = 0
                 # Current length for child
-                index_u = np.where(np.around(self.bu.s, decimals=7) ==
+                index_u = np.where(np.around(self.bu.s0, decimals=7) ==
                                    self.spars_s[0])[0][0]
                 x_u = self.bu.g.x1_grid[index_u]
-                index_l = np.where(np.around(self.bl.s, decimals=7) ==
+                index_l = np.where(np.around(self.bl.s0, decimals=7) ==
                                    self.spars_s[0])[0][0]
                 x_l = self.bl.g.x1_grid[index_l]
 

@@ -41,7 +41,6 @@ def format_u(input, g=None, g_p=None):
 
 def format_input(input, gu=None, gu_p=None, gl=None, gl_p=None):
     _, _, n_u = g_upper._check_input([])
-
     Au = format_u(input[:n_u], gu, gu_p)
     Al = format_u(input[n_u:], gl, gl_p)
     return Au, Al
@@ -87,14 +86,20 @@ a = coupled_beams(g_upper, g_lower, p_upper, p_lower, l_upper, l_lower, None,
 
 a.calculate_x()
 constraints = ({'type': 'eq', 'fun': constraint_f})
+_, _, n_u = g_upper._check_input([])
+_, _, n_l = g_lower._check_input([])
+# print('s0', a.bl.s0)
+# print('x0', a.bl.x)
+# a.formatted_residual(format_input=format_input, x0=(n_u+n_l)*[0])
 # a.formatted_residual(format_input=format_input, x0=[
 #                      0.00200144, 0.00350643, 0.00255035, 0.00226923] + [-0.00219846, - 0.00313221, - 0.00193564, - 0.00191324])
+# a.formatted_residual(format_input=format_input, x0=(n_u+n_l)*[0])
+
 # a.formatted_residual(format_input=format_input, x0=[
 #                      0.00200144, 0.00350643, 0.00255035, 0.00226923, 0.00183999] + [-0.00219846, - 0.00313221, - 0.00193564, - 0.00191324, - 0.00127513])
 # a.formatted_residual(format_input=format_input, x0=list(
 # g_upper.D[:-1]) + list(g_lower.D[:1]) + list(g_lower.D[2:-1]))
-_, _, n_u = g_upper._check_input([])
-_, _, n_l = g_lower._check_input([])
+
 
 # Du = [6.15460393e-05, 2.11765046e-04, 3.60480211e-04, 5.08573998e-04,
 #       2.11616879e-03, 1.69337891e-03]
@@ -106,7 +111,7 @@ _, _, n_l = g_lower._check_input([])
 #       0.0013324195475520374, -0.0009263075595432437, -8.113216580214986e-05, -4.477960680268073e-05]
 # a.formatted_residual(format_input=format_input, x0=Du + Dl)
 # constraint_f(input=Du + Dl)
-a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l), solver='gradient')
+a.parameterized_solver(format_input=format_input, x0=np.zeros(n_u+n_l), solver='lm')
 # a.parameterized_solver(format_input=format_input, x0=np.array(Du+Dl))
 # a.bu.g.D =
 # a.bl.g.g_independent = a.bu.g
@@ -127,6 +132,8 @@ print('lower 1', a.bl.g.cst[0].D)
 print('lower 2', a.bl.g.cst[1].D)
 print('lower 3', a.bl.g.cst[2].D)
 print('loads', a.bl.l.concentrated_load, a.bu.l.concentrated_load)
+print('increasing', [i < j for i, j in zip(a.bl.g.x1_grid, a.bl.g.x1_grid[1:])])
+
 plt.figure()
 plt.plot(a.bu.g.x1_grid[1:], a.bu.M[1:], 'b', label='Upper')
 plt.plot(a.bl.g.x1_grid[1:], a.bl.M[1:], 'r', label='Lower')
@@ -138,7 +145,7 @@ plt.plot(a.bl.g.x1_grid[1:], Ml[1:], '--r', label='Lower')
 plt.legend()
 
 # print('chords', a.bl.g.chord, a.bu.g.chord)
-index = np.where(a.bl.s == a.spars_s[0])[0][0]
+index = np.where(a.bl.s0 == a.spars_s[0])[0][0]
 plt.figure()
 plt.plot(a.bu.g_p.x1_grid, a.bu.g_p.x3(a.bu.g_p.x1_grid), 'b',
          label='Upper Parent', lw=3)
@@ -148,6 +155,7 @@ plt.plot(a.bl.g_p.x1_grid, a.bl.g_p.x3(a.bl.g_p.x1_grid), 'b', linestyle='dashed
          label='Lower Parent', lw=3)
 plt.plot(a.bl.g.x1_grid, a.bl.g.x3(a.bl.g.x1_grid), '.5', linestyle='dashed',
          label='Lower Child: %.3f N' % -l_upper.concentrated_load[0][-1], lw=3)
+
 xu_p = np.array([a.bu.g_p.x1_grid[index]])
 xl_p = np.array([a.bl.g_p.x1_grid[index]])
 plt.plot([xu_p, xl_p], [a.bu.g_p.x3(xu_p), a.bl.g_p.x3(xl_p)], 'b', lw=3)
