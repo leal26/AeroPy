@@ -23,11 +23,23 @@ def rmse(x1, y1, x2, y2):
 def format_input(input, g=None, g_p=None):
     return [0, 0] + list(input)
 
+w = 400
+
+def distributed_load(s):
+    try:
+        len(s)
+        return w*np.ones(len(s))
+    except:
+        return w
+
 import matplotlib
 matplotlib.rcParams.update({'font.size': 14})
 
+abaqus = np.transpose(np.loadtxt("A6_neutral_line.csv", delimiter=","))
+abaqus = abaqus[abaqus[:,1].argsort()]
+
 # Ghuku paper
-distributed_load = None
+distributed_load = distributed_load
 chord_parent = 0.4385
 width = 0.0385
 thickness = 0.00625
@@ -52,13 +64,13 @@ s = np.zeros(len(x))
 for i in range(len(x)):
     s[i] = g.arclength(x[i])[0]
 
-for i in range(len(load_keys)):
+for i in [1]:
     print('Load: ', load_keys[i])
     load = load_keys[i]
-    l = loads(concentrated_load=[[0, -load]], load_s=[s[-1]], distributed_load=distributed_load)
+    l = loads(concentrated_load=[[0, -load]], load_s=[s[-1]], distributed_load=distributed_load, follower=True)
     b = beam_chen(g, p, l, s)
     # b.iterative_solver()
-    b.parameterized_solver(format_input=format_input, x0=b.g.D[2:4])
+    b.parameterized_solver(format_input=format_input, x0=list(b.g.D[2:4]) + [0])
 
     if i == 0:
         plt.plot(b.x, b.y, colors[i], label='Parent', linestyle='-',
@@ -66,22 +78,19 @@ for i in range(len(load_keys)):
  
         plt.ylim([0, max(b.y)])
     if i > 0:
-        plt.plot(b.x, b.y, colors[i], label='Child: %.3f N' % load, linestyle='-',
-                 lw=3, zorder=1, clip_on=False)
-        gg = CoordinateSystem.polynomial(D=experiment[load_keys[i]], chord=chord_parent)
-        gg.calculate_x1(s)
-        gg.plot(label='Experiment: %.3f N' %
-                load_keys[i], color=colors[i], scatter=True, marker="D", clip_on=False)
-        r = gg.r(gg.x1_grid)
-        print('RMSE', rmse(b.x, b.y, r[:,0], r[:,1]))
-        # rhs = b.p.young*b.p.inertia*(b.g.rho - b.g_p.rho)
-        # lhs = b.M
-        # plt.plot(s, rhs, colors[i], lw=3,zorder=1)
-        # plt.scatter(s, lhs, c=colors[i], edgecolors='k', zorder=20, marker="D", clip_on=False)
-        # #plt.ylim([-b.p.young*b.p.inertia, b.p.young*b.p.inertia])
-        # # plt.xlim([0, max(s)])
-        # plt.ylabel("Units (N m)")
-        # plt.xlabel("s (m)")
+        # plt.plot(b.x, b.y, colors[i], label='Child: %.3f N' % load, linestyle='-',
+                 # lw=3, zorder=1, clip_on=False)
+
+        # plt.scatter(abaqus[:, 0][0::4], abaqus[:, 1][0::4], c='.5', edgecolors='k', zorder=10, marker="^")
+        # print('RMSE', rmse(b.x, b.y, abaqus[:, 0], abaqus[:, 1]))
+        rhs = b.p.young*b.p.inertia*(b.g.rho - b.g_p.rho)
+        lhs = b.M
+        plt.plot(s, rhs, colors[i], lw=3,zorder=1)
+        plt.scatter(s, lhs, c=colors[i], edgecolors='k', zorder=20, marker="D", clip_on=False)
+        #plt.ylim([-b.p.young*b.p.inertia, b.p.young*b.p.inertia])
+        # plt.xlim([0, max(s)])
+        plt.ylabel("Units (N m)")
+        plt.xlabel("s (m)")
 plt.xlim([0, max(s)])
 plt.legend()
 

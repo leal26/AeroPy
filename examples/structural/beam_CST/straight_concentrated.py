@@ -6,6 +6,19 @@ from aeropy.structural.beam import beam_chen
 from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
+from scipy.interpolate import interp1d
+
+def rmse(x1, y1, x2, y2):
+    kind = "cubic" 
+    if max(x1) > max(x2):
+        f = interp1d(x1, y1, kind=kind)
+        predictions = y2
+        targets = f(x2)
+    else:
+        f = interp1d(x2, y2, kind=kind)
+        predictions = y1
+        targets = f(x1)
+    return np.sqrt(np.mean((predictions-targets)**2))
 
 def format_input(input, g=None, g_p=None):
     # COnsidering BC for zero derivative at the root
@@ -46,6 +59,7 @@ g0.plot(label='Parent')
 [x, y] = eulerBernoulle.T
 print('EB x:', x)
 print('EB y:', y)
+print('RMSE', rmse(b.x, b.y, x, y))
 plt.scatter(x, y, c='.5', label='Euler-Bernoulle: %.3f N' % -
             l.concentrated_load[0][1], linestyle='-', zorder=1, edgecolors='k')
 plt.scatter(abaqus_data['coord'][0:401:40, 0],

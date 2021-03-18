@@ -19,7 +19,7 @@ a4 = 3
 a5 = 3
 a2 = a4 + 2*a5
 a3 = -2*a4-3*a5
-g = CoordinateSystem.polynomial(D=[0, 0, a2, a3, a4, a5], chord = 1, color = 'b', n =6)
+g = CoordinateSystem.polynomial(D=[0, 0, 0.5492, 0.2000], chord = 0.4385, color = 'b', n =6)
 g_p = CoordinateSystem.polynomial(D=[0, 0, a2, a3, a4, a5], chord = 1, color = 'k', n =6)
 
 s_tip = g.arclength(g.chord)[0]
@@ -34,7 +34,7 @@ b.g.calculate_x1(b.s)
 b.y = b.g.x3(b.g.x1_grid)
 
 np.savetxt("points.csv", np.array([b.g.x1_grid, b.y]).T, delimiter=",")
-
+BREAK
 # plt.figure()
 # plt.plot(b.g.x1_grid, b.y, 'g', label='Fit')
 # dy = b.g.x3(b.g.x1_grid, diff='x1')

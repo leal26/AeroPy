@@ -493,7 +493,7 @@ class CoordinateSystem(object):
                 # BREAK
             return np.array(s_list)
 
-    def plot(self, basis=False, r=None, label=None, linestyle='-', color=None, scatter=False, zorder=0, marker='.'):
+    def plot(self, basis=False, r=None, label=None, linestyle='-', color=None, scatter=False, zorder=0, marker='.', clip_on=True):
         if r is None:
             r = self.r(self.x1_grid)
         print('x_p', r[:, 0])
@@ -503,17 +503,17 @@ class CoordinateSystem(object):
 
         if scatter:
             if label is None:
-                plt.scatter(r[:, 0], r[:, 1], c=color, zorder=2, marker=marker)
+                plt.scatter(r[:, 0], r[:, 1], c=color, zorder=2, marker=marker, clip_on=clip_on)
             else:
                 plt.scatter(r[:, 0], r[:, 1], c=color, label=label,
-                            zorder=2, edgecolors='k', marker=marker)
+                            zorder=2, edgecolors='k', marker=marker, clip_on=clip_on)
         else:
             if label is None:
                 plt.plot(r[:, 0], r[:, 1], color, linestyle=linestyle, lw=3,
-                         zorder=zorder)
+                         zorder=zorder, clip_on=clip_on)
             else:
                 plt.plot(r[:, 0], r[:, 1], color, linestyle=linestyle, lw=3,
-                         label=label, zorder=zorder)
+                         label=label, zorder=zorder, clip_on=clip_on)
         if basis:
             plt.quiver(r[:, 0], r[:, 2],
                        self.a[0, :, 0], self.a[0, :, 2],

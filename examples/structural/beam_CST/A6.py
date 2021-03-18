@@ -19,15 +19,26 @@ def rmse(x1, y1, x2, y2):
         predictions = y1
         targets = f(x1)
     return np.sqrt(np.mean((predictions-targets)**2))
-
+    
 def format_input(input, g=None, g_p=None):
-    return [0, 0] + list(input)
+    # COnsidering BC for zero derivative at the root
+    return list(input) + [-input[0]]
 
-import matplotlib
-matplotlib.rcParams.update({'font.size': 14})
+w = 400
 
+def distributed_load(s):
+    try:
+        len(s)
+        return w*np.ones(len(s))
+    except:
+        return w
+
+
+abaqus = np.transpose(np.loadtxt("A6_neutral_line.csv", delimiter=","))
+abaqus = abaqus[abaqus[:,1].argsort()]
+  
 # Ghuku paper
-distributed_load = None
+distributed_load = distributed_load
 chord_parent = 0.4385
 width = 0.0385
 thickness = 0.00625
@@ -41,8 +52,8 @@ p = properties(young=200e9, dimensions=[width, thickness])
 
 exp_F = [0.000, 20.9634, 83.7474, 159.2844, 232.8594, 308.3964, 382.9542, 459.4704, 481.0524]
 exp_delta = [0, 0.0047, 0.0135, 0.03098, 0.0451, 0.0622, 0.0793, 0.0977, 0.103]
-g = CoordinateSystem.polynomial(D=experiment[list(experiment.keys())[
-                                0]], chord=chord_parent, color='b')
+g0 = CoordinateSystem.polynomial(D=experiment[list(experiment.keys())[
+    0]], chord=chord_parent, color='b')
 
 colors = ['0.0', '0.3', '0.5', '0.7']
 load_keys = list(experiment.keys())
@@ -50,39 +61,31 @@ load_keys = list(experiment.keys())
 x = np.linspace(0, chord_parent, 10)
 s = np.zeros(len(x))
 for i in range(len(x)):
-    s[i] = g.arclength(x[i])[0]
+    s[i] = g0.arclength(x[i])[0]
+s[0] = 0
 
-for i in range(len(load_keys)):
+g = CoordinateSystem.CST(D=[-0.27928065, - 0.29209946, - 0.30491828, - 0.3177371,
+                            0.27928065], chord=chord_parent, color='b', deltaz=0.27928065*chord_parent, N1=1.0, N2=1.0)
+
+for i in [1]:
     print('Load: ', load_keys[i])
     load = load_keys[i]
     l = loads(concentrated_load=[[0, -load]], load_s=[s[-1]], distributed_load=distributed_load)
-    b = beam_chen(g, p, l, s)
+    b = beam_chen(g, p, l, s, ignore_ends=True)
     # b.iterative_solver()
-    b.parameterized_solver(format_input=format_input, x0=b.g.D[2:4])
+    b.parameterized_solver(format_input=format_input, x0=b.g.D[:-1])
 
     if i == 0:
         plt.plot(b.x, b.y, colors[i], label='Parent', linestyle='-',
-                 lw=3, zorder=1, clip_on=False)
- 
-        plt.ylim([0, max(b.y)])
-    if i > 0:
-        plt.plot(b.x, b.y, colors[i], label='Child: %.3f N' % load, linestyle='-',
-                 lw=3, zorder=1, clip_on=False)
+                 lw=3, zorder=1)
         gg = CoordinateSystem.polynomial(D=experiment[load_keys[i]], chord=chord_parent)
         gg.calculate_x1(s)
         gg.plot(label='Experiment: %.3f N' %
-                load_keys[i], color=colors[i], scatter=True, marker="D", clip_on=False)
-        r = gg.r(gg.x1_grid)
-        print('RMSE', rmse(b.x, b.y, r[:,0], r[:,1]))
-        # rhs = b.p.young*b.p.inertia*(b.g.rho - b.g_p.rho)
-        # lhs = b.M
-        # plt.plot(s, rhs, colors[i], lw=3,zorder=1)
-        # plt.scatter(s, lhs, c=colors[i], edgecolors='k', zorder=20, marker="D", clip_on=False)
-        # #plt.ylim([-b.p.young*b.p.inertia, b.p.young*b.p.inertia])
-        # # plt.xlim([0, max(s)])
-        # plt.ylabel("Units (N m)")
-        # plt.xlabel("s (m)")
-plt.xlim([0, max(s)])
+                load_keys[i], color=colors[i], scatter=True, marker="D")
+    if i > 0:
+        plt.plot(b.x, b.y, colors[i], label='Child: %.3f N' % load, linestyle='-',
+                 lw=3, zorder=1)
+        plt.scatter(abaqus[:, 0][0::4], abaqus[:, 1][0::4], c='.5', edgecolors='k', zorder=10, marker="^")
+        print('RMSE', rmse(b.x, b.y, abaqus[:, 0], abaqus[:, 1]))
 plt.legend()
-
 plt.show()

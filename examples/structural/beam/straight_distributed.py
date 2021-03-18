@@ -8,7 +8,20 @@ from aeropy.geometry.parametric import CoordinateSystem
 
 w = 1
 
+from scipy.interpolate import interp1d
 
+def rmse(x1, y1, x2, y2):
+    kind = "cubic" 
+    if max(x1) > max(x2):
+        f = interp1d(x1, y1, kind=kind)
+        predictions = y2
+        targets = f(x2)
+    else:
+        f = interp1d(x2, y2, kind=kind)
+        predictions = y1
+        targets = f(x1)
+    return np.sqrt(np.mean((predictions-targets)**2))
+    
 def distributed_load(s):
     try:
         len(s)
@@ -17,7 +30,7 @@ def distributed_load(s):
         return w
 
 
-def format_input(input):
+def format_input(input, g=None, g_p=None):
     return [0, 0] + list(input)
 
 
@@ -46,12 +59,30 @@ eulerBernoulle = curve_EB.r(b.s)
 
 [x, y] = eulerBernoulle.T
 
+import matplotlib
+matplotlib.rcParams.update({'font.size': 14})
+print('RMSE', rmse(b.x, b.y, x, y))
 g0 = CoordinateSystem.polynomial(D=[0, 0, 0, 0], chord=1, color='k')
 g0.calculate_x1(s)
-g0.plot(label='Parent', zorder=0)
-plt.plot(b.x, b.y, '.5', label='Child: %.3f N/m' % w, linestyle='-', lw=3, zorder=1)
-plt.scatter(x, y, c='.5', label='Euler-Bernoulle: %.3f N/m' % w, edgecolors='k', zorder=2)
+g0.plot(label='Parent', zorder=2, clip_on=False)
+
+
+plt.plot(b.x, b.y, '.5', label='Child: %.3f N/m' % w, linestyle='-', lw=3, zorder=3, clip_on=False)
+plt.scatter(x, y, c='.5', label='Euler-Bernoulle: %.3f N/m' % w, edgecolors='k', zorder=4, clip_on=False)
 plt.xlim([0, 1])
+
+
 # plt.scatter(abaqus_data['coord'][0:401:40,0], abaqus_data['coord'][0:401:40,1], c='g', label='FEA', edgecolors='k', zorder = 10)
-plt.legend()
+# plt.legend()
+
+
+rhs = b.p.young*b.p.inertia*(b.g.rho - b.g_p.rho)
+lhs = b.M
+plt.figure()
+plt.plot(s, rhs, '.5', lw=3,zorder=1, clip_on=False)
+plt.scatter(s, lhs, c='.5', edgecolors='k', zorder=20, marker="D", clip_on=False)
+#plt.ylim([-b.p.young*b.p.inertia, b.p.young*b.p.inertia])
+plt.xlim([0, max(s)])
+plt.ylabel("Units (N.m)")
+plt.xlabel("s (m)")
 plt.show()

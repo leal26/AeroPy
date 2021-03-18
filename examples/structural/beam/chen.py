@@ -6,8 +6,21 @@ from aeropy.structural.beam import beam_chen
 from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
+from scipy.interpolate import interp1d
 
-def format_input(input):
+def rmse(x1, y1, x2, y2):
+    kind = "cubic" 
+    if max(x1) > max(x2):
+        f = interp1d(x1, y1, kind=kind)
+        predictions = y2
+        targets = f(x2)
+    else:
+        f = interp1d(x2, y2, kind=kind)
+        predictions = y1
+        targets = f(x1)
+    return np.sqrt(np.mean((predictions-targets)**2))
+    
+def format_input(input, g=None, g_p=None):
     return [0, 0] + list(input)
 # Ghuku paper
 # distributed_load = None
@@ -46,6 +59,7 @@ experiment = {0: [0, 0, -1.05540301, 1.19321522],
               0.196: [0, 0, -2.3139154, 1.77815251], }
 
 p = properties(young=194.3e9, dimensions=[width, thickness])
+
 exp_F = [0.000, 0.098, 0.196, 0.294, 0.392, 0.490, 0.588]
 exp_delta = [0.089, 0.149, 0.195, 0.227, 0.251, 0.268, 0.281]
 g = CoordinateSystem.polynomial(D=D_0, chord=chord_parent, color='b')
@@ -58,8 +72,10 @@ s = np.zeros(len(x))
 for i in range(len(x)):
     s[i] = g.arclength(x[i])[0]
 
+import matplotlib
+matplotlib.rcParams.update({'font.size': 14})
 
-for i in range(len(load_keys)):
+for i in range(1, len(load_keys)):
     print('Load: ', load_keys[i])
     load = load_keys[i]
     l = loads(concentrated_load=[[0, -load]], load_s=[s[-1]], distributed_load=distributed_load)
@@ -70,12 +86,25 @@ for i in range(len(load_keys)):
         b.y = b.g.x3(b.x)
         plt.plot(b.x, b.y, colors[i], label='Parent', linestyle='-', lw=3, zorder=0)
     # b.iterative_solver()
-    b.parameterized_solver(format_input=format_input, x0=b.g.D[2:])
+
+    b.parameterized_solver(format_input=format_input, x0=[0,0])
     plt.plot(b.x, b.y, colors[i+1], label='Child: %.3f N' % load, linestyle='-',
              lw=3, zorder=1)
 
     gg = CoordinateSystem.polynomial(D=experiment[load_keys[i]], chord=chord_parent)
     gg.calculate_x1(s)
     gg.plot(label='Experiment: %.3f N' % load_keys[i], color=colors[i+1], scatter=True, marker="D")
+    r = gg.r(gg.x1_grid)
+    print('RMSE', rmse(b.x, b.y, r[:, 0], r[:, 1]))
+
+    # rhs = b.p.young*b.p.inertia*(b.g.rho - b.g_p.rho)
+    # lhs = b.M
+
+    # plt.plot(s, rhs, colors[i+1], lw=3,zorder=1, label='Experiment: %.3f N' % load_keys[i])
+    # plt.scatter(s, lhs, c=colors[i+1], edgecolors='k', zorder=20, marker="D", clip_on=False)
+    # plt.xlim([0, max(s)])
+    # plt.ylabel("Units (N m)")
+    # plt.xlabel("s (m)")
+plt.xlim([0,chord_parent])
 plt.legend()
 plt.show()

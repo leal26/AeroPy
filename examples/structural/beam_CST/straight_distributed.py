@@ -6,6 +6,20 @@ from aeropy.structural.beam import beam_chen
 from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
+from scipy.interpolate import interp1d
+
+def rmse(x1, y1, x2, y2):
+    kind = "cubic" 
+    if max(x1) > max(x2):
+        f = interp1d(x1, y1, kind=kind)
+        predictions = y2
+        targets = f(x2)
+    else:
+        f = interp1d(x2, y2, kind=kind)
+        predictions = y1
+        targets = f(x1)
+    return np.sqrt(np.mean((predictions-targets)**2))
+    
 w = 1
 
 
@@ -17,7 +31,7 @@ def distributed_load(s):
         return w
 
 
-def format_input(input):
+def format_input(input, g=None, g_p=None):
     # COnsidering BC for zero derivative at the root
     return list(input) + [-input[0]]
 
@@ -46,6 +60,7 @@ curve_EB.calculate_x1(b.s)
 eulerBernoulle = curve_EB.r(b.s)
 
 [x, y] = eulerBernoulle.T
+print('RMSE', rmse(b.x, b.y, x, y))
 g0 = CoordinateSystem.polynomial(D=[0, 0, 0, 0], chord=1, color='k')
 g0.calculate_x1(s)
 g0.plot(label='Parent', zorder=0)

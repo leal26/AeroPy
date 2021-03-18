@@ -6,6 +6,19 @@ from aeropy.structural.beam import beam_chen
 from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
+from scipy.interpolate import interp1d
+
+def rmse(x1, y1, x2, y2):
+    kind = "cubic" 
+    if max(x1) > max(x2):
+        f = interp1d(x1, y1, kind=kind)
+        predictions = y2
+        targets = f(x2)
+    else:
+        f = interp1d(x2, y2, kind=kind)
+        predictions = y1
+        targets = f(x1)
+    return np.sqrt(np.mean((predictions-targets)**2))
 
 x_B1 = [0, 0.111088563, 0.179019141, 0.232567106, 0.27826509, 0.317433824, 0.367033123, 0.425769313,
         0.481887716, 0.54582566, 0.599329657, 0.658042172, 0.724577611, 0.7793719, 0.86807229]
@@ -28,7 +41,7 @@ def distributed_load(s):
         return w
 
 
-def format_input(input, g=None):
+def format_input(input, g=None, g_p=None):
     # COnsidering BC for zero derivative at the root
     return list(input) + [-input[0]]
 
@@ -50,15 +63,17 @@ print('x', b.x)
 print('y', b.y)
 print('chord', b.g.chord)
 print('deltaz', b.g.deltaz)
+print('RMSE', rmse(b.x, b.y, x_B0, y_B0))
 plt.plot(b.x, b.y, '.3', label=r'Child: %.3f N/m, $\beta=0$' % w, linestyle='-', lw=3, zorder=1)
 plt.scatter(x_B0, y_B0, c='.3', label=r'Rao: %.3f N/m, $\beta=0$' %
             w, edgecolors='k', zorder=2, marker='s')
-
+BREAK
 print('CASE 2')
 l = loads(distributed_load=distributed_load, follower=True)
 b = beam_chen(g, p, l, s, ignore_ends=True)
 b.parameterized_solver(format_input=format_input, x0=g.D[:-1])
 plt.plot(b.x, b.y, '.5', label=r'Child: %.3f N/m, $\beta=1$' % w, linestyle='-', lw=3, zorder=1)
+print('RMSE', rmse(b.x, b.y, x_B1, y_B1))
 plt.scatter(x_B1, y_B1, c='.5', label=r'Rao: %.3f N/m, $\beta=1$' %
             w, edgecolors='k', zorder=2, marker='s')
 plt.xlim([0, 1])
