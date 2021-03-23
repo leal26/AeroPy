@@ -34,6 +34,8 @@ constraints = ({'type': 'eq', 'fun': constraint_f})
 n = 2
 p = 3
 i = (n+1)*p
+print(i)
+BREAK
 g = CoordinateSystem.pCST(D=i*[0], chord=[.2, .4, .4], color=['b', 'g', 'r'],
                           N1=[1, 1, 1], N2=[1, 1, 1], continuity='C1', free_end=True,
                           root_fixed=True)

@@ -842,6 +842,7 @@ class CoordinateSystem(object):
                         self.darc[index] = np.sqrt(1 + dr[0]**2)
                         self.x1_grid[index] = origin + self.offset_x
                     else:
+                        # if index >0:
                         target = length_target[index]
                         self.x1_grid[index] = optimize.fsolve(f_index, target)[0] + self.offset_x
             if output:

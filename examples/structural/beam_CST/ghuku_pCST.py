@@ -50,7 +50,7 @@ for i in range(2, 3):  # len(load_keys)
     # b._residual(b.g.D[:-1])
     b.parameterized_solver(format_input=format_input,
                            x0=b.g.D[:-1],
-                           solver='gradient')
+                           solver='lm')
 
     if i == 0:
         plt.plot(b.x, b.y, colors[i], label='Parent', linestyle='-',

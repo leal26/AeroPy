@@ -156,8 +156,8 @@ class beam_chen():
                     f2 = c*self.g.sin[index] - ss*self.g.cos[index]
                     f1 = (c-self.g.sin[index]*f2)/self.g.cos[index]
 
-                    M_i += self.l.concentrated_magnitude[i]*f1*(self.y[index]-y-y0)
-                    M_i += self.l.concentrated_magnitude[i]*f2*(self.x[index]-x-x0)
+                    M_i += self.l.concentrated_magnitude[i]*f1*(self.y[index]-y)
+                    M_i += self.l.concentrated_magnitude[i]*f2*(self.x[index]-x)
             else:
                 for i in range(len(self.l.concentrated_s)):
                     decimals = abs(int(math.floor(math.log10(abs(self.g.tol)))))
@@ -178,11 +178,11 @@ class beam_chen():
                 i_end = len(self.s)
             if not self.l.follower:
                 M_i -= trapz(self.l.distributed_load(self.s[index:i_end])
-                             * (self.x[index:i_end]-x-x0), self.s[index:i_end])
+                             * (self.x[index:i_end]-x), self.s[index:i_end])
             else:
                 w = self.l.distributed_load(self.s[index:i_end])
-                M_x = w*self.g.cos[index:i_end]*(self.x[index:i_end]-x-x0)
-                M_y = w*self.g.sin[index:i_end]*(self.y[index:i_end]-y-y0)
+                M_x = w*self.g.cos[index:i_end]*(self.x[index:i_end]-x)
+                M_y = w*self.g.sin[index:i_end]*(self.y[index:i_end]-y)
                 M_i -= trapz(M_x + M_y, self.s[index:i_end])
         # Point torques
         for j in range(len(self.l.torque)):
@@ -288,7 +288,7 @@ class beam_chen():
             self._residual(A)
             return self.r
         bounds = []
-        margin = 0.4
+        margin = 10
         for xi in x0:
             bounds.append([xi-margin, xi+margin])
 

@@ -7,12 +7,29 @@ from aeropy.structural.beam import beam_chen
 from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
+from scipy.interpolate import interp1d
 
+def rmse(x1, y1, x2, y2):
+    print('x1', x1)
+    print('x2', x2)
+    kind = "cubic"
+    x1[0] = 0
+    x2[0] = 0
+    if max(x1) > max(x2):
+        f = interp1d(x1, y1, kind=kind)
+        predictions = y2
+        targets = f(x2)
+    else:
+        f = interp1d(x2, y2, kind=kind)
+        predictions = y1
+        targets = f(x1)
+    return np.sqrt(np.mean((predictions-targets)**2))
+    
 def constraint_f(input):
     A = format_input(input)
     g.D = A
 
-    index = np.where(b.s == 0.5)[0][0]
+    index = np.where(b.s == 0.9)[0][0]
     g.calculate_x1(b.s)
     x = g.x1_grid[index]
     y = g.x3(np.array([x]))
@@ -26,29 +43,36 @@ def format_input(input, g=None, g_p=None):
     # return input
 
 
+s_w = 0.4
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-abaqus = np.loadtxt('case_study_1.csv', delimiter=',')
+abaqus = np.loadtxt('case_study_B5.csv', delimiter=',')
 
 constraints = ({'type': 'eq', 'fun': constraint_f})
 
 n = 2
-p = 2
+p = 3
 i = n*p+1
-print(i)
-BREAK
-g = CoordinateSystem.pCST(D=i*[0], chord=[.5, .5], color=['b', 'g'],
+
+g = CoordinateSystem.pCST(D=list(-.05*np.arange(i)), chord=[s_w, 1-s_w], color=['b', 'g'],
                           N1=[1, 1], N2=[1, 1], continuity='C2', free_end=True,
                           root_fixed=True)
 
 p = properties()
-l = loads(concentrated_load=[[0, -1]], load_s=[1])
+
 g.calculate_s(N=[11, 11])
-b = beam_chen(g, p, l, s=None, ignore_ends=True, calculate_resultant=True)
-b.spars_s = [0.5]
-b.parameterized_solver(format_input, x0=[0, 0, 0, 0], constraints=constraints)
+l = loads(concentrated_load=[[0, 0], [0, -2]], load_s=[g.s[10], g.s[-1]]) #, follower=True)
+b = beam_chen(g, p, l, s=None, ignore_ends=False)
+# print(b.g.D)
+# BREAK
+b.parameterized_solver(format_input, x0=b.g.D[:-1]) # constraints=constraints)
 # b.g.D = [0, .1, .2, .3]
 # b.g.calculate_x1(b.g.s)
+
+# x = b.g.x1_grid
+# y = b.g.x3(b.g.x1_grid)
+# np.savetxt("points.csv", np.array([x,y]).T, delimiter=",")
+# BREAK
 # Checking stuff
 # print('check1', +b.g.cst[0].D[2] + b.g.cst[1].D[0] + b.g.cst[1].zetaT)
 # print('check2', 2*b.g.cst[1].D[1] - (1+2)*b.g.cst[1].D[2], 2/3*b.g.cst[1].D[1])
@@ -73,7 +97,7 @@ plt.plot(b.g.x1_grid, b.g.x3(b.g.x1_grid), c='.5',
          label='Upper Child', lw=3)
 plt.scatter(abaqus[0, :], abaqus[1, :], c='.5',
             label='FEA', edgecolors='k', zorder=10, marker="^")
-
+print(rmse(b.g.x1_grid, b.g.x3(b.g.x1_grid), abaqus[0, :], abaqus[1, :]))
 plt.figure()
 plt.plot(b.g.x1_grid, b.g.x3(b.g.x1_grid, diff='x1'), 'b',
          label='d', lw=3)
