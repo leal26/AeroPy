@@ -306,7 +306,10 @@ class beam_chen():
         self.g.calculate_x1(self.s)
         self.x = self.g.x1_grid
         self.y = self.g.x3(self.x)
-        print('sol', self.g.D, sol.fun)
+        if solver == 'lm':
+            print('sol', self.g.D, self.R)
+        else:
+            print('sol', self.g.D, sol.fun)
 
     def _residual(self, A):
         self.g.D = A

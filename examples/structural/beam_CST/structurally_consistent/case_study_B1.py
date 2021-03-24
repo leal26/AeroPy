@@ -73,25 +73,35 @@ b.parameterized_solver(format_input, x0=[0, 0, 0, 0, 0, 0]) # constraints=constr
 # print('A0', b.g.A0)
 print('loads', b.l.concentrated_load)
 print('D', b.g.cst[0].D, b.g.cst[1].D)
+
+import matplotlib
+matplotlib.rcParams.update({'font.size': 14})
+
 plt.figure()
-plt.plot(b.g.x1_grid[1:], b.M[1:], 'b', label='From forces')
+plt.plot(b.s, b.M[:], '.5', lw=3, label='From forces', clip_on=False)
 
 M = (b.p.young*b.p.inertia)*(b.g.rho - b.g_p.rho)
-plt.plot(b.g.x1_grid[1:], M[1:], 'r', label='From CST')
+plt.scatter(b.s, M[:], c='.5', edgecolors='k', zorder=20, marker='D', label='From CST', clip_on=False)
+plt.xlim([0, max(b.s)])
+plt.ylabel("Units (N.m)")
+plt.xlabel("s (m)")
 plt.legend()
 
 plt.figure()
-plt.plot(b.g_p.x1_grid, b.g_p.x3(b.g_p.x1_grid), 'b',
-         label='Upper Parent', lw=3)
+plt.plot(b.g_p.x1_grid, b.g_p.x3(b.g_p.x1_grid), 'k',
+         label='Upper Parent', lw=3, clip_on=False)
 plt.plot(b.g.x1_grid, b.g.x3(b.g.x1_grid), c='.5',
-         label='Upper Child', lw=3)
+         label='Upper Child', lw=3, clip_on=False)
 plt.scatter(abaqus[0, :], abaqus[1, :], c='.5',
-            label='FEA', edgecolors='k', zorder=10, marker="^")
+            label='FEA', edgecolors='k', zorder=10, marker="^", clip_on=False)
+plt.xlim([0, max(b.g_p.x1_grid)])
 print(rmse(b.g.x1_grid, b.g.x3(b.g.x1_grid), abaqus[0, :], abaqus[1, :]))
 plt.figure()
 plt.plot(b.g.x1_grid, b.g.x3(b.g.x1_grid, diff='x1'), 'b',
-         label='d', lw=3)
+         label='d', lw=3, clip_on=False)
 plt.plot(b.g.x1_grid, b.g.x3(b.g.x1_grid, diff='x11'), 'r',
-         label='dd', lw=3)
+         label='dd', lw=3, clip_on=False)
+plt.xlim([0, max(b.g_p.x1_grid)])
+
 plt.legend()
 plt.show()

@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import warnings
 import numpy as np
 import pickle
 
@@ -8,6 +7,9 @@ from aeropy.structural.stable_solution import properties, loads
 from aeropy.geometry.parametric import CoordinateSystem
 
 from scipy.interpolate import interp1d
+
+import matplotlib
+matplotlib.rcParams.update({'font.size': 14})
 
 def rmse(x1, y1, x2, y2):
     print('x1', x1)
@@ -24,17 +26,6 @@ def rmse(x1, y1, x2, y2):
         predictions = y1
         targets = f(x1)
     return np.sqrt(np.mean((predictions-targets)**2))
-    
-def constraint_f(input):
-    A = format_input(input)
-    g.D = A
-
-    index = np.where(b.s == 0.9)[0][0]
-    g.calculate_x1(b.s)
-    x = g.x1_grid[index]
-    y = g.x3(np.array([x]))
-
-    return y
 
 
 def format_input(input, g=None, g_p=None):
@@ -43,65 +34,72 @@ def format_input(input, g=None, g_p=None):
     # return input
 
 
-s_w = 0.4
-warnings.filterwarnings("ignore", category=RuntimeWarning)
+# Ghuku paper
+distributed_load = None
+chord_parent = 0.4385
+width = 0.0385
+thickness = 0.00625
+clamped_load = 20.9634
+experiment = {0: [0., 0., 0.5492, 0.2000],
+              138.321+clamped_load: [0., 0., 0.3746, 0.1753],
+              211.896+clamped_load: [0., 0., 0.2475, 0.2864], }
+# 287.433: [0., 0., 0.1287, 0.3582],
+# 460.089: [0., 0., -0.1891, 0.6087],}
+p = properties(young=200e9, dimensions=[width, thickness])
+exp_F = [0.000, 20.9634, 83.7474, 159.2844, 232.8594, 308.3964, 382.9542, 459.4704, 481.0524]
+exp_delta = [0, 0.0047, 0.0135, 0.03098, 0.0451, 0.0622, 0.0793, 0.0977, 0.103]
+g0 = CoordinateSystem.polynomial(D=experiment[list(experiment.keys())[
+    0]], chord=chord_parent, color='b')
 
-abaqus = np.loadtxt('case_study_B5.csv', delimiter=',')
+colors = ['0.0', '0.3', '0.5', '0.7']
+load_keys = list(experiment.keys())
 
-constraints = ({'type': 'eq', 'fun': constraint_f})
+g = CoordinateSystem.pCST(D=[-0.10248271, -0.10555923, -0.10863574, -0.19294965, -0.19987181], chord=[.4*chord_parent, .6*chord_parent], color=['b', 'r'],
+                          N1=[1, 1], N2=[1, 1], continuity='C2', free_end=True, root_fixed=True)
+g.calculate_s([21, 21])
+s = g.s
 
-n = 2
-p = 3
-i = n*p+1
+for i in [0,2]:  # len(load_keys)
+    print('Load: ', load_keys[i])
+    load = load_keys[i]
+    l = loads(concentrated_load=[[0, -load]], load_s=[g.total_length],
+              distributed_load=distributed_load)
+    b = beam_chen(g, p, l, s, ignore_ends=False)
 
-g = CoordinateSystem.pCST(D=list(-.05*np.arange(i)), chord=[s_w, 1-s_w], color=['b', 'g'],
-                          N1=[1, 1], N2=[1, 1], continuity='C2', free_end=True,
-                          root_fixed=True)
+    # b.iterative_solver()
+    # b._residual(b.g.D[:-1])
+    b.parameterized_solver(format_input=format_input,
+                           x0=b.g.D[:-1],
+                           solver='lm')
 
-p = properties()
-
-g.calculate_s(N=[11, 11])
-l = loads(concentrated_load=[[0, 0], [0, -2]], load_s=[g.s[10], g.s[-1]]) #, follower=True)
-b = beam_chen(g, p, l, s=None, ignore_ends=False)
-# print(b.g.D)
-# BREAK
-b.parameterized_solver(format_input, x0=b.g.D[:-1]) # constraints=constraints)
-# b.g.D = [0, .1, .2, .3]
-# b.g.calculate_x1(b.g.s)
-
-# x = b.g.x1_grid
-# y = b.g.x3(b.g.x1_grid)
-# np.savetxt("points.csv", np.array([x,y]).T, delimiter=",")
-# BREAK
-# Checking stuff
-# print('check1', +b.g.cst[0].D[2] + b.g.cst[1].D[0] + b.g.cst[1].zetaT)
-# print('check2', 2*b.g.cst[1].D[1] - (1+2)*b.g.cst[1].D[2], 2/3*b.g.cst[1].D[1])
-# print('chord', b.g.cst[0].chord, b.g.cst[1].chord)
-# print('offset', b.g.cst[0].offset_x, b.g.cst[1].offset_x)
-# print('zetaT', b.g.cst[0].zetaT, b.g.cst[1].zetaT, b.g.zetaT)
-# print('zetaL', b.g.cst[0].zetaL, b.g.cst[1].zetaL, b.g.zetaL)
-# print('A0', b.g.A0)
-print('loads', b.l.concentrated_load)
-print('D', b.g.cst[0].D, b.g.cst[1].D)
-plt.figure()
-plt.plot(b.g.x1_grid[1:], b.M[1:], 'b', label='From forces')
-
-M = (b.p.young*b.p.inertia)*(b.g.rho - b.g_p.rho)
-plt.plot(b.g.x1_grid[1:], M[1:], 'r', label='From CST')
+    if i == 0:
+        plt.plot(b.x, b.y, colors[i], label='Parent', linestyle='-',
+                 lw=3, zorder=1)
+        gg = CoordinateSystem.polynomial(D=experiment[load_keys[i]], chord=chord_parent)
+        gg.calculate_x1(s)
+        gg.plot(label='Experiment: %.3f N' %
+                load_keys[i], color=colors[i], scatter=True, marker="D")
+    if i > 0:
+        plt.plot(b.x, b.y, colors[i], label='Child: %.3f N' % load, linestyle='-',
+                 lw=3, zorder=1)
+        gg = CoordinateSystem.polynomial(D=experiment[load_keys[i]], chord=chord_parent)
+        gg.calculate_x1(s)
+        gg.plot(label='Experiment: %.3f N' %
+                load_keys[i], color=colors[i], scatter=True, marker="D")
+        r = gg.r(gg.x1_grid)
+        print('D1', b.g.cst[0].D)
+        print('D2', b.g.cst[1].D)
+        print('RMSE', rmse(b.x, b.y, r[:,0], r[:,1]))
+plt.xlim([0, max(b.x)])
 plt.legend()
 
 plt.figure()
-plt.plot(b.g_p.x1_grid, b.g_p.x3(b.g_p.x1_grid), 'b',
-         label='Upper Parent', lw=3)
-plt.plot(b.g.x1_grid, b.g.x3(b.g.x1_grid), c='.5',
-         label='Upper Child', lw=3)
-plt.scatter(abaqus[0, :], abaqus[1, :], c='.5',
-            label='FEA', edgecolors='k', zorder=10, marker="^")
-print(rmse(b.g.x1_grid, b.g.x3(b.g.x1_grid), abaqus[0, :], abaqus[1, :]))
-plt.figure()
-plt.plot(b.g.x1_grid, b.g.x3(b.g.x1_grid, diff='x1'), 'b',
-         label='d', lw=3)
-plt.plot(b.g.x1_grid, b.g.x3(b.g.x1_grid, diff='x11'), 'r',
-         label='dd', lw=3)
+plt.plot(b.s, b.M[:], '.5', lw=3, label='From forces', clip_on=False)
+
+M = (b.p.young*b.p.inertia)*(b.g.rho - b.g_p.rho)
+plt.scatter(b.s, M[:], c='.5', edgecolors='k', zorder=20, marker='D', label='From CST', clip_on=False)
+plt.xlim([0, max(b.s)])
+plt.ylabel("Units (N.m)")
+plt.xlabel("s (m)")
 plt.legend()
 plt.show()
