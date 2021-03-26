@@ -78,7 +78,6 @@ for i in range(len(load_keys)):
         gg.plot(label='Experiment: %.3f N' %
                 load_keys[i], color=colors[i], scatter=True, marker="D")
         r = gg.r(gg.x1_grid)
-        print('RMSE', rmse(b.x, b.y, r[:,0], r[:,1]))
-        BREAK
+plt.xlim([0, max(s)])
 plt.legend()
 plt.show()

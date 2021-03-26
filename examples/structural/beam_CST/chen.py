@@ -73,7 +73,7 @@ for i in range(len(x)):
     s[i] = g.arclength(x[i])[0]
 print(s)
 s[0] = 0
-for i in [0,1]:
+for i in [0,1,2]:
     print('Load: ', load_keys[i])
     load = load_keys[i]
     l = loads(concentrated_load=[[0, -load]], load_s=[s[-1]], distributed_load=distributed_load)
@@ -93,5 +93,6 @@ for i in [0,1]:
     gg.plot(label='Experiment: %.3f N' % load_keys[i], color=colors[i+1], scatter=True, marker="D")
     r = gg.r(gg.x1_grid)
     print('RMSE', rmse(b.x, b.y, r[:, 0], r[:, 1]))
+plt.xlim([0,chord_parent])
 plt.legend()
 plt.show()

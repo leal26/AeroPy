@@ -67,7 +67,7 @@ s[0] = 0
 g = CoordinateSystem.CST(D=[-0.27928065, - 0.29209946, - 0.30491828, - 0.3177371,
                             0.27928065], chord=chord_parent, color='b', deltaz=0.27928065*chord_parent, N1=1.0, N2=1.0)
 
-for i in [1]:
+for i in [0,1]:
     print('Load: ', load_keys[i])
     load = load_keys[i]
     l = loads(concentrated_load=[[0, -load]], load_s=[s[-1]], distributed_load=distributed_load)
@@ -86,6 +86,7 @@ for i in [1]:
         plt.plot(b.x, b.y, colors[i], label='Child: %.3f N' % load, linestyle='-',
                  lw=3, zorder=1)
         plt.scatter(abaqus[:, 0][0::4], abaqus[:, 1][0::4], c='.5', edgecolors='k', zorder=10, marker="^")
-        print('RMSE', rmse(b.x, b.y, abaqus[:, 0], abaqus[:, 1]))
+        # print('RMSE', rmse(b.x, b.y, abaqus[:, 0], abaqus[:, 1]))
 plt.legend()
+plt.xlim([0, max(b.x)])
 plt.show()
